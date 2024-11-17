@@ -40,7 +40,7 @@ if (!function_exists('serverEcho')) {
 			default => '37',
 		};
 		$duration = sprintf('%.5f', round($time, 5));
-		$columns = (int) getenv('CONIA_TERMINAL_COLUMNS');
+		$columns = (int) getenv('FIVEORBS_TERMINAL_COLUMNS');
 
 		list($usec, $sec) = explode(' ', microtime());
 		$usec = str_replace('0.', '.', $usec);

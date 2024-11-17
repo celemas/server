@@ -49,9 +49,9 @@ class Server extends Command
 			2 => ['pipe', 'w'],
 		];
 		$process = proc_open(
-			'CONIA_CLI_SERVER=1 ' .
-			"CONIA_DOCUMENT_ROOT={$docroot} " .
-				"CONIA_TERMINAL_COLUMNS={$columns} " .
+			'FIVEORBS_CLI_SERVER=1 ' .
+			"FIVEORBS_DOCUMENT_ROOT={$docroot} " .
+				"FIVEORBS_TERMINAL_COLUMNS={$columns} " .
 				"php -S {$host}:{$port} " .
 				($quiet ? '-q ' : '') .
 				"    -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',

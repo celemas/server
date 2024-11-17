@@ -8,7 +8,7 @@ require_once 'functions.php';
 
 if (PHP_SAPI !== 'cli') {
 	$uri = $_SERVER['REQUEST_URI'] ?? '';
-	$publicDir = getenv('CONIA_DOCUMENT_ROOT');
+	$publicDir = getenv('FIVEORBS_DOCUMENT_ROOT');
 	$url = urldecode(parse_url($uri, PHP_URL_PATH));
 
 	$start = microtime(true);
