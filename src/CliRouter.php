@@ -7,48 +7,48 @@ declare(strict_types=1);
 require_once 'functions.php';
 
 if (PHP_SAPI !== 'cli') {
-    $uri = $_SERVER['REQUEST_URI'] ?? '';
-    $publicDir = getenv('CONIA_DOCUMENT_ROOT');
-    $url = urldecode(parse_url($uri, PHP_URL_PATH));
+	$uri = $_SERVER['REQUEST_URI'] ?? '';
+	$publicDir = getenv('CONIA_DOCUMENT_ROOT');
+	$url = urldecode(parse_url($uri, PHP_URL_PATH));
 
-    $start = microtime(true);
+	$start = microtime(true);
 
-    if ($publicDir) {
-        // serve existing files as-is
-        if (is_file($publicDir . $url)) {
-            /** @psalm-suppress PossiblyInvalidArgument */
-            serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+	if ($publicDir) {
+		// serve existing files as-is
+		if (is_file($publicDir . $url)) {
+			/** @psalm-suppress PossiblyInvalidArgument */
+			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
 
-            return false;
-        }
+			return false;
+		}
 
-        if (is_file($publicDir . rtrim($url, '/') . '/index.html')) {
-            /** @psalm-suppress PossiblyInvalidArgument */
-            serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+		if (is_file($publicDir . rtrim($url, '/') . '/index.html')) {
+			/** @psalm-suppress PossiblyInvalidArgument */
+			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
 
-            return false;
-        }
+			return false;
+		}
 
-        if ($url === '/phpinfo') {
-            echo phpinfo();
-            /** @psalm-suppress PossiblyInvalidArgument */
-            serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+		if ($url === '/phpinfo') {
+			echo phpinfo();
+			/** @psalm-suppress PossiblyInvalidArgument */
+			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
 
-            return true;
-        }
+			return true;
+		}
 
-        $_SERVER['SCRIPT_NAME'] = 'index.php';
+		$_SERVER['SCRIPT_NAME'] = 'index.php';
 
-        /** @psalm-suppress UnresolvableInclude, MixedAssignment */
-        $response = require_once $publicDir . '/index.php';
+		/** @psalm-suppress UnresolvableInclude, MixedAssignment */
+		$response = require_once $publicDir . '/index.php';
 
-        if ($response) {
-            /** @psalm-suppress MixedMethodCall, MixedArgument */
-            serverEcho($response->getStatusCode(), $uri, microtime(true) - $start);
-        }
+		if ($response) {
+			/** @psalm-suppress MixedMethodCall, MixedArgument */
+			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start);
+		}
 
-        return true;
-    }
+		return true;
+	}
 
-    return false;
+	return false;
 }
