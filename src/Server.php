@@ -38,11 +38,11 @@ class Server extends Command
 		}
 
 		$opts = new Opts();
-		$debugger = $opts->has('-d', $opts->has('--debug'));
 		$host = $opts->get('-h', $opts->get('--host', 'localhost'));
 		$port = $opts->get('-p', $opts->get('--port', $port));
 		$filter = $opts->get('-f', $opts->get('--filter', ''));
-		$quiet = $opts->has('-q');
+		$debugger = $opts->has('-d', $opts->has('--debug'));
+		$quiet = $opts->has('-q', $opts->has('--quiet'));
 
 		$descriptors = [
 			0 => ['pipe', 'r'],
