@@ -38,6 +38,7 @@ class Server extends Command
 		}
 
 		$opts = new Opts();
+		$debugger = $opts->get('-d', $opts->get('--debug'));
 		$host = $opts->get('-h', $opts->get('--host', 'localhost'));
 		$port = $opts->get('-p', $opts->get('--port', $port));
 		$filter = $opts->get('-f', $opts->get('--filter', ''));
@@ -49,12 +50,13 @@ class Server extends Command
 			2 => ['pipe', 'w'],
 		];
 		$process = proc_open(
+			($debugger ? 'XDEBUG_SESSION=1 ' : '') .
 			'FIVEORBS_CLI_SERVER=1 ' .
 			"FIVEORBS_DOCUMENT_ROOT={$docroot} " .
 				"FIVEORBS_TERMINAL_COLUMNS={$columns} " .
 				"php -S {$host}:{$port} " .
 				($quiet ? '-q ' : '') .
-				"    -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
+				" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
 			$descriptors,
 			$pipes,
 		);
