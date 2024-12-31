@@ -61,6 +61,10 @@ class Server extends Command
 			$pipes,
 		);
 
+		if ($debugger) {
+			echo "\033[0;31mXdebug session enabled\033[0m\n";
+		}
+
 		if (is_resource($process)) {
 			while (!feof($pipes[1])) {
 				$output = fgets($pipes[2], 1024);
