@@ -38,7 +38,7 @@ class Server extends Command
 		}
 
 		$opts = new Opts();
-		$debugger = $opts->get('-d', $opts->get('--debug'));
+		$debugger = $opts->has('-d', $opts->has('--debug'));
 		$host = $opts->get('-h', $opts->get('--host', 'localhost'));
 		$port = $opts->get('-p', $opts->get('--port', $port));
 		$filter = $opts->get('-f', $opts->get('--filter', ''));
