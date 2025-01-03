@@ -53,10 +53,10 @@ class Server extends Command
 			($debugger ? 'XDEBUG_SESSION=1 ' : '') .
 			'FIVEORBS_CLI_SERVER=1 ' .
 			"FIVEORBS_DOCUMENT_ROOT={$docroot} " .
-				"FIVEORBS_TERMINAL_COLUMNS={$columns} " .
-				"php -S {$host}:{$port} " .
-				($quiet ? '-q ' : '') .
-				" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
+			"FIVEORBS_TERMINAL_COLUMNS={$columns} " .
+			"php -S {$host}:{$port} " .
+			($quiet ? '-q ' : '') .
+			" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
 			$descriptors,
 			$pipes,
 		);
@@ -74,10 +74,18 @@ class Server extends Command
 				}
 
 				if (!preg_match('/^\[.*?\] \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}/', $output)) {
-					$pos = (int) strpos($output, ']');
+					$openingPos = (int) strpos($output, '[');
+					$closingPos = (int) strpos($output, ']');
 
 					if (!$filter || !preg_match($filter, substr($output, (int) strpos($output, '/')))) {
-						echo substr($output, $pos + 2);
+						if ($openingPos === 0 && $closingPos === 25) {
+							// If this matches it should be a line outputted by the builtin server.
+							// Kind of a hack, but it should work most of the time.
+							echo substr($output, 27);
+						} else {
+							// For example an error_log coming from the user.
+							echo $output;
+						}
 					}
 				}
 			}
