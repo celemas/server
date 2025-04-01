@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace FiveOrbs\Core\Server;
+namespace Duon\Core\Server;
 
-use FiveOrbs\Cli\Command;
-use FiveOrbs\Cli\Opts;
+use Duon\Cli\Command;
+use Duon\Cli\Opts;
 use Throwable;
 
 /** @psalm-api */
