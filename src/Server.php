@@ -17,7 +17,7 @@ class Server extends Command
 	public function __construct(
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
-		protected readonly string $prefix = '',
+		protected readonly string $routePrefix = '',
 	) {}
 
 	public function run(): string|int
@@ -55,7 +55,7 @@ class Server extends Command
 			'DUON_CLI_SERVER=1 ' .
 			"DUON_DOCUMENT_ROOT={$docroot} " .
 			"DUON_TERMINAL_COLUMNS={$columns} " .
-			"DUON_ROUTE_PREFIX={$this->prefix} " .
+			"DUON_ROUTE_PREFIX={$this->routePrefix} " .
 			"php -S {$host}:{$port} " .
 			($quiet ? '-q ' : '') .
 			" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
