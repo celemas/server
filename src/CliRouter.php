@@ -8,7 +8,13 @@ require_once 'functions.php';
 
 if (PHP_SAPI !== 'cli') {
 	$uri = $_SERVER['REQUEST_URI'] ?? '';
-	$publicDir = getenv('FIVEORBS_DOCUMENT_ROOT');
+	$routePrefix = getenv('DUON_ROUTE_PREFIX');
+	$publicDir = getenv('DUON_DOCUMENT_ROOT');
+
+	if ($routePrefix !== false) {
+		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri);
+	}
+
 	$url = urldecode(parse_url($uri, PHP_URL_PATH));
 
 	$start = microtime(true);

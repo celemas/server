@@ -17,6 +17,7 @@ class Server extends Command
 	public function __construct(
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
+		protected readonly string $prefix = '',
 	) {}
 
 	public function run(): string|int
@@ -51,9 +52,10 @@ class Server extends Command
 		];
 		$process = proc_open(
 			($debugger ? 'XDEBUG_SESSION=1 ' : '') .
-			'FIVEORBS_CLI_SERVER=1 ' .
-			"FIVEORBS_DOCUMENT_ROOT={$docroot} " .
-			"FIVEORBS_TERMINAL_COLUMNS={$columns} " .
+			'DUON_CLI_SERVER=1 ' .
+			"DUON_DOCUMENT_ROOT={$docroot} " .
+			"DUON_TERMINAL_COLUMNS={$columns} " .
+			"DUON_ROUTE_PREFIX={$this->prefix} " .
 			"php -S {$host}:{$port} " .
 			($quiet ? '-q ' : '') .
 			" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
