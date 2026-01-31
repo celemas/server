@@ -51,14 +51,14 @@ class Server extends Command
 			2 => ['pipe', 'w'],
 		];
 		$process = proc_open(
-			($debugger ? 'XDEBUG_SESSION=1 ' : '') .
-			'DUON_CLI_SERVER=1 ' .
-			"DUON_DOCUMENT_ROOT={$docroot} " .
-			"DUON_TERMINAL_COLUMNS={$columns} " .
-			"DUON_ROUTE_PREFIX={$this->routePrefix} " .
-			"php -S {$host}:{$port} " .
-			($quiet ? '-q ' : '') .
-			" -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
+			($debugger ? 'XDEBUG_SESSION=1 ' : '')
+			. 'DUON_CLI_SERVER=1 '
+			. "DUON_DOCUMENT_ROOT={$docroot} "
+			. "DUON_TERMINAL_COLUMNS={$columns} "
+			. "DUON_ROUTE_PREFIX={$this->routePrefix} "
+			. "php -S {$host}:{$port} "
+			. ($quiet ? '-q ' : '')
+			. " -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
 			$descriptors,
 			$pipes,
 		);
