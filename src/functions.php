@@ -28,10 +28,13 @@ if (!function_exists('getServerEchoSpacer')) {
 if (!function_exists('serverEcho')) {
 	function serverEcho(int $statusCode, string $msg, float $time, bool $fromHandler = false): void
 	{
-		$isXhr = (!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
-			&& strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ? '[XHR]' : '';
+		$isXhr = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+		&& strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+			? '[XHR]'
+			: '';
 		$method = isset($_SERVER['REQUEST_METHOD'])
-			? strtoupper($_SERVER['REQUEST_METHOD']) : '';
+			? strtoupper($_SERVER['REQUEST_METHOD'])
+			: '';
 		$statusColor = match (true) {
 			$statusCode >= 200 && $statusCode < 300 => '32',
 			$statusCode >= 300 && $statusCode < 400 => '34',
@@ -47,18 +50,18 @@ if (!function_exists('serverEcho')) {
 		$timestamp = date('H:i:s', (int) $sec) . substr($usec, 0, 3);
 		$url = urldecode($msg);
 
-		$leftSide
+		$leftSide =
 			// timestamp
-			= "\033[0;37m{$timestamp}\033[0m "
+			"\033[0;37m{$timestamp}\033[0m "
 			// status code
 			. "\033[0;{$statusColor}m{$statusCode}\033[0m "
 			// request method
 			. "{$method} "
 			// request uri
 			. "\033[0;{$statusColor}m{$url}\033[0m";
-		$rightSide
+		$rightSide =
 			// from error handler
-			= ($fromHandler ? "\033[0;36m[EXC]\033[0m" : '')
+			($fromHandler ? "\033[0;36m[EXC]\033[0m" : '')
 			// xhr indicator
 			. "\033[0;36m{$isXhr}\033[0m"
 			. ($fromHandler || $isXhr ? ' ' : '')

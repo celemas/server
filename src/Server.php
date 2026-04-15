@@ -58,7 +58,12 @@ class Server extends Command
 			. "DUON_ROUTE_PREFIX={$this->routePrefix} "
 			. "php -S {$host}:{$port} "
 			. ($quiet ? '-q ' : '')
-			. " -t {$docroot}" . DIRECTORY_SEPARATOR . ' ' . __DIR__ . DIRECTORY_SEPARATOR . 'CliRouter.php ',
+			. " -t {$docroot}"
+			. DIRECTORY_SEPARATOR
+			. ' '
+			. __DIR__
+			. DIRECTORY_SEPARATOR
+			. 'CliRouter.php ',
 			$descriptors,
 			$pipes,
 		);
