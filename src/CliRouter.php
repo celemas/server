@@ -36,6 +36,7 @@ if (PHP_SAPI !== 'cli') {
 		}
 
 		if ($url === '/phpinfo') {
+			// @mago-expect lint:no-debug-symbols
 			echo phpinfo();
 			/** @psalm-suppress PossiblyInvalidArgument */
 			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
