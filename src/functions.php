@@ -28,10 +28,11 @@ if (!function_exists('getServerEchoSpacer')) {
 if (!function_exists('serverEcho')) {
 	function serverEcho(int $statusCode, string $msg, float $time, bool $fromHandler = false): void
 	{
-		$isXhr = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
-		&& strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
-			? '[XHR]'
-			: '';
+		$xRequestedWith = $_SERVER['HTTP_X_REQUESTED_WITH'] ?? null;
+		$isXhr = is_string($xRequestedWith)
+			&& strtolower($xRequestedWith) === 'xmlhttprequest'
+				? '[XHR]'
+				: '';
 		$method = isset($_SERVER['REQUEST_METHOD'])
 			? strtoupper($_SERVER['REQUEST_METHOD'])
 			: '';
