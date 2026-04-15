@@ -16,7 +16,7 @@ if (!function_exists('getServerEchoSpacer')) {
 		$rightLen = $strlen(preg_replace('#\\x1b[[][^A-Za-z]*[A-Za-z]#', '', $rightSide));
 
 		if ($leftLen > $columns) {
-			$leftLen = $leftLen % $columns;
+			$leftLen %= $columns;
 		}
 
 		$spacer = str_repeat('.', $columns - (($leftLen + $rightLen + 2) % $columns));
