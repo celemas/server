@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duon\Core\Server;
 
+/** @internal */
 final class ServerProcess
 {
 	private function __construct(

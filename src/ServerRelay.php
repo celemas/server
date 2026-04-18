@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duon\Core\Server;
 
+/** @internal */
 final class ServerRelay
 {
 	public static function run(array $bindings): void

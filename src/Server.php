@@ -38,17 +38,18 @@ class Server extends Command
 
 	public function run(): string|int
 	{
-		$runtime = new ServerRuntime(new ServerSupport($this->docroot, $this->routePrefix));
-		$phpOutput = function (string $line) use (&$runtime): void {
-			$this->echoPhpOutput($line, $runtime->filter());
-		};
-		$browserOutput = static function (string $line): void {
-			echo $line;
-		};
-
 		try {
 			$options = ServerOptions::from($this->port);
-			$runtime->options($options);
+			$runtime = new ServerRuntime(
+				new ServerSupport($this->docroot, $this->routePrefix),
+				$options,
+			);
+			$phpOutput = function (string $line) use ($options): void {
+				$this->echoPhpOutput($line, $options->filter);
+			};
+			$browserOutput = static function (string $line): void {
+				echo $line;
+			};
 
 			if ($options->watch) {
 				return $runtime->watch($phpOutput, $browserOutput);
@@ -58,27 +59,6 @@ class Server extends Command
 		} catch (InvalidArgumentException $e) {
 			return $e->getMessage();
 		}
-	}
-
-	private function port(string $value): int
-	{
-		return ServerSupport::port($value);
-	}
-
-	private function browserSyncBackendPort(int $port): int
-	{
-		return ServerSupport::backendPort($port);
-	}
-
-	private function phpCommand(string $host, int $port, bool $quiet): array
-	{
-		return new ServerSupport($this->docroot, $this->routePrefix)->phpCommand($host, $port, $quiet);
-	}
-
-	private function browserSyncCommand(string $host, int $port, int $backendPort, bool $quiet): array
-	{
-		return new ServerSupport($this->docroot, $this->routePrefix)
-			->browserSyncCommand($host, $port, $backendPort, $quiet);
 	}
 
 	private function echoPhpOutput(string $output, string $filter): void

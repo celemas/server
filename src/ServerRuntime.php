@@ -4,23 +4,13 @@ declare(strict_types=1);
 
 namespace Duon\Core\Server;
 
-final class ServerRuntime
+/** @internal */
+final readonly class ServerRuntime
 {
-	private ServerOptions $options;
-
 	public function __construct(
-		private readonly ServerSupport $support,
+		private ServerSupport $support,
+		private ServerOptions $options,
 	) {}
-
-	public function options(ServerOptions $options): void
-	{
-		$this->options = $options;
-	}
-
-	public function filter(): string
-	{
-		return $this->options->filter;
-	}
 
 	public function serve(callable $phpOutput): string|int
 	{

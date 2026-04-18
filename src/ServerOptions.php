@@ -6,6 +6,7 @@ namespace Duon\Core\Server;
 
 use Duon\Cli\Opts;
 
+/** @internal */
 final class ServerOptions
 {
 	public string $host = 'localhost';

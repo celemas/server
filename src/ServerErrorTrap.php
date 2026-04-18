@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Duon\Core\Server;
 
+/** @internal */
 final class ServerErrorTrap
 {
 	public static function run(callable $callback, ?string &$message = null): mixed
