@@ -10,12 +10,12 @@ use Throwable;
 /** @internal */
 final readonly class Setup
 {
-	public const DEFAULT_WATCH = '**/*.{php,js,css}';
+	public const DEFAULT_WATCH = ['**/*.{php,js,css}'];
 
 	public function __construct(
 		private string $docroot,
 		private string $routePrefix,
-		private string $watch = self::DEFAULT_WATCH,
+		private array $watch = self::DEFAULT_WATCH,
 	) {}
 
 	public static function port(string $value): int
@@ -124,16 +124,20 @@ final readonly class Setup
 			'start',
 			'--proxy',
 			"http://{$host}:{$backendPort}",
-			'--files',
-			$this->watch,
-			'--port',
-			(string) $port,
-			'--host',
-			$host,
-			'--no-ui',
-			'--no-notify',
-			'--no-open',
 		];
+
+		foreach ($this->watch as $pattern) {
+			$command[] = '--files';
+			$command[] = $pattern;
+		}
+
+		$command[] = '--port';
+		$command[] = (string) $port;
+		$command[] = '--host';
+		$command[] = $host;
+		$command[] = '--no-ui';
+		$command[] = '--no-notify';
+		$command[] = '--no-open';
 
 		if ($quiet) {
 			$command[] = '--logLevel';

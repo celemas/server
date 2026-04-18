@@ -76,7 +76,7 @@ final class ServerTest extends TestCase
 		$this->withArgv(['run.php', 'server', '--watch'], function (): void {
 			$options = Options::from(1983, ['**/*.php', '**/*.css']);
 			$this->assertTrue($options->watch);
-			$this->assertSame('**/*.php, **/*.css', $options->watchFiles);
+			$this->assertSame(['**/*.php', '**/*.css'], $options->watchFiles);
 		});
 	}
 
@@ -85,7 +85,47 @@ final class ServerTest extends TestCase
 		$this->withArgv(['run.php', 'server', '--watch', '**/*.twig'], function (): void {
 			$options = Options::from(1983, ['**/*.php', '**/*.css']);
 			$this->assertTrue($options->watch);
-			$this->assertSame('**/*.twig', $options->watchFiles);
+			$this->assertSame(['**/*.twig'], $options->watchFiles);
+		});
+	}
+
+	public function testWatchFlagSupportsMultipleValues(): void
+	{
+		$this->withArgv([
+			'run.php',
+			'server',
+			'--watch',
+			'app/**/*.php',
+			'--watch',
+			'vendor/duon/cms/**/*.{js,css,php}',
+		], function (): void {
+			$options = Options::from(1983, Setup::DEFAULT_WATCH);
+			$this->assertTrue($options->watch);
+			$this->assertSame(
+				[
+					'app/**/*.php',
+					'vendor/duon/cms/**/*.{js,css,php}',
+				],
+				$options->watchFiles,
+			);
+		});
+	}
+
+	public function testWatchPatternParsesBraceCommasCorrectly(): void
+	{
+		$this->withArgv(['run.php', 'server', '--watch'], function (): void {
+			$options = Options::from(
+				1983,
+				'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/duon/cms/**/*.{js,css,php}',
+			);
+			$this->assertSame(
+				[
+					'app/**/*.php',
+					'public/**/*.{js,php,css,jpg,png}',
+					'vendor/duon/cms/**/*.{js,css,php}',
+				],
+				$options->watchFiles,
+			);
 		});
 	}
 

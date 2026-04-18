@@ -15,7 +15,8 @@ final class Options
 	public bool $debugger = false;
 	public bool $quiet = false;
 	public bool $watch = false;
-	public string $watchFiles = Setup::DEFAULT_WATCH;
+	/** @var list<string> */
+	public array $watchFiles = Setup::DEFAULT_WATCH;
 
 	public static function from(int $defaultPort, array|string $defaultWatch): self
 	{
@@ -35,28 +36,32 @@ final class Options
 		return $options;
 	}
 
-	private static function watchFiles(Opts $opts, array|string $defaultWatch): string
+	/** @return list<string> */
+	private static function watchFiles(Opts $opts, array|string $defaultWatch): array
 	{
-		$watch = WatchPattern::normalize($defaultWatch);
-		$value = self::watchValue($opts);
+		$watch = WatchPattern::list($defaultWatch);
+		$values = self::watchValues($opts);
 
-		if ($value === null || trim($value) === '') {
+		if ($values === []) {
 			return $watch;
 		}
 
-		return WatchPattern::normalize($value);
+		return WatchPattern::list($values);
 	}
 
-	private static function watchValue(Opts $opts): ?string
+	/** @return list<string> */
+	private static function watchValues(Opts $opts): array
 	{
+		$values = [];
+
 		if ($opts->has('-w')) {
-			return $opts->get('-w', '');
+			$values = array_merge($values, $opts->all('-w', []));
 		}
 
 		if ($opts->has('--watch')) {
-			return $opts->get('--watch', '');
+			$values = array_merge($values, $opts->all('--watch', []));
 		}
 
-		return null;
+		return $values;
 	}
 }
