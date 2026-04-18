@@ -131,6 +131,7 @@ final readonly class ServerSupport
 			$host,
 			'--no-ui',
 			'--no-notify',
+			'--no-open',
 		];
 
 		if ($quiet) {
