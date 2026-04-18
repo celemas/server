@@ -41,7 +41,7 @@ class Server extends Command
 		try {
 			$options = Options::from($this->port);
 			$runtime = new Runtime(
-				new Support($this->docroot, $this->routePrefix),
+				new Setup($this->docroot, $this->routePrefix),
 				$options,
 			);
 			$phpOutput = function (string $line) use ($options): void {

@@ -21,7 +21,7 @@ final class Options
 		$opts = new Opts();
 		$options = new self();
 		$options->host = $opts->get('-h', $opts->get('--host', 'localhost'));
-		$options->port = Support::port($opts->get('-p', $opts->get(
+		$options->port = Setup::port($opts->get('-p', $opts->get(
 			'--port',
 			(string) $defaultPort,
 		)));

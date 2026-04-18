@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Duon\Core\Tests;
 
-use Duon\Core\Server\Support;
+use Duon\Core\Server\Setup;
 use InvalidArgumentException;
 
 final class ServerTest extends TestCase
 {
 	public function testPhpCommandAddsQuietFlag(): void
 	{
-		$support = new Support('/tmp/public', '');
-		$command = $support->phpCommand('localhost', 1983, true);
+		$setup = new Setup('/tmp/public', '');
+		$command = $setup->phpCommand('localhost', 1983, true);
 
 		$this->assertSame(
 			[
@@ -30,8 +30,8 @@ final class ServerTest extends TestCase
 
 	public function testBrowserSyncCommandUsesProxyPort(): void
 	{
-		$support = new Support('/tmp/public', '');
-		$command = $support->browserSyncCommand('localhost', 1983, 1984, false);
+		$setup = new Setup('/tmp/public', '');
+		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
 
 		$this->assertSame(
 			[
@@ -59,7 +59,7 @@ final class ServerTest extends TestCase
 		$this->expectException(InvalidArgumentException::class);
 		$this->expectExceptionMessage("Invalid port 'foo'.");
 
-		Support::port('foo');
+		Setup::port('foo');
 	}
 
 	public function testBrowserSyncNeedsBackendPort(): void
@@ -67,6 +67,6 @@ final class ServerTest extends TestCase
 		$this->expectException(InvalidArgumentException::class);
 		$this->expectExceptionMessage('BrowserSync needs a free backend port after the public port.');
 
-		Support::backendPort(65_535);
+		Setup::backendPort(65_535);
 	}
 }

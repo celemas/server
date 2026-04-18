@@ -8,21 +8,21 @@ namespace Duon\Core\Server;
 final readonly class Runtime
 {
 	public function __construct(
-		private Support $support,
+		private Setup $setup,
 		private Options $options,
 	) {}
 
 	public function serve(callable $phpOutput): string|int
 	{
-		$message = $this->support->portUnavailableMessage($this->options->host, $this->options->port);
+		$message = $this->setup->portUnavailableMessage($this->options->host, $this->options->port);
 
 		if ($message !== null) {
 			return $message;
 		}
 
 		$php = Process::start(
-			$this->support->phpCommand($this->options->host, $this->options->port, $this->options->quiet),
-			$this->support->phpEnvironment($this->options->debugger),
+			$this->setup->phpCommand($this->options->host, $this->options->port, $this->options->quiet),
+			$this->setup->phpEnvironment($this->options->debugger),
 		);
 
 		if ($php === null) {
@@ -37,28 +37,28 @@ final readonly class Runtime
 
 	public function watch(callable $phpOutput, callable $browserOutput): string|int
 	{
-		$backendPort = Support::backendPort($this->options->port);
-		$missing = $this->support->missingBrowserSyncDependencies();
+		$backendPort = Setup::backendPort($this->options->port);
+		$missing = $this->setup->missingBrowserSyncDependencies();
 
 		if ($missing !== []) {
 			return 'BrowserSync requires ' . implode(' and ', $missing) . ' in PATH.';
 		}
 
-		$message = $this->support->portUnavailableMessage($this->options->host, $this->options->port);
+		$message = $this->setup->portUnavailableMessage($this->options->host, $this->options->port);
 
 		if ($message !== null) {
 			return $message;
 		}
 
-		$message = $this->support->portUnavailableMessage($this->options->host, $backendPort);
+		$message = $this->setup->portUnavailableMessage($this->options->host, $backendPort);
 
 		if ($message !== null) {
 			return $message;
 		}
 
 		$php = Process::start(
-			$this->support->phpCommand($this->options->host, $backendPort, $this->options->quiet),
-			$this->support->phpEnvironment($this->options->debugger),
+			$this->setup->phpCommand($this->options->host, $backendPort, $this->options->quiet),
+			$this->setup->phpEnvironment($this->options->debugger),
 		);
 
 		if ($php === null) {
@@ -66,7 +66,7 @@ final readonly class Runtime
 		}
 
 		$browserSync = Process::start(
-			$this->support->browserSyncCommand(
+			$this->setup->browserSyncCommand(
 				$this->options->host,
 				$this->options->port,
 				$backendPort,

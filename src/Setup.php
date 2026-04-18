@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /** @internal */
-final readonly class Support
+final readonly class Setup
 {
 	private const BROWSER_SYNC_FILES = '**/*.php, **/*.css, **/*.js';
 
