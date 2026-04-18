@@ -138,6 +138,10 @@ final readonly class Setup
 		$command[] = '--no-ui';
 		$command[] = '--no-notify';
 		$command[] = '--no-open';
+		$command[] = '--reload-delay';
+		$command[] = '100';
+		$command[] = '--reload-debounce';
+		$command[] = '300';
 
 		if ($quiet) {
 			$command[] = '--logLevel';
