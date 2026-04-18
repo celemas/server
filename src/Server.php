@@ -17,6 +17,7 @@ class Server extends Command
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
 		protected readonly string $routePrefix = '',
+		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 	) {}
 
 	public function help(): void
@@ -31,17 +32,17 @@ class Server extends Command
 		$this->helpOption('-d, --debug', 'Enable an Xdebug session for the PHP server.');
 		$this->helpOption('-q, --quiet', 'Reduce verbose output where supported.');
 		$this->helpOption(
-			'-w, --watch',
-			'Run BrowserSync in front of the PHP server. Requires node and npx.',
+			'-w, --watch [files]',
+			'Run BrowserSync in front of the PHP server. Optional files override the configured watch patterns.',
 		);
 	}
 
 	public function run(): string|int
 	{
 		try {
-			$options = Options::from($this->port);
+			$options = Options::from($this->port, $this->watch);
 			$runtime = new Runtime(
-				new Setup($this->docroot, $this->routePrefix),
+				new Setup($this->docroot, $this->routePrefix, $options->watchFiles),
 				$options,
 			);
 			$phpOutput = function (string $line) use ($options): void {

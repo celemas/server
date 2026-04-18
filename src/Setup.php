@@ -10,11 +10,12 @@ use Throwable;
 /** @internal */
 final readonly class Setup
 {
-	private const BROWSER_SYNC_FILES = '**/*.php, **/*.css, **/*.js';
+	public const DEFAULT_WATCH = '**/*.{php,js,css}';
 
 	public function __construct(
 		private string $docroot,
 		private string $routePrefix,
+		private string $watch = self::DEFAULT_WATCH,
 	) {}
 
 	public static function port(string $value): int
@@ -124,7 +125,7 @@ final readonly class Setup
 			'--proxy',
 			"http://{$host}:{$backendPort}",
 			'--files',
-			self::BROWSER_SYNC_FILES,
+			$this->watch,
 			'--port',
 			(string) $port,
 			'--host',

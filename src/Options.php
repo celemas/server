@@ -15,8 +15,9 @@ final class Options
 	public bool $debugger = false;
 	public bool $quiet = false;
 	public bool $watch = false;
+	public string $watchFiles = Setup::DEFAULT_WATCH;
 
-	public static function from(int $defaultPort): self
+	public static function from(int $defaultPort, array|string $defaultWatch): self
 	{
 		$opts = new Opts();
 		$options = new self();
@@ -29,7 +30,33 @@ final class Options
 		$options->debugger = $opts->has('-d', $opts->has('--debug'));
 		$options->quiet = $opts->has('-q', $opts->has('--quiet'));
 		$options->watch = $opts->has('-w', $opts->has('--watch'));
+		$options->watchFiles = self::watchFiles($opts, $defaultWatch);
 
 		return $options;
+	}
+
+	private static function watchFiles(Opts $opts, array|string $defaultWatch): string
+	{
+		$watch = WatchPattern::normalize($defaultWatch);
+		$value = self::watchValue($opts);
+
+		if ($value === null || trim($value) === '') {
+			return $watch;
+		}
+
+		return WatchPattern::normalize($value);
+	}
+
+	private static function watchValue(Opts $opts): ?string
+	{
+		if ($opts->has('-w')) {
+			return $opts->get('-w', '');
+		}
+
+		if ($opts->has('--watch')) {
+			return $opts->get('--watch', '');
+		}
+
+		return null;
 	}
 }
