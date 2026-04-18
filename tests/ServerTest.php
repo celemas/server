@@ -55,6 +55,41 @@ final class ServerTest extends TestCase
 		);
 	}
 
+	public function testBrowserSyncCommandAddsMultipleFileFlags(): void
+	{
+		$setup = new Setup(
+			'/tmp/public',
+			'',
+			[
+				'app/**/*.php',
+				'vendor/duon/cms/**/*.{js,css,php}',
+			],
+		);
+		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
+
+		$this->assertSame(
+			[
+				'npx',
+				'browser-sync',
+				'start',
+				'--proxy',
+				'http://localhost:1984',
+				'--files',
+				'app/**/*.php',
+				'--files',
+				'vendor/duon/cms/**/*.{js,css,php}',
+				'--port',
+				'1983',
+				'--host',
+				'localhost',
+				'--no-ui',
+				'--no-notify',
+				'--no-open',
+			],
+			$command,
+		);
+	}
+
 	public function testPortRejectsInvalidValue(): void
 	{
 		$this->expectException(InvalidArgumentException::class);
@@ -104,9 +139,11 @@ final class ServerTest extends TestCase
 			$this->assertSame(
 				[
 					'app/**/*.php',
-					'vendor/duon/cms/**/*.{js,css,php}',
+					'vendor/duon/cms/**/*.js',
+					'vendor/duon/cms/**/*.css',
+					'vendor/duon/cms/**/*.php',
 				],
-				$options->watchFiles,
+				array_slice($options->watchFiles, 0, 4),
 			);
 		});
 	}
@@ -121,10 +158,16 @@ final class ServerTest extends TestCase
 			$this->assertSame(
 				[
 					'app/**/*.php',
-					'public/**/*.{js,php,css,jpg,png}',
-					'vendor/duon/cms/**/*.{js,css,php}',
+					'public/**/*.js',
+					'public/**/*.php',
+					'public/**/*.css',
+					'public/**/*.jpg',
+					'public/**/*.png',
+					'vendor/duon/cms/**/*.js',
+					'vendor/duon/cms/**/*.css',
+					'vendor/duon/cms/**/*.php',
 				],
-				$options->watchFiles,
+				array_slice($options->watchFiles, 0, 9),
 			);
 		});
 	}

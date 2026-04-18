@@ -13,10 +13,12 @@ final class WatchPattern
 	public static function list(array|string $watch): array
 	{
 		if (is_string($watch)) {
-			return self::fromArray(self::split($watch));
+			$patterns = self::fromArray(self::split($watch));
+		} else {
+			$patterns = self::fromArray($watch);
 		}
 
-		return self::fromArray($watch);
+		return WatchBrace::expandList(WatchSymlink::expand($patterns));
 	}
 
 	/** @param list<mixed> $watch
