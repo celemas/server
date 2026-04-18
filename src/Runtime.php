@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Duon\Core\Server;
 
 /** @internal */
-final readonly class ServerRuntime
+final readonly class Runtime
 {
 	public function __construct(
-		private ServerSupport $support,
-		private ServerOptions $options,
+		private Support $support,
+		private Options $options,
 	) {}
 
 	public function serve(callable $phpOutput): string|int
@@ -20,7 +20,7 @@ final readonly class ServerRuntime
 			return $message;
 		}
 
-		$php = ServerProcess::start(
+		$php = Process::start(
 			$this->support->phpCommand($this->options->host, $this->options->port, $this->options->quiet),
 			$this->support->phpEnvironment($this->options->debugger),
 		);
@@ -30,14 +30,14 @@ final readonly class ServerRuntime
 		}
 
 		$this->echoDebugger();
-		ServerRelay::run([$php->binding([1 => $phpOutput, 2 => $phpOutput])]);
+		Relay::run([$php->binding([1 => $phpOutput, 2 => $phpOutput])]);
 
 		return $this->normalizeExitCode($php->close());
 	}
 
 	public function watch(callable $phpOutput, callable $browserOutput): string|int
 	{
-		$backendPort = ServerSupport::backendPort($this->options->port);
+		$backendPort = Support::backendPort($this->options->port);
 		$missing = $this->support->missingBrowserSyncDependencies();
 
 		if ($missing !== []) {
@@ -56,7 +56,7 @@ final readonly class ServerRuntime
 			return $message;
 		}
 
-		$php = ServerProcess::start(
+		$php = Process::start(
 			$this->support->phpCommand($this->options->host, $backendPort, $this->options->quiet),
 			$this->support->phpEnvironment($this->options->debugger),
 		);
@@ -65,7 +65,7 @@ final readonly class ServerRuntime
 			return 'Failed to start the PHP server.';
 		}
 
-		$browserSync = ServerProcess::start(
+		$browserSync = Process::start(
 			$this->support->browserSyncCommand(
 				$this->options->host,
 				$this->options->port,
@@ -84,7 +84,7 @@ final readonly class ServerRuntime
 		echo "PHP server listening on http://{$this->options->host}:{$backendPort}\n";
 		$this->echoDebugger();
 
-		ServerRelay::run([
+		Relay::run([
 			$php->binding([1 => $phpOutput, 2 => $phpOutput]),
 			$browserSync->binding([1 => $browserOutput, 2 => $browserOutput]),
 		]);

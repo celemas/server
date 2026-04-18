@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duon\Core\Server;
 
 /** @internal */
-final class ServerWatchers
+final class Watchers
 {
 	public static function collect(array $bindings): array
 	{

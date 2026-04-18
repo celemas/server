@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duon\Core\Server;
 
 /** @internal */
-final class ServerWatcherOutput
+final class WatcherOutput
 {
 	public static function consumeReady(array &$watchers, array $read): void
 	{

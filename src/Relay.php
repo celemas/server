@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace Duon\Core\Server;
 
 /** @internal */
-final class ServerRelay
+final class Relay
 {
 	public static function run(array $bindings): void
 	{
-		$watchers = ServerWatchers::collect($bindings);
+		$watchers = Watchers::collect($bindings);
 
 		while ($watchers !== []) {
 			$read = array_column($watchers, 'stream');
 			$write = null;
 			$except = null;
-			$changed = ServerErrorTrap::run(
+			$changed = ErrorTrap::run(
 				static fn(): mixed => stream_select($read, $write, $except, 0, 200_000),
 			);
 
@@ -24,7 +24,7 @@ final class ServerRelay
 			}
 
 			if ($changed > 0) {
-				ServerWatcherOutput::consumeReady($watchers, $read);
+				WatcherOutput::consumeReady($watchers, $read);
 			}
 
 			if (self::stopped($bindings)) {
@@ -32,7 +32,7 @@ final class ServerRelay
 			}
 		}
 
-		ServerWatcherOutput::flushAll($watchers);
+		WatcherOutput::flushAll($watchers);
 	}
 
 	private static function stopped(array $bindings): bool

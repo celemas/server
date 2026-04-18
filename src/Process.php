@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Duon\Core\Server;
 
 /** @internal */
-final class ServerProcess
+final class Process
 {
 	private function __construct(
 		private mixed $process,
@@ -64,7 +64,7 @@ final class ServerProcess
 		}
 
 		if ($terminate) {
-			ServerErrorTrap::run(fn(): mixed => proc_terminate($this->process));
+			ErrorTrap::run(fn(): mixed => proc_terminate($this->process));
 		}
 
 		return proc_close($this->process);

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use Throwable;
 
 /** @internal */
-final readonly class ServerSupport
+final readonly class Support
 {
 	private const BROWSER_SYNC_FILES = '**/*.php, **/*.css, **/*.js';
 
@@ -62,7 +62,7 @@ final readonly class ServerSupport
 	{
 		$errorCode = 0;
 		$errorMessage = '';
-		$server = ServerErrorTrap::run(
+		$server = ErrorTrap::run(
 			static fn(): mixed => stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage),
 			$errorMessage,
 		);

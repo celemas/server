@@ -7,7 +7,7 @@ namespace Duon\Core\Server;
 use Duon\Cli\Opts;
 
 /** @internal */
-final class ServerOptions
+final class Options
 {
 	public string $host = 'localhost';
 	public int $port = 1983;
@@ -21,7 +21,7 @@ final class ServerOptions
 		$opts = new Opts();
 		$options = new self();
 		$options->host = $opts->get('-h', $opts->get('--host', 'localhost'));
-		$options->port = ServerSupport::port($opts->get('-p', $opts->get(
+		$options->port = Support::port($opts->get('-p', $opts->get(
 			'--port',
 			(string) $defaultPort,
 		)));

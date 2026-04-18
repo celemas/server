@@ -39,9 +39,9 @@ class Server extends Command
 	public function run(): string|int
 	{
 		try {
-			$options = ServerOptions::from($this->port);
-			$runtime = new ServerRuntime(
-				new ServerSupport($this->docroot, $this->routePrefix),
+			$options = Options::from($this->port);
+			$runtime = new Runtime(
+				new Support($this->docroot, $this->routePrefix),
 				$options,
 			);
 			$phpOutput = function (string $line) use ($options): void {
