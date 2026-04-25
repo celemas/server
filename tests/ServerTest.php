@@ -50,6 +50,10 @@ final class ServerTest extends TestCase
 				'--no-ui',
 				'--no-notify',
 				'--no-open',
+				'--reload-delay',
+				'100',
+				'--reload-debounce',
+				'300',
 			],
 			$command,
 		);
@@ -85,6 +89,10 @@ final class ServerTest extends TestCase
 				'--no-ui',
 				'--no-notify',
 				'--no-open',
+				'--reload-delay',
+				'100',
+				'--reload-debounce',
+				'300',
 			],
 			$command,
 		);
