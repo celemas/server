@@ -7,7 +7,7 @@ namespace Duon\Core\Server;
 use Duon\Cli\Command;
 use InvalidArgumentException;
 
-/** @psalm-api */
+/** @api */
 class Server extends Command
 {
 	protected string $name = 'server';
