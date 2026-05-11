@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Duon\Core\Server;
+namespace Celemas\Core\Server;
 
-use Duon\Cli\Command;
+use Celemas\Cli\Command;
 use InvalidArgumentException;
 
 /** @api */

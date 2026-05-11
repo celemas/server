@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Duon\Core\Server;
+namespace Celemas\Core\Server;
 
-use Duon\Cli\Opts;
+use Celemas\Cli\Opts;
 
 /** @internal */
 final class Options

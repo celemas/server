@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Duon\Core\Tests;
+namespace Celemas\Core\Tests;
 
-use Duon\Core\Server\Options;
-use Duon\Core\Server\Setup;
+use Celemas\Core\Server\Options;
+use Celemas\Core\Server\Setup;
 use InvalidArgumentException;
 
 final class ServerTest extends TestCase
@@ -66,7 +66,7 @@ final class ServerTest extends TestCase
 			'',
 			[
 				'app/**/*.php',
-				'vendor/duon/cms/**/*.{js,css,php}',
+				'vendor/celemas/cms/**/*.{js,css,php}',
 			],
 		);
 		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
@@ -81,7 +81,7 @@ final class ServerTest extends TestCase
 				'--files',
 				'app/**/*.php',
 				'--files',
-				'vendor/duon/cms/**/*.{js,css,php}',
+				'vendor/celemas/cms/**/*.{js,css,php}',
 				'--port',
 				'1983',
 				'--host',
@@ -140,16 +140,16 @@ final class ServerTest extends TestCase
 			'--watch',
 			'app/**/*.php',
 			'--watch',
-			'vendor/duon/cms/**/*.{js,css,php}',
+			'vendor/celemas/cms/**/*.{js,css,php}',
 		], function (): void {
 			$options = Options::from(1983, Setup::DEFAULT_WATCH);
 			$this->assertTrue($options->watch);
 			$this->assertSame(
 				[
 					'app/**/*.php',
-					'vendor/duon/cms/**/*.js',
-					'vendor/duon/cms/**/*.css',
-					'vendor/duon/cms/**/*.php',
+					'vendor/celemas/cms/**/*.js',
+					'vendor/celemas/cms/**/*.css',
+					'vendor/celemas/cms/**/*.php',
 				],
 				array_slice($options->watchFiles, 0, 4),
 			);
@@ -161,7 +161,7 @@ final class ServerTest extends TestCase
 		$this->withArgv(['run.php', 'server', '--watch'], function (): void {
 			$options = Options::from(
 				1983,
-				'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/duon/cms/**/*.{js,css,php}',
+				'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celemas/cms/**/*.{js,css,php}',
 			);
 			$this->assertSame(
 				[
@@ -171,9 +171,9 @@ final class ServerTest extends TestCase
 					'public/**/*.css',
 					'public/**/*.jpg',
 					'public/**/*.png',
-					'vendor/duon/cms/**/*.js',
-					'vendor/duon/cms/**/*.css',
-					'vendor/duon/cms/**/*.php',
+					'vendor/celemas/cms/**/*.js',
+					'vendor/celemas/cms/**/*.css',
+					'vendor/celemas/cms/**/*.php',
 				],
 				array_slice($options->watchFiles, 0, 9),
 			);

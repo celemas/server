@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Duon\Core\Server;
+namespace Celemas\Core\Server;
 
 use InvalidArgumentException;
 
