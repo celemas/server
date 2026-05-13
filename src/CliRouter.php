@@ -8,8 +8,8 @@ require_once 'functions.php';
 
 if (PHP_SAPI !== 'cli') {
 	$uri = $_SERVER['REQUEST_URI'] ?? '';
-	$routePrefix = getenv('DUON_ROUTE_PREFIX');
-	$publicDir = getenv('DUON_DOCUMENT_ROOT');
+	$routePrefix = getenv('CELEMAS_ROUTE_PREFIX');
+	$publicDir = getenv('CELEMAS_DOCUMENT_ROOT');
 
 	if ($routePrefix !== false) {
 		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri);

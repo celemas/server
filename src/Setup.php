@@ -88,10 +88,10 @@ final readonly class Setup
 	public function phpEnvironment(bool $debugger): array
 	{
 		$environment = array_merge((array) getenv(), [
-			'DUON_CLI_SERVER' => '1',
-			'DUON_DOCUMENT_ROOT' => $this->docroot,
-			'DUON_TERMINAL_COLUMNS' => $this->terminalColumns(),
-			'DUON_ROUTE_PREFIX' => $this->routePrefix,
+			'CELEMAS_CLI_SERVER' => '1',
+			'CELEMAS_DOCUMENT_ROOT' => $this->docroot,
+			'CELEMAS_TERMINAL_COLUMNS' => $this->terminalColumns(),
+			'CELEMAS_ROUTE_PREFIX' => $this->routePrefix,
 		]);
 
 		if ($debugger) {
