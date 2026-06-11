@@ -4,7 +4,8 @@
 
 declare(strict_types=1);
 
-require_once 'functions.php';
+require_once __DIR__ . '/Console.php';
+require_once __DIR__ . '/functions.php';
 
 if (PHP_SAPI !== 'cli') {
 	$uri = $_SERVER['REQUEST_URI'] ?? '';
@@ -20,6 +21,8 @@ if (PHP_SAPI !== 'cli') {
 	$start = microtime(true);
 
 	if ($publicDir) {
+		\Celemas\Core\Server\Console::clearException();
+
 		// serve existing files as-is
 		if (is_file($publicDir . $url)) {
 			/** @psalm-suppress PossiblyInvalidArgument */
@@ -50,9 +53,13 @@ if (PHP_SAPI !== 'cli') {
 		$response = require_once $publicDir . '/index.php';
 
 		if ($response) {
+			$fromHandler = \Celemas\Core\Server\Console::hasException();
+
 			/** @psalm-suppress MixedMethodCall, MixedArgument */
-			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start);
+			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start, $fromHandler);
 		}
+
+		\Celemas\Core\Server\Console::flushException();
 
 		return true;
 	}

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Celemas\Core\Tests;
 
+use Celemas\Core\Server\Console;
 use Celemas\Core\Server\Options;
 use Celemas\Core\Server\Setup;
 use InvalidArgumentException;
+use RuntimeException;
 
 final class ServerTest extends TestCase
 {
@@ -178,6 +180,96 @@ final class ServerTest extends TestCase
 				array_slice($options->watchFiles, 0, 9),
 			);
 		});
+	}
+
+	public function testConsoleFlushesHandledException(): void
+	{
+		$this->withCliServer(function (): void {
+			$this->withErrorLogFile(function (string $file): void {
+				Console::recordException(new RuntimeException('Boom'), trace: false);
+
+				$this->assertTrue(Console::hasException());
+
+				Console::flushException();
+				$log = file_get_contents($file);
+
+				$this->assertFalse(Console::hasException());
+				$this->assertIsString($log);
+				$this->assertStringContainsString(RuntimeException::class . ': Boom', $log);
+				$this->assertStringContainsString('in ', $log);
+				$this->assertStringNotContainsString('Trace:', $log);
+			});
+		});
+	}
+
+	public function testConsoleIgnoresExceptionOutsideDevServer(): void
+	{
+		$this->withCliServer(function (): void {
+			Console::recordException(new RuntimeException('Boom'), trace: true);
+			$this->assertTrue(Console::hasException());
+		});
+		$oldValue = $_SERVER['CELEMAS_CLI_SERVER'] ?? null;
+		$_SERVER['CELEMAS_CLI_SERVER'] = '0';
+
+		try {
+			Console::recordException(new RuntimeException('Ignored'), trace: true);
+
+			$this->assertFalse(Console::hasException());
+		} finally {
+			if ($oldValue === null) {
+				unset($_SERVER['CELEMAS_CLI_SERVER']);
+			} else {
+				$_SERVER['CELEMAS_CLI_SERVER'] = $oldValue;
+			}
+		}
+	}
+
+	/** @param callable(): void $callback */
+	private function withCliServer(callable $callback): void
+	{
+		$oldValue = $_SERVER['CELEMAS_CLI_SERVER'] ?? null;
+		$_SERVER['CELEMAS_CLI_SERVER'] = '1';
+
+		try {
+			$callback();
+		} finally {
+			Console::clearException();
+
+			if ($oldValue === null) {
+				unset($_SERVER['CELEMAS_CLI_SERVER']);
+			} else {
+				$_SERVER['CELEMAS_CLI_SERVER'] = $oldValue;
+			}
+		}
+	}
+
+	/** @param callable(string): void $callback */
+	private function withErrorLogFile(callable $callback): void
+	{
+		$previous = ini_get('error_log');
+		$file = tempnam(sys_get_temp_dir(), 'core-error-log-');
+
+		if ($file === false) {
+			$this->fail('Could not create temporary error log file.');
+		}
+
+		// @mago-expect lint:no-ini-set
+		ini_set('error_log', $file);
+
+		try {
+			$callback($file);
+		} finally {
+			if ($previous === false) {
+				ini_restore('error_log');
+			} else {
+				// @mago-expect lint:no-ini-set
+				ini_set('error_log', $previous);
+			}
+
+			if (is_file($file)) {
+				unlink($file);
+			}
+		}
 	}
 
 	private function withArgv(array $argv, callable $callback): void
