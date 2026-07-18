@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Celemas\Core\Server;
 
-use Celemas\Cli\Opts;
+use Celemas\Cli\Args;
 
 /** @internal */
 final class Options
@@ -18,29 +18,25 @@ final class Options
 	/** @var list<string> */
 	public array $watchFiles = Setup::DEFAULT_WATCH;
 
-	public static function from(int $defaultPort, array|string $defaultWatch): self
+	public static function from(int $defaultPort, array|string $defaultWatch, Args $args): self
 	{
-		$opts = new Opts();
 		$options = new self();
-		$options->host = $opts->get('-h', $opts->get('--host', 'localhost'));
-		$options->port = Setup::port($opts->get('-p', $opts->get(
-			'--port',
-			(string) $defaultPort,
-		)));
-		$options->filter = $opts->get('-f', $opts->get('--filter', ''));
-		$options->debugger = $opts->has('-d', $opts->has('--debug'));
-		$options->quiet = $opts->has('-q', $opts->has('--quiet'));
-		$options->watch = $opts->has('-w', $opts->has('--watch'));
-		$options->watchFiles = self::watchFiles($opts, $defaultWatch);
+		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
+		$options->port = Setup::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
+		$options->filter = $args->opt('-f', $args->opt('--filter', ''));
+		$options->debugger = $args->has('-d') || $args->has('--debug');
+		$options->quiet = $args->has('-q') || $args->has('--quiet');
+		$options->watch = $args->has('-w') || $args->has('--watch');
+		$options->watchFiles = self::watchFiles($args, $defaultWatch);
 
 		return $options;
 	}
 
 	/** @return list<string> */
-	private static function watchFiles(Opts $opts, array|string $defaultWatch): array
+	private static function watchFiles(Args $args, array|string $defaultWatch): array
 	{
 		$watch = WatchPattern::list($defaultWatch);
-		$values = self::watchValues($opts);
+		$values = self::watchValues($args);
 
 		if ($values === []) {
 			return $watch;
@@ -50,16 +46,16 @@ final class Options
 	}
 
 	/** @return list<string> */
-	private static function watchValues(Opts $opts): array
+	private static function watchValues(Args $args): array
 	{
 		$values = [];
 
-		if ($opts->has('-w')) {
-			$values = array_merge($values, $opts->all('-w', []));
+		if ($args->has('-w')) {
+			$values = array_merge($values, $args->opts('-w', []));
 		}
 
-		if ($opts->has('--watch')) {
-			$values = array_merge($values, $opts->all('--watch', []));
+		if ($args->has('--watch')) {
+			$values = array_merge($values, $args->opts('--watch', []));
 		}
 
 		return $values;
