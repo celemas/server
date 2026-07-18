@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Celemas\Core\Server;
+namespace Celema\Core\Server;
 
 use InvalidArgumentException;
 use Throwable;
@@ -88,10 +88,10 @@ final readonly class Setup
 	public function phpEnvironment(bool $debugger): array
 	{
 		$environment = array_merge((array) getenv(), [
-			'CELEMAS_CLI_SERVER' => '1',
-			'CELEMAS_DOCUMENT_ROOT' => $this->docroot,
-			'CELEMAS_TERMINAL_COLUMNS' => $this->terminalColumns(),
-			'CELEMAS_ROUTE_PREFIX' => $this->routePrefix,
+			'CELEMA_CLI_SERVER' => '1',
+			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
+			'CELEMA_TERMINAL_COLUMNS' => $this->terminalColumns(),
+			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
 		]);
 
 		if ($debugger) {

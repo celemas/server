@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Celemas\Core\Server;
+namespace Celema\Core\Server;
 
 use Throwable;
 
@@ -14,7 +14,7 @@ final class Console
 
 	public static function enabled(): bool
 	{
-		$value = $_SERVER['CELEMAS_CLI_SERVER'] ?? getenv('CELEMAS_CLI_SERVER');
+		$value = $_SERVER['CELEMA_CLI_SERVER'] ?? getenv('CELEMA_CLI_SERVER');
 
 		return $value === '1';
 	}

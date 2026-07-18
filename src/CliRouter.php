@@ -9,8 +9,8 @@ require_once __DIR__ . '/functions.php';
 
 if (PHP_SAPI !== 'cli') {
 	$uri = $_SERVER['REQUEST_URI'] ?? '';
-	$routePrefix = getenv('CELEMAS_ROUTE_PREFIX');
-	$publicDir = getenv('CELEMAS_DOCUMENT_ROOT');
+	$routePrefix = getenv('CELEMA_ROUTE_PREFIX');
+	$publicDir = getenv('CELEMA_DOCUMENT_ROOT');
 
 	if ($routePrefix !== false) {
 		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri);
@@ -21,7 +21,7 @@ if (PHP_SAPI !== 'cli') {
 	$start = microtime(true);
 
 	if ($publicDir) {
-		\Celemas\Core\Server\Console::clearException();
+		\Celema\Core\Server\Console::clearException();
 
 		// serve existing files as-is
 		if (is_file($publicDir . $url)) {
@@ -53,13 +53,13 @@ if (PHP_SAPI !== 'cli') {
 		$response = require_once $publicDir . '/index.php';
 
 		if ($response) {
-			$fromHandler = \Celemas\Core\Server\Console::hasException();
+			$fromHandler = \Celema\Core\Server\Console::hasException();
 
 			/** @psalm-suppress MixedMethodCall, MixedArgument */
 			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start, $fromHandler);
 		}
 
-		\Celemas\Core\Server\Console::flushException();
+		\Celema\Core\Server\Console::flushException();
 
 		return true;
 	}

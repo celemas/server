@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Celemas\Core\Server;
+namespace Celema\Core\Server;
 
 /** @internal */
 final class WatcherOutput

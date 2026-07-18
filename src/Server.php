@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Celemas\Core\Server;
+namespace Celema\Core\Server;
 
-use Celemas\Cli\Args;
-use Celemas\Cli\Command;
+use Celema\Console\Args;
+use Celema\Console\Command;
 use InvalidArgumentException;
 
 /** @api */

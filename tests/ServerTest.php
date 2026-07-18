@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Celemas\Core\Tests;
+namespace Celema\Core\Tests;
 
-use Celemas\Core\Server\Console;
-use Celemas\Core\Server\Options;
-use Celemas\Core\Server\Setup;
+use Celema\Console\Args;
+use Celema\Core\Server\Console;
+use Celema\Core\Server\Options;
+use Celema\Core\Server\Setup;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -68,7 +69,7 @@ final class ServerTest extends TestCase
 			'',
 			[
 				'app/**/*.php',
-				'vendor/celemas/cms/**/*.{js,css,php}',
+				'vendor/celema/cms/**/*.{js,css,php}',
 			],
 		);
 		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
@@ -83,7 +84,7 @@ final class ServerTest extends TestCase
 				'--files',
 				'app/**/*.php',
 				'--files',
-				'vendor/celemas/cms/**/*.{js,css,php}',
+				'vendor/celema/cms/**/*.{js,css,php}',
 				'--port',
 				'1983',
 				'--host',
@@ -118,68 +119,69 @@ final class ServerTest extends TestCase
 
 	public function testWatchFlagUsesConfiguredPatternWithoutValue(): void
 	{
-		$this->withArgv(['run.php', 'server', '--watch'], function (): void {
-			$options = Options::from(1983, ['**/*.php', '**/*.css']);
-			$this->assertTrue($options->watch);
-			$this->assertSame(['**/*.php', '**/*.css'], $options->watchFiles);
-		});
+		$options = Options::from(1983, ['**/*.php', '**/*.css'], new Args(['--watch']));
+
+		$this->assertTrue($options->watch);
+		$this->assertSame(['**/*.php', '**/*.css'], $options->watchFiles);
 	}
 
 	public function testWatchFlagValueOverridesConfiguredPattern(): void
 	{
-		$this->withArgv(['run.php', 'server', '--watch', '**/*.twig'], function (): void {
-			$options = Options::from(1983, ['**/*.php', '**/*.css']);
-			$this->assertTrue($options->watch);
-			$this->assertSame(['**/*.twig'], $options->watchFiles);
-		});
+		$options = Options::from(
+			1983,
+			['**/*.php', '**/*.css'],
+			new Args(['--watch=**/*.twig']),
+		);
+
+		$this->assertTrue($options->watch);
+		$this->assertSame(['**/*.twig'], $options->watchFiles);
 	}
 
 	public function testWatchFlagSupportsMultipleValues(): void
 	{
-		$this->withArgv([
-			'run.php',
-			'server',
-			'--watch',
-			'app/**/*.php',
-			'--watch',
-			'vendor/celemas/cms/**/*.{js,css,php}',
-		], function (): void {
-			$options = Options::from(1983, Setup::DEFAULT_WATCH);
-			$this->assertTrue($options->watch);
-			$this->assertSame(
-				[
-					'app/**/*.php',
-					'vendor/celemas/cms/**/*.js',
-					'vendor/celemas/cms/**/*.css',
-					'vendor/celemas/cms/**/*.php',
-				],
-				array_slice($options->watchFiles, 0, 4),
-			);
-		});
+		$options = Options::from(
+			1983,
+			Setup::DEFAULT_WATCH,
+			new Args([
+				'--watch=app/**/*.php',
+				'--watch=vendor/celema/cms/**/*.{js,css,php}',
+			]),
+		);
+
+		$this->assertTrue($options->watch);
+		$this->assertSame(
+			[
+				'app/**/*.php',
+				'vendor/celema/cms/**/*.js',
+				'vendor/celema/cms/**/*.css',
+				'vendor/celema/cms/**/*.php',
+			],
+			array_slice($options->watchFiles, 0, 4),
+		);
 	}
 
 	public function testWatchPatternParsesBraceCommasCorrectly(): void
 	{
-		$this->withArgv(['run.php', 'server', '--watch'], function (): void {
-			$options = Options::from(
-				1983,
-				'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celemas/cms/**/*.{js,css,php}',
-			);
-			$this->assertSame(
-				[
-					'app/**/*.php',
-					'public/**/*.js',
-					'public/**/*.php',
-					'public/**/*.css',
-					'public/**/*.jpg',
-					'public/**/*.png',
-					'vendor/celemas/cms/**/*.js',
-					'vendor/celemas/cms/**/*.css',
-					'vendor/celemas/cms/**/*.php',
-				],
-				array_slice($options->watchFiles, 0, 9),
-			);
-		});
+		$options = Options::from(
+			1983,
+			'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celema/cms/**/*.{js,css,php}',
+			new Args(['--watch']),
+		);
+
+		$this->assertSame(
+			[
+				'app/**/*.php',
+				'public/**/*.js',
+				'public/**/*.php',
+				'public/**/*.css',
+				'public/**/*.jpg',
+				'public/**/*.png',
+				'vendor/celema/cms/**/*.js',
+				'vendor/celema/cms/**/*.css',
+				'vendor/celema/cms/**/*.php',
+			],
+			array_slice($options->watchFiles, 0, 9),
+		);
 	}
 
 	public function testConsoleFlushesHandledException(): void
@@ -208,8 +210,8 @@ final class ServerTest extends TestCase
 			Console::recordException(new RuntimeException('Boom'), trace: true);
 			$this->assertTrue(Console::hasException());
 		});
-		$oldValue = $_SERVER['CELEMAS_CLI_SERVER'] ?? null;
-		$_SERVER['CELEMAS_CLI_SERVER'] = '0';
+		$oldValue = $_SERVER['CELEMA_CLI_SERVER'] ?? null;
+		$_SERVER['CELEMA_CLI_SERVER'] = '0';
 
 		try {
 			Console::recordException(new RuntimeException('Ignored'), trace: true);
@@ -217,9 +219,9 @@ final class ServerTest extends TestCase
 			$this->assertFalse(Console::hasException());
 		} finally {
 			if ($oldValue === null) {
-				unset($_SERVER['CELEMAS_CLI_SERVER']);
+				unset($_SERVER['CELEMA_CLI_SERVER']);
 			} else {
-				$_SERVER['CELEMAS_CLI_SERVER'] = $oldValue;
+				$_SERVER['CELEMA_CLI_SERVER'] = $oldValue;
 			}
 		}
 	}
@@ -227,8 +229,8 @@ final class ServerTest extends TestCase
 	/** @param callable(): void $callback */
 	private function withCliServer(callable $callback): void
 	{
-		$oldValue = $_SERVER['CELEMAS_CLI_SERVER'] ?? null;
-		$_SERVER['CELEMAS_CLI_SERVER'] = '1';
+		$oldValue = $_SERVER['CELEMA_CLI_SERVER'] ?? null;
+		$_SERVER['CELEMA_CLI_SERVER'] = '1';
 
 		try {
 			$callback();
@@ -236,9 +238,9 @@ final class ServerTest extends TestCase
 			Console::clearException();
 
 			if ($oldValue === null) {
-				unset($_SERVER['CELEMAS_CLI_SERVER']);
+				unset($_SERVER['CELEMA_CLI_SERVER']);
 			} else {
-				$_SERVER['CELEMAS_CLI_SERVER'] = $oldValue;
+				$_SERVER['CELEMA_CLI_SERVER'] = $oldValue;
 			}
 		}
 	}
@@ -268,22 +270,6 @@ final class ServerTest extends TestCase
 
 			if (is_file($file)) {
 				unlink($file);
-			}
-		}
-	}
-
-	private function withArgv(array $argv, callable $callback): void
-	{
-		$oldArgv = $_SERVER['argv'] ?? null;
-		$_SERVER['argv'] = $argv;
-
-		try {
-			$callback();
-		} finally {
-			if ($oldArgv === null) {
-				unset($_SERVER['argv']);
-			} else {
-				$_SERVER['argv'] = $oldArgv;
 			}
 		}
 	}
