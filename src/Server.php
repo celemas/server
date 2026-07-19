@@ -6,14 +6,36 @@ namespace Celema\Core\Server;
 
 use Celema\Console\Args;
 use Celema\Console\Command;
+use Celema\Console\Io;
+use Celema\Console\Opt;
 use InvalidArgumentException;
 
 /** @api */
-class Server extends Command
+#[Command('server', 'Serve the application on the builtin PHP server')]
+#[Opt(
+	'--host',
+	'Host to bind the dev server to. Defaults to localhost.',
+	short: '-h',
+	value: 'host',
+)]
+#[Opt(
+	'--port',
+	'Public port to listen on. When BrowserSync is enabled, the PHP server uses the next port.',
+	short: '-p',
+	value: 'port',
+)]
+#[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
+#[Opt('--debug', 'Enable an Xdebug session for the PHP server.', short: '-d')]
+#[Opt('--quiet', 'Reduce verbose output where supported.', short: '-q')]
+#[Opt(
+	'--watch',
+	'Run BrowserSync in front of the PHP server. Optional files override the configured watch patterns.',
+	short: '-w',
+	value: 'file',
+	optionalValue: true,
+)]
+class Server
 {
-	protected string $name = 'server';
-	protected string $description = 'Serve the application on the builtin PHP server';
-
 	public function __construct(
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
@@ -21,34 +43,7 @@ class Server extends Command
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 	) {}
 
-	public function help(): void
-	{
-		$this->helpHeader(withOptions: true);
-		$this->helpOption(
-			'--host',
-			'Host to bind the dev server to. Defaults to localhost.',
-			short: '-h',
-			value: 'host',
-		);
-		$this->helpOption(
-			'--port',
-			'Public port to listen on. When BrowserSync is enabled, the PHP server uses the next port.',
-			short: '-p',
-			value: 'port',
-		);
-		$this->helpOption('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex');
-		$this->helpOption('--debug', 'Enable an Xdebug session for the PHP server.', short: '-d');
-		$this->helpOption('--quiet', 'Reduce verbose output where supported.', short: '-q');
-		$this->helpOption(
-			'--watch',
-			'Run BrowserSync in front of the PHP server. Optional files override the configured watch patterns.',
-			short: '-w',
-			value: 'file',
-			optionalValue: true,
-		);
-	}
-
-	public function run(Args $args): int
+	public function __invoke(Args $args, Io $io): int
 	{
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
@@ -70,16 +65,16 @@ class Server extends Command
 			// Runtime still reports failures as a message string; print it and
 			// keep the previous exit-0 behaviour.
 			if (is_string($result)) {
-				$this->echoln($result);
+				$io->echoln($result);
 
-				return self::SUCCESS;
+				return 0;
 			}
 
 			return $result;
 		} catch (InvalidArgumentException $e) {
-			$this->echoln($e->getMessage());
+			$io->echoln($e->getMessage());
 
-			return self::SUCCESS;
+			return 0;
 		}
 	}
 
