@@ -76,8 +76,7 @@ final readonly class PhpOutput
 			$fields[2],
 			$fields[3],
 			$fields[5],
-			str_contains($fields[4], 'e'),
-			str_contains($fields[4], 'x'),
+			$fields[4],
 		);
 	}
 }

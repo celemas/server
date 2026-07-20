@@ -136,7 +136,7 @@ final class FrankenOutputTest extends TestCase
 				'uri' => $uri,
 				'headers' => $headers,
 			],
-			'duration' => 0.012345,
+			'duration' => 0.012_345,
 			'status' => 200,
 		]);
 	}

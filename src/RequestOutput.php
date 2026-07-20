@@ -20,9 +20,7 @@ final readonly class RequestOutput
 		string $method,
 		string $duration,
 		string $url,
-		bool $exception = false,
-		bool $xhr = false,
-		?float $time = null,
+		string $flags = '--',
 	): void {
 		$method = $this->plain($method);
 		$url = $this->plain(urldecode($url));
@@ -38,9 +36,11 @@ final readonly class RequestOutput
 			$status >= 500 => 'red',
 			default => 'white',
 		};
-		$flags = ($exception ? '[EXC]' : '') . ($xhr ? '[XHR]' : '');
-		$separator = $flags === '' ? '' : ' ';
-		$time ??= microtime(true);
+		$exception = str_contains($flags, 'e');
+		$xhr = str_contains($flags, 'x');
+		$labels = ($exception ? '[EXC]' : '') . ($xhr ? '[XHR]' : '');
+		$separator = $labels === '' ? '' : ' ';
+		$time = microtime(true);
 		$timestamp = sprintf(
 			'%s.%02d',
 			date('H:i:s', (int) $time),
@@ -48,7 +48,7 @@ final readonly class RequestOutput
 		);
 		$spacer = $this->spacer(
 			mb_strwidth("{$timestamp} {$status} {$method} {$url}"),
-			mb_strwidth("{$flags}{$separator}{$duration}s"),
+			mb_strwidth("{$labels}{$separator}{$duration}s"),
 		);
 
 		$this->io->echoln(
