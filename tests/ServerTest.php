@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Celema\Core\Tests;
 
 use Celema\Console\Args;
+use Celema\Console\BufferedIo;
 use Celema\Core\Server\Console;
 use Celema\Core\Server\Options;
+use Celema\Core\Server\Server;
 use Celema\Core\Server\Setup;
 use InvalidArgumentException;
 use RuntimeException;
@@ -99,6 +101,16 @@ final class ServerTest extends TestCase
 			],
 			$command,
 		);
+	}
+
+	public function testInvalidOptionsReportToStderrAndFail(): void
+	{
+		$io = new BufferedIo();
+		$exit = (new Server('/tmp/public'))(new Args(['--port=foo']), $io);
+
+		$this->assertSame(1, $exit);
+		$this->assertSame('', $io->output());
+		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
 	}
 
 	public function testPortRejectsInvalidValue(): void

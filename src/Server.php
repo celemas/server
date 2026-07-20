@@ -63,19 +63,18 @@ class Server
 				? $runtime->watch($phpOutput->line(...), $browserOutput)
 				: $runtime->serve($phpOutput->line(...));
 
-			// Runtime still reports failures as a message string; print it and
-			// keep the previous exit-0 behaviour.
+			// Runtime reports failures as a message string.
 			if (is_string($result)) {
-				$io->echoln($result);
+				$io->error($result);
 
-				return 0;
+				return 1;
 			}
 
 			return $result;
 		} catch (InvalidArgumentException $e) {
-			$io->echoln($e->getMessage());
+			$io->error($e->getMessage());
 
-			return 0;
+			return 1;
 		}
 	}
 }
