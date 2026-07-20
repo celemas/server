@@ -8,6 +8,7 @@ use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Core\Server\Console;
 use Celema\Core\Server\FrankenOptions;
+use Celema\Core\Server\FrankenPhp;
 use Celema\Core\Server\Options;
 use Celema\Core\Server\Server;
 use Celema\Core\Server\Setup;
@@ -68,6 +69,68 @@ final class ServerTest extends TestCase
 		$setup = new Setup('/tmp/public', '', frankenPhp: '__missing_frankenphp_binary__');
 
 		$this->assertTrue($setup->missingFrankenPhp());
+	}
+
+	public function testFrankenPhpCommandReportsMissingExecutable(): void
+	{
+		$io = new BufferedIo();
+		$exit = (new FrankenPhp('/tmp/public', executable: '__missing_frankenphp_binary__'))(
+			new Args([]),
+			$io,
+		);
+
+		$this->assertSame(1, $exit);
+		$this->assertSame('', $io->output());
+		$this->assertStringContainsString(
+			'FrankenPHP requires frankenphp in PATH.',
+			$io->errorOutput(),
+		);
+	}
+
+	public function testFrankenPhpCommandRejectsInvalidOptions(): void
+	{
+		$io = new BufferedIo();
+		$exit = (new FrankenPhp('/tmp/public'))(new Args(['--port=foo']), $io);
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
+	}
+
+	public function testFrankenPhpCommandRunsConfiguredExecutable(): void
+	{
+		$executable = tempnam(sys_get_temp_dir(), 'fake-frankenphp-');
+
+		if ($executable === false) {
+			$this->fail('Could not create a fake FrankenPHP executable.');
+		}
+
+		file_put_contents(
+			$executable,
+			"#!/bin/sh\nprintf '%s\\n' '{\"level\":\"info\",\"ts\":1784570344.75,"
+			. '"logger":"http.log.access","msg":"handled request",'
+			. '"request":{"method":"GET","uri":"/test","headers":{}},'
+			. "\"duration\":0.001,\"status\":200}' >&2\n",
+		);
+		chmod($executable, 0o755);
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = stream_socket_get_name($socket, false);
+		fclose($socket);
+		$this->assertIsString($address);
+		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new FrankenPhp('/tmp/public', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}"]),
+				$io,
+			);
+
+			$this->assertSame(0, $exit);
+			$this->assertStringContainsString('200 GET /test', $io->output());
+		} finally {
+			unlink($executable);
+		}
 	}
 
 	public function testFrankenOptionsUseCommandArguments(): void
