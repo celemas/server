@@ -84,7 +84,7 @@ class Server
 
 	private function echoPhpOutput(string $output, string $filter): void
 	{
-		if (preg_match('/^\[.*?\] \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}/', $output)) {
+		if (preg_match('/^\[[^\]]+\] (\[[0-9a-f:.]+\]|\d{1,3}(\.\d{1,3}){3}):\d{1,5}/i', $output)) {
 			return;
 		}
 
