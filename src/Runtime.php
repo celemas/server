@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Celema\Core\Server;
 
+use Celema\Console\Io;
+
 /** @internal */
 final readonly class Runtime
 {
 	public function __construct(
 		private Setup $setup,
 		private Options $options,
+		private Io $io,
 	) {}
 
 	public function serve(callable $phpOutput): string|int
@@ -80,8 +83,10 @@ final readonly class Runtime
 			return 'Failed to start BrowserSync.';
 		}
 
-		echo "BrowserSync proxy listening on http://{$this->options->host}:{$this->options->port}\n";
-		echo "PHP server listening on http://{$this->options->host}:{$backendPort}\n";
+		$this->io->echoln(
+			"BrowserSync proxy listening on http://{$this->options->host}:{$this->options->port}",
+		);
+		$this->io->echoln("PHP server listening on http://{$this->options->host}:{$backendPort}");
 		$this->echoDebugger();
 
 		Relay::run([
@@ -108,7 +113,7 @@ final readonly class Runtime
 	private function echoDebugger(): void
 	{
 		if ($this->options->debugger) {
-			echo "\033[0;31mXdebug session enabled\033[0m\n";
+			$this->io->echoln('<red>Xdebug session enabled</red>');
 		}
 	}
 

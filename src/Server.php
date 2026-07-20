@@ -50,7 +50,11 @@ class Server
 			$runtime = new Runtime(
 				new Setup($this->docroot, $this->routePrefix, $options->watchFiles),
 				$options,
+				$io,
 			);
+			// The relayed child output stays a verbatim pipe: it is not
+			// markup (request URIs may contain tag-like text), and
+			// escaping would strip the request log's colors.
 			$phpOutput = function (string $line) use ($options): void {
 				$this->echoPhpOutput($line, $options->filter);
 			};
