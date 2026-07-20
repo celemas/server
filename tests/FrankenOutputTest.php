@@ -129,7 +129,7 @@ final class FrankenOutputTest extends TestCase
 		return $this->entry([
 			'level' => 'info',
 			'ts' => 1_784_570_344.75,
-			'logger' => 'http.log.access',
+			'logger' => 'http.log.access.log0',
 			'msg' => 'handled request',
 			'request' => [
 				'method' => $method,

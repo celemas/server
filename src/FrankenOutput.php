@@ -34,8 +34,11 @@ final class FrankenOutput
 			return;
 		}
 
+		$logger = $entry['logger'] ?? null;
+
 		if (
-			($entry['logger'] ?? null) === 'http.log.access'
+			is_string($logger)
+			&& str_starts_with($logger, 'http.log.access')
 			&& ($entry['msg'] ?? null) === 'handled request'
 		) {
 			if (!$this->request($entry)) {

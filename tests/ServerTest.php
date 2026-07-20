@@ -55,6 +55,36 @@ final class ServerTest extends TestCase
 		);
 	}
 
+	public function testFrankenPhpCommandUsesCaddyfile(): void
+	{
+		$setup = new Setup('/tmp/public', '/prefix');
+
+		$this->assertSame(
+			[
+				'frankenphp',
+				'run',
+				'--config',
+				'/tmp/Caddyfile',
+				'--adapter',
+				'caddyfile',
+			],
+			$setup->frankenPhpCommand('localhost', 1983, true, '/tmp/Caddyfile'),
+		);
+	}
+
+	public function testFrankenPhpCaddyfileRoutesPrefix(): void
+	{
+		$setup = new Setup('/tmp/public', '/prefix/');
+		$config = $setup->frankenPhpCaddyfile('localhost', 1983, true);
+
+		$this->assertIsString($config);
+		$this->assertStringContainsString("\tdebug\n", $config);
+		$this->assertStringContainsString('"http://localhost:1983"', $config);
+		$this->assertStringContainsString('root * "/tmp/public"', $config);
+		$this->assertStringContainsString('@prefix path "/prefix" "/prefix/*"', $config);
+		$this->assertNull(new Setup('/tmp/public', '')->frankenPhpCaddyfile('localhost', 1983, false));
+	}
+
 	public function testFrankenPhpEnvironmentIdentifiesServer(): void
 	{
 		$environment = new Setup('/tmp/public', '/prefix')->frankenPhpEnvironment();
@@ -121,7 +151,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new FrankenPhp('/tmp/public', executable: $executable))(
+			$exit = (new FrankenPhp('/tmp/public', routePrefix: '/prefix', executable: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}"]),
 				$io,
 			);
