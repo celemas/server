@@ -24,11 +24,15 @@ final readonly class PhpOutput
 	/** The fixed '[Sun Jul 20 17:12:05 2026] ' prefix of PHP server lines. */
 	private const int TIMESTAMP = 27;
 
+	private RequestOutput $requests;
+
 	public function __construct(
 		private Io $io,
-		private string $filter,
-		private int $columns,
-	) {}
+		string $filter,
+		int $columns,
+	) {
+		$this->requests = new RequestOutput($io, $filter, $columns);
+	}
 
 	public function line(string $line): void
 	{
@@ -67,66 +71,13 @@ final readonly class PhpOutput
 			return;
 		}
 
-		$status = (int) $fields[1];
-		$method = $this->plain($fields[2]);
-		$duration = $fields[3];
-		$url = $this->plain(urldecode($fields[5]));
-
-		if ($this->filter !== '' && preg_match($this->filter, $url) === 1) {
-			return;
-		}
-
-		$statusColor = match (true) {
-			$status >= 200 && $status < 300 => 'green',
-			$status >= 300 && $status < 400 => 'blue',
-			$status >= 400 && $status < 500 => 'yellow',
-			$status >= 500 => 'red',
-			default => 'white',
-		};
-		$exc = str_contains($fields[4], 'e');
-		$xhr = str_contains($fields[4], 'x');
-		$flags = ($exc ? '[EXC]' : '') . ($xhr ? '[XHR]' : '');
-		$separator = $flags === '' ? '' : ' ';
-
-		$now = microtime(true);
-		$timestamp = sprintf('%s.%02d', date('H:i:s', (int) $now), (int) (($now - floor($now)) * 100));
-
-		$spacer = $this->spacer(
-			mb_strwidth("{$timestamp} {$status} {$method} {$url}"),
-			mb_strwidth("{$flags}{$separator}{$duration}s"),
+		$this->requests->line(
+			(int) $fields[1],
+			$fields[2],
+			$fields[3],
+			$fields[5],
+			str_contains($fields[4], 'e'),
+			str_contains($fields[4], 'x'),
 		);
-
-		$this->io->echoln(
-			"<white>{$timestamp}</white> "
-			. "<{$statusColor}>{$status}</{$statusColor}> "
-			. $this->io->escape($method)
-			. ' '
-			. "<{$statusColor}>"
-			. $this->io->escape($url)
-			. "</{$statusColor}>"
-			. " <gray>{$spacer}</gray> "
-			. ($exc ? '<cyan>[EXC]</cyan>' : '')
-			. ($xhr ? '<cyan>[XHR]</cyan>' : '')
-			. $separator
-			. "<white>{$duration}s</white>",
-		);
-	}
-
-	private function spacer(int $left, int $right): string
-	{
-		if ($left > $this->columns) {
-			$left %= $this->columns;
-		}
-
-		return str_repeat('.', $this->columns - (($left + $right + 2) % $this->columns));
-	}
-
-	/**
-	 * Strips all control characters, so the widths above match what the
-	 * escaped text renders as and one request stays one log line.
-	 */
-	private function plain(string $text): string
-	{
-		return (string) preg_replace('/[\x00-\x1F\x7F]/', replacement: '', subject: $text);
 	}
 }
