@@ -153,8 +153,13 @@ final readonly class Setup
 
 	private function terminalColumns(): string
 	{
+		// No stty on Windows; without a terminal it only prints an error.
+		if (DIRECTORY_SEPARATOR === '\\' || !stream_isatty(STDIN)) {
+			return '80';
+		}
+
 		try {
-			$size = trim(exec('stty size') ?: '');
+			$size = trim(exec('stty size 2>/dev/null') ?: '');
 
 			if ($size === '') {
 				return '80';
