@@ -16,12 +16,19 @@ final class Console
 	{
 		$value = $_SERVER['CELEMA_CLI_SERVER'] ?? getenv('CELEMA_CLI_SERVER');
 
-		return $value === '1';
+		return $value === '1' || $value === 'frankenphp';
 	}
 
 	public static function recordException(Throwable $exception, bool $trace): void
 	{
 		if (!self::enabled()) {
+			return;
+		}
+
+		if (self::frankenPhp()) {
+			self::writeMarker();
+			self::writeException($exception, $trace);
+
 			return;
 		}
 
@@ -46,13 +53,36 @@ final class Console
 		$trace = self::$trace;
 		self::clearException();
 
-		if ($exception === null) {
-			return;
+		if ($exception !== null) {
+			self::writeException($exception, $trace);
 		}
+	}
+
+	private static function frankenPhp(): bool
+	{
+		$value = $_SERVER['CELEMA_CLI_SERVER'] ?? getenv('CELEMA_CLI_SERVER');
+
+		return $value === 'frankenphp';
+	}
+
+	private static function writeMarker(): void
+	{
+		$context = json_encode([
+			'method' => strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '-')),
+			'uri' => (string) ($_SERVER['REQUEST_URI'] ?? ''),
+		], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
+
+		if (is_string($context)) {
+			self::write('celema-exception ' . $context);
+		}
+	}
+
+	private static function writeException(Throwable $exception, bool $withTrace): void
+	{
 		self::write($exception::class . ': ' . self::message($exception));
 		self::write('in ' . $exception->getFile() . ':' . $exception->getLine());
 
-		if (!$trace) {
+		if (!$withTrace) {
 			return;
 		}
 

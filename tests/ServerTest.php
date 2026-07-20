@@ -276,6 +276,31 @@ final class ServerTest extends TestCase
 		});
 	}
 
+	public function testConsoleReportsFrankenPhpExceptionImmediately(): void
+	{
+		$this->withServer('frankenphp', function (): void {
+			$this->withErrorLogFile(function (string $file): void {
+				$_SERVER['REQUEST_METHOD'] = 'POST';
+				$_SERVER['REQUEST_URI'] = '/api?x=1';
+
+				try {
+					Console::recordException(new RuntimeException('Boom'), trace: false);
+				} finally {
+					unset($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+				}
+
+				$log = file_get_contents($file);
+				$this->assertFalse(Console::hasException());
+				$this->assertIsString($log);
+				$this->assertStringContainsString(
+					'celema-exception {"method":"POST","uri":"/api?x=1"}',
+					$log,
+				);
+				$this->assertStringContainsString(RuntimeException::class . ': Boom', $log);
+			});
+		});
+	}
+
 	public function testConsoleIgnoresExceptionOutsideDevServer(): void
 	{
 		$this->withCliServer(function (): void {
@@ -301,8 +326,14 @@ final class ServerTest extends TestCase
 	/** @param callable(): void $callback */
 	private function withCliServer(callable $callback): void
 	{
+		$this->withServer('1', $callback);
+	}
+
+	/** @param callable(): void $callback */
+	private function withServer(string $server, callable $callback): void
+	{
 		$oldValue = $_SERVER['CELEMA_CLI_SERVER'] ?? null;
-		$_SERVER['CELEMA_CLI_SERVER'] = '1';
+		$_SERVER['CELEMA_CLI_SERVER'] = $server;
 
 		try {
 			$callback();
