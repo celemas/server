@@ -52,19 +52,16 @@ class Server
 				$options,
 				$io,
 			);
-			// The relayed child output stays a verbatim pipe: it is not
-			// markup (request URIs may contain tag-like text), and
-			// escaping would strip the request log's colors.
-			$phpOutput = function (string $line) use ($options): void {
-				$this->echoPhpOutput($line, $options->filter);
-			};
+			$phpOutput = new PhpOutput($io, $options->filter, Setup::terminalColumns());
+			// BrowserSync's output passes through verbatim; it colors
+			// and formats its own lines.
 			$browserOutput = static function (string $line): void {
 				echo $line;
 			};
 
 			$result = $options->watch
-				? $runtime->watch($phpOutput, $browserOutput)
-				: $runtime->serve($phpOutput);
+				? $runtime->watch($phpOutput->line(...), $browserOutput)
+				: $runtime->serve($phpOutput->line(...));
 
 			// Runtime still reports failures as a message string; print it and
 			// keep the previous exit-0 behaviour.
@@ -80,28 +77,5 @@ class Server
 
 			return 0;
 		}
-	}
-
-	private function echoPhpOutput(string $output, string $filter): void
-	{
-		if (preg_match('/^\[[^\]]+\] (\[[0-9a-f:.]+\]|\d{1,3}(\.\d{1,3}){3}):\d{1,5}/i', $output)) {
-			return;
-		}
-
-		$openingPos = (int) strpos($output, '[');
-		$closingPos = (int) strpos($output, ']');
-		$uriPos = (int) strpos($output, '/');
-
-		if ($filter && preg_match($filter, substr($output, $uriPos))) {
-			return;
-		}
-
-		if ($openingPos === 0 && $closingPos === 25) {
-			echo substr($output, 27);
-
-			return;
-		}
-
-		echo $output;
 	}
 }

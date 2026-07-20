@@ -90,7 +90,6 @@ final readonly class Setup
 		$environment = array_merge((array) getenv(), [
 			'CELEMA_CLI_SERVER' => '1',
 			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
-			'CELEMA_TERMINAL_COLUMNS' => $this->terminalColumns(),
 			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
 		]);
 
@@ -151,25 +150,20 @@ final readonly class Setup
 		return $command;
 	}
 
-	private function terminalColumns(): string
+	public static function terminalColumns(): int
 	{
 		// No stty on Windows; without a terminal it only prints an error.
 		if (DIRECTORY_SEPARATOR === '\\' || !stream_isatty(STDIN)) {
-			return '80';
+			return 80;
 		}
 
 		try {
 			$size = trim(exec('stty size 2>/dev/null') ?: '');
+			$columns = (int) (explode(' ', $size)[1] ?? 0);
 
-			if ($size === '') {
-				return '80';
-			}
-
-			$parts = explode(' ', $size);
-
-			return $parts[1] ?? '80';
+			return $columns > 0 ? $columns : 80;
 		} catch (Throwable) {
-			return '80';
+			return 80;
 		}
 	}
 
