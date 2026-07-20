@@ -16,6 +16,7 @@ final readonly class Setup
 		private string $docroot,
 		private string $routePrefix,
 		private array $watch = self::DEFAULT_WATCH,
+		private string $frankenPhp = 'frankenphp',
 	) {}
 
 	public static function port(string $value): int
@@ -57,6 +58,11 @@ final readonly class Setup
 		}
 
 		return $missing;
+	}
+
+	public function missingFrankenPhp(): bool
+	{
+		return !$this->commandAvailable($this->frankenPhp);
 	}
 
 	public function portUnavailableMessage(string $host, int $port): ?string
@@ -115,6 +121,25 @@ final readonly class Setup
 		return $command;
 	}
 
+	public function frankenPhpCommand(string $host, int $port, bool $debug): array
+	{
+		$command = [
+			$this->frankenPhp,
+			'php-server',
+			'--root',
+			$this->docroot,
+			'--listen',
+			"{$host}:{$port}",
+			'--access-log',
+		];
+
+		if ($debug) {
+			$command[] = '--debug';
+		}
+
+		return $command;
+	}
+
 	public function browserSyncCommand(string $host, int $port, int $backendPort, bool $quiet): array
 	{
 		$command = [
@@ -148,6 +173,15 @@ final readonly class Setup
 		}
 
 		return $command;
+	}
+
+	public function frankenPhpEnvironment(): array
+	{
+		return array_merge((array) getenv(), [
+			'CELEMA_CLI_SERVER' => 'frankenphp',
+			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
+			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
+		]);
 	}
 
 	public static function terminalColumns(): int

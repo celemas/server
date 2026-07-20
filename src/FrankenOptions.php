@@ -7,12 +7,12 @@ namespace Celema\Core\Server;
 use Celema\Console\Args;
 
 /** @internal */
-final class Options
+final class FrankenOptions
 {
 	public string $host = 'localhost';
 	public int $port = 1983;
 	public string $filter = '';
-	public bool $debugger = false;
+	public bool $debug = false;
 	public bool $quiet = false;
 	public bool $watch = false;
 	/** @var list<string> */
@@ -24,40 +24,11 @@ final class Options
 		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
 		$options->port = Setup::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
 		$options->filter = $args->opt('-f', $args->opt('--filter', ''));
-		$options->debugger = $args->has('-d') || $args->has('--debug');
+		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
 		$options->watch = $args->has('-w') || $args->has('--watch');
-		$options->watchFiles = self::watchFiles($args, $defaultWatch);
+		$options->watchFiles = Options::watchFiles($args, $defaultWatch);
 
 		return $options;
-	}
-
-	/** @return list<string> */
-	public static function watchFiles(Args $args, array|string $defaultWatch): array
-	{
-		$watch = WatchPattern::list($defaultWatch);
-		$values = self::watchValues($args);
-
-		if ($values === []) {
-			return $watch;
-		}
-
-		return WatchPattern::list($values);
-	}
-
-	/** @return list<string> */
-	private static function watchValues(Args $args): array
-	{
-		$values = [];
-
-		if ($args->has('-w')) {
-			$values = array_merge($values, $args->opts('-w', []));
-		}
-
-		if ($args->has('--watch')) {
-			$values = array_merge($values, $args->opts('--watch', []));
-		}
-
-		return $values;
 	}
 }

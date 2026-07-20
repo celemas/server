@@ -7,6 +7,7 @@ namespace Celema\Core\Tests;
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Core\Server\Console;
+use Celema\Core\Server\FrankenOptions;
 use Celema\Core\Server\Options;
 use Celema\Core\Server\Server;
 use Celema\Core\Server\Setup;
@@ -32,6 +33,65 @@ final class ServerTest extends TestCase
 			],
 			$command,
 		);
+	}
+
+	public function testFrankenPhpCommandUsesConfiguredServer(): void
+	{
+		$setup = new Setup('/tmp/public', '');
+
+		$this->assertSame(
+			[
+				'frankenphp',
+				'php-server',
+				'--root',
+				'/tmp/public',
+				'--listen',
+				'localhost:1983',
+				'--access-log',
+				'--debug',
+			],
+			$setup->frankenPhpCommand('localhost', 1983, true),
+		);
+	}
+
+	public function testFrankenPhpEnvironmentIdentifiesServer(): void
+	{
+		$environment = new Setup('/tmp/public', '/prefix')->frankenPhpEnvironment();
+
+		$this->assertSame('frankenphp', $environment['CELEMA_CLI_SERVER']);
+		$this->assertSame('/tmp/public', $environment['CELEMA_DOCUMENT_ROOT']);
+		$this->assertSame('/prefix', $environment['CELEMA_ROUTE_PREFIX']);
+	}
+
+	public function testMissingFrankenPhpIsReported(): void
+	{
+		$setup = new Setup('/tmp/public', '', frankenPhp: '__missing_frankenphp_binary__');
+
+		$this->assertTrue($setup->missingFrankenPhp());
+	}
+
+	public function testFrankenOptionsUseCommandArguments(): void
+	{
+		$options = FrankenOptions::from(
+			1983,
+			['**/*.php'],
+			new Args([
+				'--host=127.0.0.1',
+				'--port=8080',
+				'--filter=#health#',
+				'--debug',
+				'--quiet',
+				'--watch=**/*.twig',
+			]),
+		);
+
+		$this->assertSame('127.0.0.1', $options->host);
+		$this->assertSame(8080, $options->port);
+		$this->assertSame('#health#', $options->filter);
+		$this->assertTrue($options->debug);
+		$this->assertTrue($options->quiet);
+		$this->assertTrue($options->watch);
+		$this->assertSame(['**/*.twig'], $options->watchFiles);
 	}
 
 	public function testBrowserSyncCommandUsesProxyPort(): void
