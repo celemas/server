@@ -41,6 +41,7 @@ class Server
 		protected readonly int $port = 1983,
 		protected readonly string $routePrefix = '',
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
+		protected readonly string $executable = 'php',
 	) {}
 
 	public function __invoke(Args $args, Io $io): int
@@ -48,7 +49,12 @@ class Server
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
 			$runtime = new PhpRuntime(
-				new Setup($this->docroot, $this->routePrefix, $options->watchFiles),
+				new Setup(
+					$this->docroot,
+					$this->routePrefix,
+					$options->watchFiles,
+					php: $this->executable,
+				),
 				$options,
 				$io,
 			);

@@ -16,6 +16,7 @@ final readonly class Setup
 		private string $routePrefix,
 		private array $watch = self::DEFAULT_WATCH,
 		private string $frankenPhp = 'frankenphp',
+		private string $php = 'php',
 	) {}
 
 	public function missingBrowserSyncDependencies(): array
@@ -55,7 +56,7 @@ final readonly class Setup
 
 	public function phpCommand(string $host, int $port, bool $quiet): array
 	{
-		$command = ['php', '-S', "{$host}:{$port}"];
+		$command = [$this->php, '-S', "{$host}:{$port}"];
 
 		if ($quiet) {
 			$command[] = '-q';

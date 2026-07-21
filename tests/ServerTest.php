@@ -164,6 +164,41 @@ final class ServerTest extends TestCase
 		}
 	}
 
+	public function testServerCommandRunsConfiguredExecutable(): void
+	{
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+
+		if ($executable === false) {
+			$this->fail('Could not create a fake PHP executable.');
+		}
+
+		file_put_contents(
+			$executable,
+			"#!/bin/sh\nprintf '%s\\n' "
+			. "'[Sun Jul 20 17:12:05 2026] celema-request 200 GET 0.00016 -- /test' >&2\n",
+		);
+		chmod($executable, 0o755);
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = stream_socket_get_name($socket, false);
+		fclose($socket);
+		$this->assertIsString($address);
+		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}"]),
+				$io,
+			);
+
+			$this->assertSame(0, $exit);
+			$this->assertStringContainsString('200 GET /test', $io->output());
+		} finally {
+			unlink($executable);
+		}
+	}
+
 	public function testOptionsUseCommandArguments(): void
 	{
 		$options = Options::from(
