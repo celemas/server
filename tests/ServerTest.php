@@ -266,6 +266,27 @@ final class ServerTest extends TestCase
 		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
 	}
 
+	public function testPortUnavailableMessageUsesNativeError(): void
+	{
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = stream_socket_get_name($socket, false);
+		$this->assertIsString($address);
+		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
+
+		try {
+			$message = new Setup('/tmp/public', '')->portUnavailableMessage('127.0.0.1', $port);
+
+			$this->assertIsString($message);
+			$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available: ", $message);
+			$this->assertStringNotContainsString('stream_socket_server', $message);
+		} finally {
+			fclose($socket);
+		}
+
+		$this->assertNull(new Setup('/tmp/public', '')->portUnavailableMessage('127.0.0.1', $port));
+	}
+
 	public function testPortRejectsInvalidValue(): void
 	{
 		$this->expectException(InvalidArgumentException::class);

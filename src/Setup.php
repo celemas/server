@@ -70,15 +70,19 @@ final readonly class Setup
 		$errorCode = 0;
 		$errorMessage = '';
 		$server = ErrorTrap::run(
-			static fn(): mixed => stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage),
-			$errorMessage,
+			static function () use ($host, $port, &$errorCode, &$errorMessage): mixed {
+				return stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage);
+			},
+			$trapped,
 		);
 
 		if ($server === false) {
 			$message = "Port {$host}:{$port} is not available";
+			// The native error message; the trapped warning as fallback.
+			$detail = $errorMessage !== '' ? $errorMessage : (string) $trapped;
 
-			if ($errorMessage !== '') {
-				$message .= ": {$errorMessage}";
+			if ($detail !== '') {
+				$message .= ": {$detail}";
 			}
 
 			return $message . '.';
