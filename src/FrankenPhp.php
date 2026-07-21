@@ -20,7 +20,7 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--port',
-	'Public port to listen on. When BrowserSync is enabled, FrankenPHP uses the next port.',
+	'Public port to listen on. When BrowserSync is enabled, FrankenPHP uses ten times this port, or the next free port above.',
 	short: '-p',
 	value: 'port',
 )]

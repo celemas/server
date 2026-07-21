@@ -22,7 +22,7 @@ abstract class Runtime
 
 	public function serve(callable $output): string|int
 	{
-		$message = $this->missing() ?? $this->setup->portUnavailableMessage(
+		$message = $this->missing() ?? Ports::unavailableMessage(
 			$this->options->host,
 			$this->options->port,
 		);
@@ -49,15 +49,20 @@ abstract class Runtime
 
 	public function watch(callable $output, callable $browserOutput): string|int
 	{
-		$backendPort = Setup::backendPort($this->options->port);
 		$message =
-			$this->missing() ?? $this->missingBrowserSync() ?? $this->setup->portUnavailableMessage(
+			$this->missing() ?? $this->missingBrowserSync() ?? Ports::unavailableMessage(
 				$this->options->host,
 				$this->options->port,
-			) ?? $this->setup->portUnavailableMessage($this->options->host, $backendPort);
+			);
 
 		if ($message !== null) {
 			return $message;
+		}
+
+		$backendPort = Ports::backendPort($this->options->host, $this->options->port);
+
+		if (is_string($backendPort)) {
+			return $backendPort;
 		}
 
 		try {

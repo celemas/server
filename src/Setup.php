@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Celema\Core\Server;
 
-use InvalidArgumentException;
 use Throwable;
 
 /** @internal */
@@ -18,17 +17,6 @@ final readonly class Setup
 		private array $watch = self::DEFAULT_WATCH,
 		private string $frankenPhp = 'frankenphp',
 	) {}
-
-	public static function backendPort(int $port): int
-	{
-		if ($port >= 65_535) {
-			throw new InvalidArgumentException(
-				'BrowserSync needs a free backend port after the public port.',
-			);
-		}
-
-		return $port + 1;
-	}
 
 	public function missingBrowserSyncDependencies(): array
 	{
@@ -48,36 +36,6 @@ final readonly class Setup
 	public function missingFrankenPhp(): bool
 	{
 		return !$this->commandAvailable($this->frankenPhp);
-	}
-
-	public function portUnavailableMessage(string $host, int $port): ?string
-	{
-		$errorCode = 0;
-		$errorMessage = '';
-		$server = ErrorTrap::run(
-			static function () use ($host, $port, &$errorCode, &$errorMessage): mixed {
-				return stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage);
-			},
-			$trapped,
-		);
-
-		if ($server === false) {
-			$message = "Port {$host}:{$port} is not available";
-			// The native error message; the trapped warning as fallback.
-			$detail = $errorMessage !== '' ? $errorMessage : (string) $trapped;
-
-			if ($detail !== '') {
-				$message .= ": {$detail}";
-			}
-
-			return $message . '.';
-		}
-
-		if (is_resource($server)) {
-			fclose($server);
-		}
-
-		return null;
 	}
 
 	public function phpEnvironment(bool $debug): array

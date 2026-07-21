@@ -20,7 +20,7 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--port',
-	'Public port to listen on. When BrowserSync is enabled, the PHP server uses the next port.',
+	'Public port to listen on. When BrowserSync is enabled, the PHP server uses ten times this port, or the next free port above.',
 	short: '-p',
 	value: 'port',
 )]

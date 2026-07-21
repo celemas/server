@@ -7,8 +7,10 @@ namespace Celema\Core\Tests;
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Core\Server\Console;
+use Celema\Core\Server\ErrorTrap;
 use Celema\Core\Server\FrankenPhp;
 use Celema\Core\Server\Options;
+use Celema\Core\Server\Ports;
 use Celema\Core\Server\Server;
 use Celema\Core\Server\Setup;
 use InvalidArgumentException;
@@ -291,7 +293,7 @@ final class ServerTest extends TestCase
 		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
 
 		try {
-			$message = new Setup('/tmp/public', '')->portUnavailableMessage('127.0.0.1', $port);
+			$message = Ports::unavailableMessage('127.0.0.1', $port);
 
 			$this->assertIsString($message);
 			$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available: ", $message);
@@ -300,7 +302,7 @@ final class ServerTest extends TestCase
 			fclose($socket);
 		}
 
-		$this->assertNull(new Setup('/tmp/public', '')->portUnavailableMessage('127.0.0.1', $port));
+		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
 	}
 
 	public function testPortRejectsInvalidValue(): void
@@ -311,12 +313,71 @@ final class ServerTest extends TestCase
 		Options::port('foo');
 	}
 
-	public function testBrowserSyncNeedsBackendPort(): void
+	public function testBackendPortScalesThePublicPortTimesTen(): void
 	{
-		$this->expectException(InvalidArgumentException::class);
-		$this->expectExceptionMessage('BrowserSync needs a free backend port after the public port.');
+		$port = Ports::backendPort('127.0.0.1', 1983);
 
-		Setup::backendPort(65_535);
+		$this->assertIsInt($port);
+		$this->assertGreaterThanOrEqual(19_830, $port);
+		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
+	}
+
+	public function testBackendPortSkipsOccupiedPorts(): void
+	{
+		$first = Ports::backendPort('127.0.0.1', 1983);
+		$this->assertIsInt($first);
+		$socket = stream_socket_server("tcp://127.0.0.1:{$first}");
+		$this->assertIsResource($socket);
+
+		try {
+			$second = Ports::backendPort('127.0.0.1', 1983);
+
+			$this->assertIsInt($second);
+			$this->assertGreaterThan($first, $second);
+		} finally {
+			fclose($socket);
+		}
+	}
+
+	public function testBackendPortFallsBackWhenTimesTenOverflows(): void
+	{
+		$port = Ports::backendPort('127.0.0.1', 6913);
+
+		$this->assertIsInt($port);
+		$this->assertGreaterThanOrEqual(16_913, $port);
+	}
+
+	public function testBackendPortReportsAnExhaustedRange(): void
+	{
+		// 55534 + 10000 leaves only 65534 and 65535 to try; occupy both.
+		$sockets = [];
+
+		foreach ([65_534, 65_535] as $port) {
+			$socket = ErrorTrap::run(
+				static fn(): mixed => stream_socket_server("tcp://127.0.0.1:{$port}"),
+			);
+
+			if (is_resource($socket)) {
+				$sockets[] = $socket;
+			}
+		}
+
+		try {
+			$message = Ports::backendPort('127.0.0.1', 55_534);
+
+			$this->assertSame('No free BrowserSync backend port between 65534 and 65535.', $message);
+		} finally {
+			foreach ($sockets as $socket) {
+				fclose($socket);
+			}
+		}
+	}
+
+	public function testBackendPortRejectsTheMaximumPublicPort(): void
+	{
+		$message = Ports::backendPort('127.0.0.1', 65_535);
+
+		$this->assertSame('BrowserSync needs a free backend port above the public port.', $message);
 	}
 
 	public function testWatchFlagUsesConfiguredPatternWithoutValue(): void
