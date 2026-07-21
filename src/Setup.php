@@ -209,7 +209,10 @@ final readonly class Setup
 	{
 		$output = [];
 		$exitCode = 1;
-		exec('which ' . escapeshellarg($command) . ' 2>/dev/null', $output, $exitCode);
+		$windows = DIRECTORY_SEPARATOR === '\\';
+		$finder = $windows ? 'where' : 'which';
+		$null = $windows ? 'NUL' : '/dev/null';
+		exec("{$finder} " . escapeshellarg($command) . " 2>{$null}", $output, $exitCode);
 
 		return $exitCode === 0;
 	}
