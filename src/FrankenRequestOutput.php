@@ -9,6 +9,9 @@ use Celema\Console\Io;
 /** @internal */
 final class FrankenRequestOutput
 {
+	/** Bounds pending markers whose request never reaches the access log. */
+	private const int MAX_PENDING = 100;
+
 	private RequestOutput $output;
 	/** @var array<string, int> */
 	private array $exceptions = [];
@@ -64,6 +67,11 @@ final class FrankenRequestOutput
 		}
 
 		$key = self::key($method, $url);
+
+		if (!isset($this->exceptions[$key]) && count($this->exceptions) >= self::MAX_PENDING) {
+			unset($this->exceptions[(string) array_key_first($this->exceptions)]);
+		}
+
 		$this->exceptions[$key] = ($this->exceptions[$key] ?? 0) + 1;
 
 		return true;

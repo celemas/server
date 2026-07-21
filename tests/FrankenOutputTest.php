@@ -41,6 +41,27 @@ final class FrankenOutputTest extends TestCase
 		$this->assertStringContainsString('[EXC][XHR] 0.01235s', $io->output());
 	}
 
+	public function testPendingExceptionMarkersAreBounded(): void
+	{
+		$io = new BufferedIo();
+		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+
+		for ($i = 0; $i <= 100; $i++) {
+			$output->line($this->entry([
+				'logger' => 'frankenphp',
+				'msg' => "celema-exception {\"method\":\"GET\",\"uri\":\"/page-{$i}\"}",
+			]));
+		}
+
+		$output->line($this->access('/page-0'));
+		$output->line($this->access('/page-100'));
+
+		$lines = explode("\n", trim($io->output()));
+		$this->assertCount(2, $lines);
+		$this->assertStringNotContainsString('[EXC]', $lines[0]);
+		$this->assertStringContainsString('[EXC]', $lines[1]);
+	}
+
 	public function testAccessLogFilterAndStringXhrHeader(): void
 	{
 		$io = new BufferedIo();
