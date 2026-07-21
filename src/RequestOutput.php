@@ -69,10 +69,6 @@ final readonly class RequestOutput
 
 	private function spacer(int $left, int $right): string
 	{
-		if ($left > $this->columns) {
-			$left %= $this->columns;
-		}
-
 		return str_repeat('.', $this->columns - (($left + $right + 2) % $this->columns));
 	}
 

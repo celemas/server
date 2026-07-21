@@ -54,7 +54,7 @@ final class FrankenOutput
 			return;
 		}
 
-		if (($entry['logger'] ?? null) === 'frankenphp') {
+		if ($logger === 'frankenphp') {
 			if ($this->requests->exception($message)) {
 				return;
 			}
