@@ -16,7 +16,9 @@ if (PHP_SAPI !== 'cli') {
 		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri);
 	}
 
-	$url = urldecode(parse_url($uri, PHP_URL_PATH));
+	// parse_url() returns null/false for pathless or seriously malformed URIs.
+	$path = parse_url($uri, PHP_URL_PATH);
+	$url = urldecode(is_string($path) ? $path : '/');
 
 	$start = microtime(true);
 
