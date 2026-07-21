@@ -27,18 +27,17 @@ final class FrankenOutputTest extends TestCase
 		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
-			'msg' => 'celema-exception {"method":"POST","uri":"/api"}',
-		]));
-		$output->line($this->entry([
-			'logger' => 'frankenphp',
-			'msg' => 'RuntimeException: Boom',
+			'msg' => 'celema-exception {"method":"POST","uri":"/api","lines":["RuntimeException: Boom","in /app.php:10"]}',
 		]));
 		$output->line($this->access('/api', method: 'POST', headers: [
 			'x-requested-with' => ['XMLHttpRequest'],
 		]));
 
-		$this->assertStringContainsString('RuntimeException: Boom', $io->output());
-		$this->assertStringContainsString('[EXC][XHR] 0.01235s', $io->output());
+		$lines = explode("\n", trim($io->output()));
+		$this->assertCount(3, $lines);
+		$this->assertStringContainsString('[EXC][XHR] 0.01235s', $lines[0]);
+		$this->assertSame('RuntimeException: Boom', $lines[1]);
+		$this->assertSame('in /app.php:10', $lines[2]);
 	}
 
 	public function testPendingExceptionMarkersAreBounded(): void

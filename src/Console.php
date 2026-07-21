@@ -26,8 +26,7 @@ final class Console
 		}
 
 		if (self::frankenPhp()) {
-			self::writeMarker();
-			self::writeException($exception, $trace);
+			self::writeFrankenException($exception, $trace);
 
 			return;
 		}
@@ -65,11 +64,13 @@ final class Console
 		return $value === 'frankenphp';
 	}
 
-	private static function writeMarker(): void
+	private static function writeFrankenException(Throwable $exception, bool $withTrace): void
 	{
+		// Keep the details with the marker so the parent can print them after the access log.
 		$context = json_encode([
 			'method' => strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '-')),
 			'uri' => (string) ($_SERVER['REQUEST_URI'] ?? ''),
+			'lines' => self::exceptionLines($exception, $withTrace),
 		], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
 
 		if (is_string($context)) {
@@ -79,24 +80,36 @@ final class Console
 
 	private static function writeException(Throwable $exception, bool $withTrace): void
 	{
-		self::write($exception::class . ': ' . self::message($exception));
-		self::write('in ' . $exception->getFile() . ':' . $exception->getLine());
+		foreach (self::exceptionLines($exception, $withTrace) as $line) {
+			self::write($line);
+		}
+	}
+
+	/** @return list<string> */
+	private static function exceptionLines(Throwable $exception, bool $withTrace): array
+	{
+		$lines = [
+			$exception::class . ': ' . self::message($exception),
+			'in ' . $exception->getFile() . ':' . $exception->getLine(),
+		];
 
 		if (!$withTrace) {
-			return;
+			return $lines;
 		}
 
 		$trace = trim($exception->getTraceAsString());
 
 		if ($trace === '') {
-			return;
+			return $lines;
 		}
 
-		self::write('Trace:');
+		$lines[] = 'Trace:';
 
 		foreach (explode("\n", $trace) as $line) {
-			self::write($line);
+			$lines[] = $line;
 		}
+
+		return $lines;
 	}
 
 	private static function message(Throwable $exception): string

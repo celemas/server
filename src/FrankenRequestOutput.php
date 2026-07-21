@@ -13,11 +13,14 @@ final class FrankenRequestOutput
 	private const int MAX_PENDING = 100;
 
 	private RequestOutput $output;
-	/** @var array<string, int> */
+	/** @var array<string, list<list<string>>> */
 	private array $exceptions = [];
 
-	public function __construct(Io $io, string $filter, int $columns)
-	{
+	public function __construct(
+		private Io $io,
+		string $filter,
+		int $columns,
+	) {
 		$this->output = new RequestOutput($io, $filter, $columns);
 	}
 
@@ -39,8 +42,13 @@ final class FrankenRequestOutput
 		}
 
 		$exception = $this->takeException($method, $url);
-		$flags = ($exception ? 'e' : '-') . ($this->xhr($request['headers'] ?? null) ? 'x' : '-');
+		$flags =
+			($exception !== null ? 'e' : '-') . ($this->xhr($request['headers'] ?? null) ? 'x' : '-');
 		$this->output->line($status, $method, sprintf('%.5f', $duration), $url, $flags);
+
+		if ($exception !== null) {
+			$this->write($exception);
+		}
 
 		return true;
 	}
@@ -66,33 +74,46 @@ final class FrankenRequestOutput
 			return false;
 		}
 
+		$details = $context['lines'] ?? null;
+		$lines = is_array($details)
+			? array_values(array_filter($details, is_string(...)))
+			: [];
+
 		$key = self::key($method, $url);
 
 		if (!isset($this->exceptions[$key]) && count($this->exceptions) >= self::MAX_PENDING) {
 			unset($this->exceptions[(string) array_key_first($this->exceptions)]);
 		}
 
-		$this->exceptions[$key] = ($this->exceptions[$key] ?? 0) + 1;
+		$this->exceptions[$key][] = $lines;
 
 		return true;
 	}
 
-	private function takeException(string $method, string $url): bool
+	/** @return list<string>|null */
+	private function takeException(string $method, string $url): ?array
 	{
 		$key = self::key($method, $url);
-		$count = $this->exceptions[$key] ?? 0;
 
-		if ($count === 0) {
-			return false;
+		if (!isset($this->exceptions[$key])) {
+			return null;
 		}
 
-		if ($count === 1) {
+		$lines = array_shift($this->exceptions[$key]);
+
+		if ($this->exceptions[$key] === []) {
 			unset($this->exceptions[$key]);
-		} else {
-			$this->exceptions[$key] = $count - 1;
 		}
 
-		return true;
+		return $lines;
+	}
+
+	/** @param list<string> $lines */
+	private function write(array $lines): void
+	{
+		foreach ($lines as $line) {
+			$this->io->echoln($this->io->escape($line));
+		}
 	}
 
 	private function xhr(mixed $headers): bool

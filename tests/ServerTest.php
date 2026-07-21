@@ -135,9 +135,15 @@ final class ServerTest extends TestCase
 			$this->fail('Could not create a fake FrankenPHP executable.');
 		}
 
+		$marker =
+			'{"level":"info","logger":"frankenphp",'
+			. '"msg":"celema-exception {\\"method\\":\\"GET\\",\\"uri\\":\\"/test\\",'
+			. '\\"lines\\":[\\"RuntimeException: Boom\\"]}"}';
 		file_put_contents(
 			$executable,
-			"#!/bin/sh\nprintf '%s\\n' '{\"level\":\"info\",\"ts\":1784570344.75,"
+			"#!/bin/sh\nprintf '%s\\n' "
+			. escapeshellarg($marker)
+			. " >&2\nprintf '%s\\n' '{\"level\":\"info\",\"ts\":1784570344.75,"
 			. '"logger":"http.log.access","msg":"handled request",'
 			. '"request":{"method":"GET","uri":"/test","headers":{}},'
 			. "\"duration\":0.001,\"status\":200}' >&2\n",
@@ -158,7 +164,12 @@ final class ServerTest extends TestCase
 			);
 
 			$this->assertSame(0, $exit);
-			$this->assertStringContainsString('200 GET /test', $io->output());
+			$output = $io->output();
+			$request = strpos($output, '200 GET /test');
+			$exception = strpos($output, 'RuntimeException: Boom');
+			$this->assertIsInt($request);
+			$this->assertIsInt($exception);
+			$this->assertLessThan($exception, $request);
 		} finally {
 			unlink($executable);
 		}
@@ -486,7 +497,7 @@ final class ServerTest extends TestCase
 	{
 		$this->withCliServer(function (): void {
 			$this->withErrorLogFile(function (string $file): void {
-				Console::recordException(new RuntimeException('Boom'), trace: false);
+				Console::recordException(new RuntimeException('Boom'), trace: true);
 
 				$this->assertTrue(Console::hasException());
 
@@ -497,12 +508,12 @@ final class ServerTest extends TestCase
 				$this->assertIsString($log);
 				$this->assertStringContainsString(RuntimeException::class . ': Boom', $log);
 				$this->assertStringContainsString('in ', $log);
-				$this->assertStringNotContainsString('Trace:', $log);
+				$this->assertStringContainsString('Trace:', $log);
 			});
 		});
 	}
 
-	public function testConsoleReportsFrankenPhpExceptionImmediately(): void
+	public function testConsoleReportsStructuredFrankenPhpException(): void
 	{
 		$this->withServer('frankenphp', function (): void {
 			$this->withErrorLogFile(function (string $file): void {
@@ -519,10 +530,10 @@ final class ServerTest extends TestCase
 				$this->assertFalse(Console::hasException());
 				$this->assertIsString($log);
 				$this->assertStringContainsString(
-					'celema-exception {"method":"POST","uri":"/api?x=1"}',
+					'celema-exception {"method":"POST","uri":"/api?x=1","lines":["RuntimeException: Boom","in ',
 					$log,
 				);
-				$this->assertStringContainsString(RuntimeException::class . ': Boom', $log);
+				$this->assertStringNotContainsString('Trace:', $log);
 			});
 		});
 	}
