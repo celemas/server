@@ -13,7 +13,7 @@ final class Options
 	public string $host = 'localhost';
 	public int $port = 1983;
 	public string $filter = '';
-	public bool $debugger = false;
+	public bool $debug = false;
 	public bool $quiet = false;
 	public bool $watch = false;
 	/** @var list<string> */
@@ -25,7 +25,7 @@ final class Options
 		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
 		$options->port = self::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
 		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
-		$options->debugger = $args->has('-d') || $args->has('--debug');
+		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
 		$options->watch = $args->has('-w') || $args->has('--watch');
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);

@@ -80,7 +80,7 @@ final readonly class Setup
 		return null;
 	}
 
-	public function phpEnvironment(bool $debugger): array
+	public function phpEnvironment(bool $debug): array
 	{
 		$environment = array_merge((array) getenv(), [
 			'CELEMA_CLI_SERVER' => '1',
@@ -88,7 +88,7 @@ final readonly class Setup
 			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
 		]);
 
-		if ($debugger) {
+		if ($debug) {
 			$environment['XDEBUG_SESSION'] = '1';
 		}
 

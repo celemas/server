@@ -47,7 +47,7 @@ class Server
 	{
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
-			$runtime = new Runtime(
+			$runtime = new PhpRuntime(
 				new Setup($this->docroot, $this->routePrefix, $options->watchFiles),
 				$options,
 				$io,

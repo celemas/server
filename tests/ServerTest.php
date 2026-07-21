@@ -7,7 +7,6 @@ namespace Celema\Core\Tests;
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Core\Server\Console;
-use Celema\Core\Server\FrankenOptions;
 use Celema\Core\Server\FrankenPhp;
 use Celema\Core\Server\Options;
 use Celema\Core\Server\Server;
@@ -163,9 +162,9 @@ final class ServerTest extends TestCase
 		}
 	}
 
-	public function testFrankenOptionsUseCommandArguments(): void
+	public function testOptionsUseCommandArguments(): void
 	{
-		$options = FrankenOptions::from(
+		$options = Options::from(
 			1983,
 			['**/*.php'],
 			new Args([

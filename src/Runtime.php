@@ -6,118 +6,145 @@ namespace Celema\Core\Server;
 
 use Celema\Console\Io;
 
-/** @internal */
-final readonly class Runtime
+/**
+ * Shared serve/watch orchestration for the dev-server backends; the
+ * subclasses provide the backend process and its startup messages.
+ *
+ * @internal
+ */
+abstract class Runtime
 {
 	public function __construct(
-		private Setup $setup,
-		private Options $options,
-		private Io $io,
+		protected readonly Setup $setup,
+		protected readonly Options $options,
+		protected readonly Io $io,
 	) {}
 
-	public function serve(callable $phpOutput): string|int
+	public function serve(callable $output): string|int
 	{
-		$message = $this->setup->portUnavailableMessage($this->options->host, $this->options->port);
+		$message = $this->missing() ?? $this->setup->portUnavailableMessage(
+			$this->options->host,
+			$this->options->port,
+		);
 
 		if ($message !== null) {
 			return $message;
 		}
 
-		$php = Process::start(
-			$this->setup->phpCommand($this->options->host, $this->options->port, $this->options->quiet),
-			$this->setup->phpEnvironment($this->options->debugger),
-		);
+		try {
+			$backend = $this->start($this->options->port);
 
-		if ($php === null) {
-			return 'Failed to start the PHP server.';
+			if (is_string($backend)) {
+				return $backend;
+			}
+
+			$this->started();
+			Relay::run([$backend->binding([1 => $output, 2 => $output])]);
+
+			return self::normalizeExitCode($backend->close());
+		} finally {
+			$this->cleanup();
 		}
-
-		$this->echoDebugger();
-		Relay::run([$php->binding([1 => $phpOutput, 2 => $phpOutput])]);
-
-		return $this->normalizeExitCode($php->close());
 	}
 
-	public function watch(callable $phpOutput, callable $browserOutput): string|int
+	public function watch(callable $output, callable $browserOutput): string|int
 	{
 		$backendPort = Setup::backendPort($this->options->port);
-		$missing = $this->setup->missingBrowserSyncDependencies();
-
-		if ($missing !== []) {
-			return 'BrowserSync requires ' . implode(' and ', $missing) . ' in PATH.';
-		}
-
-		$message = $this->setup->portUnavailableMessage($this->options->host, $this->options->port);
-
-		if ($message !== null) {
-			return $message;
-		}
-
-		$message = $this->setup->portUnavailableMessage($this->options->host, $backendPort);
-
-		if ($message !== null) {
-			return $message;
-		}
-
-		$php = Process::start(
-			$this->setup->phpCommand($this->options->host, $backendPort, $this->options->quiet),
-			$this->setup->phpEnvironment($this->options->debugger),
-		);
-
-		if ($php === null) {
-			return 'Failed to start the PHP server.';
-		}
-
-		$browserSync = Process::start(
-			$this->setup->browserSyncCommand(
+		$message =
+			$this->missing() ?? $this->missingBrowserSync() ?? $this->setup->portUnavailableMessage(
 				$this->options->host,
 				$this->options->port,
-				$backendPort,
-				$this->options->quiet,
-			),
-		);
+			) ?? $this->setup->portUnavailableMessage($this->options->host, $backendPort);
 
-		if ($browserSync === null) {
-			$php->close(terminate: true);
-
-			return 'Failed to start BrowserSync.';
+		if ($message !== null) {
+			return $message;
 		}
 
-		$this->io->echoln(
-			"BrowserSync proxy listening on http://{$this->options->host}:{$this->options->port}",
-		);
-		$this->io->echoln("PHP server listening on http://{$this->options->host}:{$backendPort}");
-		$this->echoDebugger();
+		try {
+			$backend = $this->start($backendPort);
 
-		Relay::run([
-			$php->binding([1 => $phpOutput, 2 => $phpOutput]),
-			$browserSync->binding([1 => $browserOutput, 2 => $browserOutput]),
-		]);
+			if (is_string($backend)) {
+				return $backend;
+			}
 
-		$phpStopped = !$php->running();
+			$browserSync = Process::start(
+				$this->setup->browserSyncCommand(
+					$this->options->host,
+					$this->options->port,
+					$backendPort,
+					$this->options->quiet,
+				),
+			);
+
+			if ($browserSync === null) {
+				$backend->close(terminate: true);
+
+				return 'Failed to start BrowserSync.';
+			}
+
+			$this->io->echoln(
+				"BrowserSync proxy listening on http://{$this->options->host}:{$this->options->port}",
+			);
+			$this->io->echoln(
+				"{$this->label()} listening on http://{$this->options->host}:{$backendPort}",
+			);
+			$this->started();
+
+			Relay::run([
+				$backend->binding([1 => $output, 2 => $output]),
+				$browserSync->binding([1 => $browserOutput, 2 => $browserOutput]),
+			]);
+
+			return $this->resolve($backend, $browserSync);
+		} finally {
+			$this->cleanup();
+		}
+	}
+
+	/** Starts the backend on the given port, or returns an error message. */
+	abstract protected function start(int $port): Process|string;
+
+	abstract protected function label(): string;
+
+	protected function missing(): ?string
+	{
+		return null;
+	}
+
+	protected function started(): void {}
+
+	protected function cleanup(): void {}
+
+	private function missingBrowserSync(): ?string
+	{
+		$missing = $this->setup->missingBrowserSyncDependencies();
+
+		if ($missing === []) {
+			return null;
+		}
+
+		return 'BrowserSync requires ' . implode(' and ', $missing) . ' in PATH.';
+	}
+
+	private function resolve(Process $backend, Process $browserSync): int
+	{
+		$backendStopped = !$backend->running();
 		$browserSyncStopped = !$browserSync->running();
-		$phpExit = $php->close(terminate: !$phpStopped);
+		$backendExit = $backend->close(terminate: !$backendStopped);
 		$browserSyncExit = $browserSync->close(terminate: !$browserSyncStopped);
 
-		if ($phpStopped && $phpExit !== 0) {
-			return $this->normalizeExitCode($phpExit);
+		if ($backendStopped && $backendExit !== 0) {
+			return self::normalizeExitCode($backendExit);
 		}
 
 		if ($browserSyncStopped && $browserSyncExit !== 0) {
-			return $this->normalizeExitCode($browserSyncExit);
+			return self::normalizeExitCode($browserSyncExit);
 		}
 
 		return 0;
 	}
 
-	private function echoDebugger(): void
-	{
-		if ($this->options->debugger) {
-			$this->io->echoln('<red>Xdebug session enabled</red>');
-		}
-	}
-
-	private function normalizeExitCode(int $exitCode): int
+	private static function normalizeExitCode(int $exitCode): int
 	{
 		return $exitCode < 0 ? 1 : $exitCode;
 	}

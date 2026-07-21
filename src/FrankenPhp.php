@@ -47,7 +47,7 @@ class FrankenPhp
 	public function __invoke(Args $args, Io $io): int
 	{
 		try {
-			$options = FrankenOptions::from($this->port, $this->watch, $args);
+			$options = Options::from($this->port, $this->watch, $args);
 			$runtime = new FrankenRuntime(
 				new Setup(
 					$this->docroot,
