@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Celema\Core\Server;
 
 use Celema\Console\Args;
+use InvalidArgumentException;
 
 /** @internal */
 final class Options
@@ -23,13 +24,28 @@ final class Options
 		$options = new self();
 		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
 		$options->port = Setup::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
-		$options->filter = $args->opt('-f', $args->opt('--filter', ''));
+		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debugger = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
 		$options->watch = $args->has('-w') || $args->has('--watch');
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);
 
 		return $options;
+	}
+
+	public static function filter(string $pattern): string
+	{
+		if ($pattern === '') {
+			return '';
+		}
+
+		$result = ErrorTrap::run(static fn(): mixed => preg_match($pattern, ''));
+
+		if ($result === false) {
+			throw new InvalidArgumentException("Invalid filter regex '{$pattern}'.");
+		}
+
+		return $pattern;
 	}
 
 	/** @return list<string> */

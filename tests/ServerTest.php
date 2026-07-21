@@ -266,6 +266,23 @@ final class ServerTest extends TestCase
 		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
 	}
 
+	public function testFilterRejectsInvalidRegex(): void
+	{
+		$this->expectException(InvalidArgumentException::class);
+		$this->expectExceptionMessage("Invalid filter regex '#oops'.");
+
+		Options::filter('#oops');
+	}
+
+	public function testInvalidFilterReportsToStderrAndFails(): void
+	{
+		$io = new BufferedIo();
+		$exit = (new Server('/tmp/public'))(new Args(['--filter=#oops']), $io);
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString("Invalid filter regex '#oops'.", $io->errorOutput());
+	}
+
 	public function testPortUnavailableMessageUsesNativeError(): void
 	{
 		$socket = stream_socket_server('tcp://127.0.0.1:0');
