@@ -23,7 +23,7 @@ final class Options
 	{
 		$options = new self();
 		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
-		$options->port = Setup::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
+		$options->port = self::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
 		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debugger = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
@@ -31,6 +31,21 @@ final class Options
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);
 
 		return $options;
+	}
+
+	public static function port(string $value): int
+	{
+		if (!preg_match('/^\d+$/', $value)) {
+			throw new InvalidArgumentException("Invalid port '{$value}'.");
+		}
+
+		$port = (int) $value;
+
+		if ($port < 1 || $port > 65_535) {
+			throw new InvalidArgumentException("Port '{$value}' must be between 1 and 65535.");
+		}
+
+		return $port;
 	}
 
 	public static function filter(string $pattern): string

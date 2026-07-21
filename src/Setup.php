@@ -19,21 +19,6 @@ final readonly class Setup
 		private string $frankenPhp = 'frankenphp',
 	) {}
 
-	public static function port(string $value): int
-	{
-		if (!preg_match('/^\d+$/', $value)) {
-			throw new InvalidArgumentException("Invalid port '{$value}'.");
-		}
-
-		$port = (int) $value;
-
-		if ($port < 1 || $port > 65_535) {
-			throw new InvalidArgumentException("Port '{$value}' must be between 1 and 65535.");
-		}
-
-		return $port;
-	}
-
 	public static function backendPort(int $port): int
 	{
 		if ($port >= 65_535) {

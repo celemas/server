@@ -22,7 +22,7 @@ final class FrankenOptions
 	{
 		$options = new self();
 		$options->host = $args->opt('-h', $args->opt('--host', 'localhost'));
-		$options->port = Setup::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
+		$options->port = Options::port($args->opt('-p', $args->opt('--port', (string) $defaultPort)));
 		$options->filter = Options::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');

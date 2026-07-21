@@ -309,7 +309,7 @@ final class ServerTest extends TestCase
 		$this->expectException(InvalidArgumentException::class);
 		$this->expectExceptionMessage("Invalid port 'foo'.");
 
-		Setup::port('foo');
+		Options::port('foo');
 	}
 
 	public function testBrowserSyncNeedsBackendPort(): void
