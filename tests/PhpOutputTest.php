@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Celema\Core\Tests;
 
 use Celema\Console\BufferedIo;
+use Celema\Console\Io;
 use Celema\Core\Server\PhpOutput;
 
 final class PhpOutputTest extends TestCase
@@ -28,6 +29,24 @@ final class PhpOutputTest extends TestCase
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
 
 		$this->assertSame(60, mb_strwidth(rtrim($io->output())));
+	}
+
+	public function testRequestTimeAndDurationAreDimmed(): void
+	{
+		$io = new class extends Io {
+			public string $markup = '';
+
+			public function echoln(string $text): void
+			{
+				$this->markup .= "{$text}\n";
+			}
+		};
+		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
+
+		$this->assertMatchesRegularExpression(
+			'#^<dim>\d{2}:\d{2}:\d{2}\.\d{2}</dim> .+ <dim>0\.00016s</dim>\n$#',
+			$io->markup,
+		);
 	}
 
 	public function testRequestLineShowsExceptionAndXhrFlags(): void

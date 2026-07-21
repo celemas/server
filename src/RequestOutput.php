@@ -52,7 +52,7 @@ final readonly class RequestOutput
 		);
 
 		$this->io->echoln(
-			"<white>{$timestamp}</white> "
+			"<dim>{$timestamp}</dim> "
 			. "<{$statusColor}>{$status}</{$statusColor}> "
 			. $this->io->escape($method)
 			. ' '
@@ -63,7 +63,7 @@ final readonly class RequestOutput
 			. ($exception ? '<cyan>[EXC]</cyan>' : '')
 			. ($xhr ? '<cyan>[XHR]</cyan>' : '')
 			. $separator
-			. "<white>{$duration}s</white>",
+			. "<dim>{$duration}s</dim>",
 		);
 	}
 
