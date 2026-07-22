@@ -1,0 +1,54 @@
+{
+	"name": "celema/server",
+	"description": "Celema development server commands",
+	"type": "library",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Ernst",
+			"email": "ernst@celema.dev"
+		}
+	],
+	"minimum-stability": "dev",
+	"prefer-stable": true,
+	"homepage": "https://celema.dev/server",
+	"require": {
+		"php": "^8.5",
+		"celema/console": "^0.5.3"
+	},
+	"require-dev": {
+		"celema/dev": "^5.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Celema\\Server\\": "src"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Celema\\Server\\Tests\\": "tests"
+		}
+	},
+	"scripts": {
+		"test": "./vendor/bin/phpunit --testdox --no-coverage --colors=always",
+		"types": "./vendor/bin/psalm --no-cache",
+		"docs:format": "npx prettier@3.6.2 --write --config ./docs/.prettierrc README.md CHANGELOG.md LICENSE.md",
+		"docs:lint": "npx markdownlint-cli2@0.22.1 --config ./vendor/celema/dev/config/markdownlint.jsonc README.md CHANGELOG.md LICENSE.md",
+		"lint": [
+			"./vendor/bin/mago fmt --check",
+			"./vendor/bin/mago lint"
+		],
+		"coverage:test": "php -d xdebug.mode=coverage ./vendor/bin/phpunit --testdox --path-coverage --colors=always",
+		"coverage:analyze": "./vendor/bin/coverlyzer .coverage/coverage.php",
+		"coverage": [
+			"composer coverage:test",
+			"composer coverage:analyze"
+		],
+		"ci": [
+			"composer lint",
+			"composer test",
+			"composer types",
+			"composer docs:lint"
+		]
+	}
+}
