@@ -6,6 +6,7 @@ namespace Celema\Server\Tests;
 
 use Celema\Console\BufferedIo;
 use Celema\Server\FrankenOutput;
+use PHPUnit\Framework\TestCase;
 
 final class FrankenOutputTest extends TestCase
 {

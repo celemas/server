@@ -14,6 +14,7 @@ use Celema\Server\Ports;
 use Celema\Server\Server;
 use Celema\Server\Setup;
 use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 final class ServerTest extends TestCase
@@ -31,7 +32,7 @@ final class ServerTest extends TestCase
 				'-q',
 				'-t',
 				'/tmp/public',
-				dirname(__DIR__) . '/src/Server/CliRouter.php',
+				dirname(__DIR__) . '/src/CliRouter.php',
 			],
 			$command,
 		);

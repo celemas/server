@@ -7,6 +7,7 @@ namespace Celema\Server\Tests;
 use Celema\Console\BufferedIo;
 use Celema\Console\Io;
 use Celema\Server\PhpOutput;
+use PHPUnit\Framework\TestCase;
 
 final class PhpOutputTest extends TestCase
 {
