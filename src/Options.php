@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Celema\Core\Server;
+namespace Celema\Server;
 
 use Celema\Console\Args;
 use InvalidArgumentException;

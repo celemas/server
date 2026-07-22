@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Celema\Core\Tests;
+namespace Celema\Server\Tests;
 
 use Celema\Console\BufferedIo;
 use Celema\Console\Io;
-use Celema\Core\Server\PhpOutput;
+use Celema\Server\PhpOutput;
 
 final class PhpOutputTest extends TestCase
 {

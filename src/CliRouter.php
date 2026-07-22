@@ -23,7 +23,7 @@ if (PHP_SAPI !== 'cli') {
 	$start = microtime(true);
 
 	if ($publicDir) {
-		\Celema\Core\Server\Console::clearException();
+		\Celema\Server\Console::clearException();
 
 		// serve existing files as-is
 		if (is_file($publicDir . $url)) {
@@ -55,13 +55,13 @@ if (PHP_SAPI !== 'cli') {
 		$response = require_once $publicDir . '/index.php';
 
 		if ($response) {
-			$fromHandler = \Celema\Core\Server\Console::hasException();
+			$fromHandler = \Celema\Server\Console::hasException();
 
 			/** @psalm-suppress MixedMethodCall, MixedArgument */
 			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start, $fromHandler);
 		}
 
-		\Celema\Core\Server\Console::flushException();
+		\Celema\Server\Console::flushException();
 
 		return true;
 	}

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Celema\Core\Tests;
+namespace Celema\Server\Tests;
 
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
-use Celema\Core\Server\Console;
-use Celema\Core\Server\ErrorTrap;
-use Celema\Core\Server\FrankenPhp;
-use Celema\Core\Server\Options;
-use Celema\Core\Server\Ports;
-use Celema\Core\Server\Server;
-use Celema\Core\Server\Setup;
+use Celema\Server\Console;
+use Celema\Server\ErrorTrap;
+use Celema\Server\FrankenPhp;
+use Celema\Server\Options;
+use Celema\Server\Ports;
+use Celema\Server\Server;
+use Celema\Server\Setup;
 use InvalidArgumentException;
 use RuntimeException;
 

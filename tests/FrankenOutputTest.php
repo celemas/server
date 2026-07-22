@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Celema\Core\Tests;
+namespace Celema\Server\Tests;
 
 use Celema\Console\BufferedIo;
-use Celema\Core\Server\FrankenOutput;
+use Celema\Server\FrankenOutput;
 
 final class FrankenOutputTest extends TestCase
 {
