@@ -43,6 +43,4 @@ The served application reports each handled request to the parent command as a s
 
 ## License
 
-Celema Development Server is released under the [MIT license](LICENSE.md).
-
-Copyright © 2024-present Ernst
+This project is licensed under the [MIT license](LICENSE.md).
