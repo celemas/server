@@ -20,6 +20,7 @@ abstract class Runtime
 		protected readonly Io $io,
 	) {}
 
+	/** @param callable(string): void $output */
 	public function serve(callable $output): string|int
 	{
 		$message = $this->missing() ?? Ports::unavailableMessage(
@@ -47,6 +48,10 @@ abstract class Runtime
 		}
 	}
 
+	/**
+	 * @param callable(string): void $output
+	 * @param callable(string): void $browserOutput
+	 */
 	public function watch(callable $output, callable $browserOutput): string|int
 	{
 		$message =

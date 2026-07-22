@@ -6,7 +6,7 @@ namespace Celema\Server;
 
 use Throwable;
 
-/** @internal */
+/** @api */
 final class Console
 {
 	private static ?Throwable $exception = null;
@@ -68,8 +68,8 @@ final class Console
 	{
 		// Keep the details with the marker so the parent can print them after the access log.
 		$context = json_encode([
-			'method' => strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? '-')),
-			'uri' => (string) ($_SERVER['REQUEST_URI'] ?? ''),
+			'method' => strtoupper($_SERVER['REQUEST_METHOD'] ?? '-'),
+			'uri' => $_SERVER['REQUEST_URI'] ?? '',
 			'lines' => self::exceptionLines($exception, $withTrace),
 		], JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
 

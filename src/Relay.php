@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-/** @internal */
+/**
+ * @internal
+ *
+ * @psalm-import-type Binding from Process
+ * @psalm-import-type Watcher from Watchers
+ */
 final class Relay
 {
+	/** @param list<Binding> $bindings */
 	public static function run(array $bindings): void
 	{
 		$watchers = Watchers::collect($bindings);
@@ -29,6 +35,8 @@ final class Relay
 	/**
 	 * A dying process may have written output after the last select
 	 * round; read it before closing, so its final lines are not lost.
+	 *
+	 * @param array<int, Watcher> $watchers
 	 */
 	private static function drain(array &$watchers): void
 	{
@@ -41,8 +49,12 @@ final class Relay
 		}
 	}
 
+	/** @param array<int, Watcher> $watchers */
 	private static function consume(array &$watchers, int $microseconds): int|false
 	{
+		// Streams of listed watchers are always open; a watcher is
+		// removed from the list when its stream gets closed.
+		/** @var list<resource> $read */
 		$read = array_column($watchers, 'stream');
 		$write = null;
 		$except = null;
@@ -59,6 +71,7 @@ final class Relay
 		return $changed;
 	}
 
+	/** @param list<Binding> $bindings */
 	private static function stopped(array $bindings): bool
 	{
 		foreach ($bindings as $binding) {

@@ -11,6 +11,7 @@ final class Ports
 	{
 		$errorCode = 0;
 		$errorMessage = '';
+		/** @var resource|false $server */
 		$server = ErrorTrap::run(
 			static function () use ($host, $port, &$errorCode, &$errorMessage): mixed {
 				return stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage);
@@ -30,9 +31,7 @@ final class Ports
 			return $message . '.';
 		}
 
-		if (is_resource($server)) {
-			fclose($server);
-		}
+		fclose($server);
 
 		return null;
 	}

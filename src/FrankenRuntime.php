@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
+use Override;
+
 /** @internal */
 final class FrankenRuntime extends Runtime
 {
 	private ?string $config = null;
 
+	#[Override]
 	protected function start(int $port): Process|string
 	{
 		$contents = $this->setup->frankenPhpCaddyfile(
@@ -38,16 +41,19 @@ final class FrankenRuntime extends Runtime
 		return $frankenPhp ?? 'Failed to start FrankenPHP.';
 	}
 
+	#[Override]
 	protected function label(): string
 	{
 		return 'FrankenPHP';
 	}
 
+	#[Override]
 	protected function missing(): ?string
 	{
 		return $this->setup->missingFrankenPhp() ? 'FrankenPHP requires frankenphp in PATH.' : null;
 	}
 
+	#[Override]
 	protected function cleanup(): void
 	{
 		if ($this->config !== null && is_file($this->config)) {

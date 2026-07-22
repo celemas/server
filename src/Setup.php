@@ -11,6 +11,7 @@ final readonly class Setup
 {
 	public const DEFAULT_WATCH = ['**/*.{php,js,css}'];
 
+	/** @param list<string> $watch */
 	public function __construct(
 		private string $docroot,
 		private string $routePrefix,
@@ -19,6 +20,7 @@ final readonly class Setup
 		private string $php = 'php',
 	) {}
 
+	/** @return list<string> */
 	public function missingBrowserSyncDependencies(): array
 	{
 		$missing = [];
@@ -39,9 +41,10 @@ final readonly class Setup
 		return !$this->commandAvailable($this->frankenPhp);
 	}
 
+	/** @return array<string, string> */
 	public function phpEnvironment(bool $debug): array
 	{
-		$environment = array_merge((array) getenv(), [
+		$environment = array_merge(getenv(), [
 			'CELEMA_CLI_SERVER' => '1',
 			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
 			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
@@ -54,6 +57,7 @@ final readonly class Setup
 		return $environment;
 	}
 
+	/** @return list<string> */
 	public function phpCommand(string $host, int $port, bool $quiet): array
 	{
 		$command = [$this->php, '-S', "{$host}:{$port}"];
@@ -69,6 +73,7 @@ final readonly class Setup
 		return $command;
 	}
 
+	/** @return list<string> */
 	public function frankenPhpCommand(
 		string $host,
 		int $port,
@@ -140,6 +145,7 @@ final readonly class Setup
 		);
 	}
 
+	/** @return list<string> */
 	public function browserSyncCommand(string $host, int $port, int $backendPort, bool $quiet): array
 	{
 		$command = [
@@ -175,9 +181,10 @@ final readonly class Setup
 		return $command;
 	}
 
+	/** @return array<string, string> */
 	public function frankenPhpEnvironment(): array
 	{
-		return array_merge((array) getenv(), [
+		return array_merge(getenv(), [
 			'CELEMA_CLI_SERVER' => 'frankenphp',
 			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
 			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
@@ -192,7 +199,8 @@ final readonly class Setup
 		}
 
 		try {
-			$size = trim(exec('stty size 2>/dev/null') ?: '');
+			$output = exec('stty size 2>/dev/null');
+			$size = trim($output === false ? '' : $output);
 			$columns = (int) (explode(' ', $size)[1] ?? 0);
 
 			return $columns > 0 ? $columns : 80;

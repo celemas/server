@@ -32,10 +32,10 @@ final class FrankenOutput
 			return;
 		}
 
-		$logger = $entry['logger'] ?? null;
+		$logger = self::str($entry, 'logger');
 
 		if (
-			is_string($logger)
+			$logger !== null
 			&& str_starts_with($logger, 'http.log.access')
 			&& ($entry['msg'] ?? null) === 'handled request'
 		) {
@@ -46,9 +46,9 @@ final class FrankenOutput
 			return;
 		}
 
-		$message = $entry['msg'] ?? null;
+		$message = self::str($entry, 'msg');
 
-		if (!is_string($message)) {
+		if ($message === null) {
 			$this->other($entry, $line);
 
 			return;
@@ -80,10 +80,10 @@ final class FrankenOutput
 	private function other(array $entry, string $line): void
 	{
 		if (($entry['level'] ?? null) === 'error') {
-			$message = is_string($entry['msg'] ?? null) ? $entry['msg'] : $line;
-			$error = $entry['error'] ?? null;
+			$message = self::str($entry, 'msg') ?? $line;
+			$error = self::str($entry, 'error');
 
-			if (is_string($error) && $error !== '') {
+			if ($error !== null && $error !== '') {
 				$message .= ": {$error}";
 			}
 
@@ -95,5 +95,13 @@ final class FrankenOutput
 		if ($this->debug) {
 			$this->io->echoln($this->io->escape($line));
 		}
+	}
+
+	private static function str(array $entry, string $key): ?string
+	{
+		/** @psalm-suppress MixedAssignment -- log entries are unvalidated JSON */
+		$value = $entry[$key] ?? null;
+
+		return is_string($value) ? $value : null;
 	}
 }

@@ -44,7 +44,7 @@ final readonly class RequestOutput
 		$timestamp = sprintf(
 			'%s.%02d',
 			date('H:i:s', (int) $time),
-			(int) (($time - floor($time)) * 100),
+			(int) (($time - floor($time)) * 100.0),
 		);
 		$spacer = $this->spacer(
 			mb_strwidth("{$timestamp} {$status} {$method} {$url}"),

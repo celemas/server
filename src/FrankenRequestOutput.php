@@ -74,7 +74,9 @@ final class FrankenRequestOutput
 			return false;
 		}
 
+		/** @psalm-suppress MixedAssignment -- the exception context is unvalidated JSON */
 		$details = $context['lines'] ?? null;
+		/** @var list<string> $lines */
 		$lines = is_array($details)
 			? array_values(array_filter($details, is_string(...)))
 			: [];
@@ -122,6 +124,7 @@ final class FrankenRequestOutput
 			return false;
 		}
 
+		/** @psalm-suppress MixedAssignment -- header values are unvalidated JSON */
 		foreach ($headers as $name => $values) {
 			if (!is_string($name) || strcasecmp($name, 'X-Requested-With') !== 0) {
 				continue;

@@ -9,7 +9,11 @@ use InvalidArgumentException;
 /** @internal */
 final class WatchPattern
 {
-	/** @return list<string> */
+	/**
+	 * @param array<array-key, mixed>|string $watch
+	 *
+	 * @return list<string>
+	 */
 	public static function list(array|string $watch): array
 	{
 		if (is_string($watch)) {
@@ -21,7 +25,9 @@ final class WatchPattern
 		return WatchBrace::expandList(WatchSymlink::expand($patterns));
 	}
 
-	/** @param list<mixed> $watch
+	/**
+	 * @param array<array-key, mixed> $watch
+	 *
 	 * @return list<string>
 	 */
 	private static function fromArray(array $watch): array
@@ -68,10 +74,7 @@ final class WatchPattern
 			}
 
 			if ($char === '}') {
-				if ($depth > 0) {
-					$depth--;
-				}
-
+				$depth = max(0, $depth - 1);
 				$buffer .= $char;
 
 				continue;

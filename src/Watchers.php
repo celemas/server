@@ -4,9 +4,19 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-/** @internal */
+/**
+ * @internal
+ *
+ * @psalm-import-type Binding from Process
+ * @psalm-type Watcher = array{stream: closed-resource|resource, handler: callable(string): void, buffer: string}
+ */
 final class Watchers
 {
+	/**
+	 * @param list<Binding> $bindings
+	 *
+	 * @return array<int, Watcher>
+	 */
 	public static function collect(array $bindings): array
 	{
 		$watchers = [];

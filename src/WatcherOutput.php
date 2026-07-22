@@ -4,9 +4,17 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-/** @internal */
+/**
+ * @internal
+ *
+ * @psalm-import-type Watcher from Watchers
+ */
 final class WatcherOutput
 {
+	/**
+	 * @param array<int, Watcher> $watchers
+	 * @param list<resource> $read
+	 */
 	public static function consumeReady(array &$watchers, array $read): void
 	{
 		foreach ($read as $stream) {
@@ -26,6 +34,7 @@ final class WatcherOutput
 		}
 	}
 
+	/** @param array<int, Watcher> $watchers */
 	public static function flushAll(array $watchers): void
 	{
 		foreach ($watchers as $watcher) {
@@ -44,6 +53,7 @@ final class WatcherOutput
 		}
 	}
 
+	/** @param Watcher $watcher */
 	private static function flush(array $watcher): void
 	{
 		if ($watcher['buffer'] !== '') {

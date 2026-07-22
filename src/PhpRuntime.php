@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
+use Override;
+
 /** @internal */
 final class PhpRuntime extends Runtime
 {
+	#[Override]
 	protected function start(int $port): Process|string
 	{
 		$php = Process::start(
@@ -17,11 +20,13 @@ final class PhpRuntime extends Runtime
 		return $php ?? 'Failed to start the PHP server.';
 	}
 
+	#[Override]
 	protected function label(): string
 	{
 		return 'PHP server';
 	}
 
+	#[Override]
 	protected function started(): void
 	{
 		if ($this->options->debug) {

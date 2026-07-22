@@ -4,14 +4,26 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-/** @internal */
+/**
+ * @internal
+ *
+ * @psalm-type Binding = array{process: Process, handlers: array<int, callable(string): void>}
+ */
 final class Process
 {
+	/**
+	 * @param resource $process
+	 * @param array<int, closed-resource|resource> $pipes
+	 */
 	private function __construct(
 		private mixed $process,
 		private array $pipes,
 	) {}
 
+	/**
+	 * @param list<string> $command
+	 * @param array<string, string>|null $environment
+	 */
 	public static function start(array $command, ?array $environment = null): ?self
 	{
 		$descriptors = [
@@ -26,15 +38,21 @@ final class Process
 			return null;
 		}
 
-		if (isset($pipes[0]) && is_resource($pipes[0])) {
+		if (isset($pipes[0])) {
 			fclose($pipes[0]);
 		}
 
 		unset($pipes[0]);
 
+		/** @var array<int, resource> $pipes */
 		return new self($process, $pipes);
 	}
 
+	/**
+	 * @param array<int, callable(string): void> $handlers
+	 *
+	 * @return Binding
+	 */
 	public function binding(array $handlers): array
 	{
 		return [
@@ -43,6 +61,7 @@ final class Process
 		];
 	}
 
+	/** @return closed-resource|resource|null */
 	public function pipe(int $index): mixed
 	{
 		return $this->pipes[$index] ?? null;

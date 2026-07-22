@@ -13,7 +13,7 @@ if (PHP_SAPI !== 'cli') {
 	$publicDir = getenv('CELEMA_DOCUMENT_ROOT');
 
 	if ($routePrefix !== false) {
-		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri);
+		$uri = preg_replace('/^' . preg_quote($routePrefix, '/') . '/', '', $uri) ?? $uri;
 	}
 
 	// parse_url() returns null/false for pathless or seriously malformed URIs.
@@ -22,20 +22,20 @@ if (PHP_SAPI !== 'cli') {
 
 	$start = microtime(true);
 
-	if ($publicDir) {
+	if ($publicDir !== false && $publicDir !== '') {
 		\Celema\Server\Console::clearException();
 
 		// serve existing files as-is
 		if (is_file($publicDir . $url)) {
-			/** @psalm-suppress PossiblyInvalidArgument */
-			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+			$status = http_response_code();
+			serverEcho(is_int($status) ? $status : 0, $uri, microtime(true) - $start);
 
 			return false;
 		}
 
 		if (is_file($publicDir . rtrim($url, '/') . '/index.html')) {
-			/** @psalm-suppress PossiblyInvalidArgument */
-			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+			$status = http_response_code();
+			serverEcho(is_int($status) ? $status : 0, $uri, microtime(true) - $start);
 
 			return false;
 		}
@@ -43,8 +43,8 @@ if (PHP_SAPI !== 'cli') {
 		if ($url === '/phpinfo') {
 			// @mago-expect lint:no-debug-symbols
 			echo phpinfo();
-			/** @psalm-suppress PossiblyInvalidArgument */
-			serverEcho(http_response_code() ?: 0, $uri, microtime(true) - $start);
+			$status = http_response_code();
+			serverEcho(is_int($status) ? $status : 0, $uri, microtime(true) - $start);
 
 			return true;
 		}

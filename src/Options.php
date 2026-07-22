@@ -54,6 +54,7 @@ final class Options
 			return '';
 		}
 
+		/** @var int|false $result */
 		$result = ErrorTrap::run(static fn(): mixed => preg_match($pattern, ''));
 
 		if ($result === false) {
