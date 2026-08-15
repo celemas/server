@@ -1,7 +1,7 @@
 # Celema Development Server
 
 <!-- prettier-ignore-start -->
-[![ci](https://codeberg.org/celema/server/badges/workflows/ci.yml/badge.svg?style=flat&logo=codeberg&logoColor=white&label=ci)](https://codeberg.org/celema/server/actions)
+[![ci](https://codefloe.com/celema/server/badges/workflows/ci.yml/badge.svg?style=flat&logo=forgejo&logoColor=white&label=ci)](https://codefloe.com/celema/server/actions)
 [![Software License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- prettier-ignore-end -->
 
