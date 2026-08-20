@@ -6,7 +6,7 @@ paths = ["src", "tests"]
 includes = ["vendor"]
 
 [formatter]
-print-width = 100
+print-width = 120
 use-tabs = true
 array-table-style-alignment = false
 empty-line-between-same-symbols = false
@@ -15,6 +15,8 @@ preserve-breaking-argument-list = true
 preserve-breaking-parameter-list = true
 preserve-breaking-attribute-list = true
 preserve-breaking-conditional-expression = true
+preserve-breaking-condition-expression = true
+preserve-breaking-binary-expression = true
 
 [linter]
 integrations = []
