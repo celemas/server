@@ -36,8 +36,8 @@ final class FrankenOutput
 
 		if (
 			$logger !== null
-			&& str_starts_with($logger, 'http.log.access')
-			&& ($entry['msg'] ?? null) === 'handled request'
+				&& str_starts_with($logger, 'http.log.access')
+				&& ($entry['msg'] ?? null) === 'handled request'
 		) {
 			if (!$this->requests->line($entry)) {
 				$this->io->echoln($this->io->escape($line));

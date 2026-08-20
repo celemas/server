@@ -62,9 +62,9 @@ final readonly class PhpOutput
 
 		if (
 			count($fields) < 6
-			|| preg_match('/^\d+$/', $fields[1]) !== 1
-			|| preg_match('/^[\d.]+$/', $fields[3]) !== 1
-			|| preg_match('/^[ex-]{2}$/', $fields[4]) !== 1
+				|| preg_match('/^\d+$/', $fields[1]) !== 1
+				|| preg_match('/^[\d.]+$/', $fields[3]) !== 1
+				|| preg_match('/^[ex-]{2}$/', $fields[4]) !== 1
 		) {
 			$this->io->echoln($this->io->escape($line));
 

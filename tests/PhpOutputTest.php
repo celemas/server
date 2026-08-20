@@ -62,7 +62,7 @@ final class PhpOutputTest extends TestCase
 	{
 		$io = new BufferedIo();
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP
-		. "celema-request 200 GET 0.00016 -- /%3Cred%3Etest\n");
+			. "celema-request 200 GET 0.00016 -- /%3Cred%3Etest\n");
 
 		$this->assertStringContainsString('/<red>test', $io->output());
 	}

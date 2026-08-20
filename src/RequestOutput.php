@@ -53,17 +53,17 @@ final readonly class RequestOutput
 
 		$this->io->echoln(
 			"<dim>{$timestamp}</dim> "
-			. "<{$statusColor}>{$status}</{$statusColor}> "
-			. $this->io->escape($method)
-			. ' '
-			. "<{$statusColor}>"
-			. $this->io->escape($url)
-			. "</{$statusColor}>"
-			. " <gray>{$spacer}</gray> "
-			. ($exception ? '<cyan>[EXC]</cyan>' : '')
-			. ($xhr ? '<cyan>[XHR]</cyan>' : '')
-			. $separator
-			. "<dim>{$duration}s</dim>",
+				. "<{$statusColor}>{$status}</{$statusColor}> "
+				. $this->io->escape($method)
+				. ' '
+				. "<{$statusColor}>"
+				. $this->io->escape($url)
+				. "</{$statusColor}>"
+				. " <gray>{$spacer}</gray> "
+				. ($exception ? '<cyan>[EXC]</cyan>' : '')
+				. ($xhr ? '<cyan>[XHR]</cyan>' : '')
+				. $separator
+				. "<dim>{$duration}s</dim>",
 		);
 	}
 

@@ -42,8 +42,7 @@ final class FrankenRequestOutput
 		}
 
 		$exception = $this->takeException($method, $url);
-		$flags =
-			($exception !== null ? 'e' : '-') . ($this->xhr($request['headers'] ?? null) ? 'x' : '-');
+		$flags = ($exception !== null ? 'e' : '-') . ($this->xhr($request['headers'] ?? null) ? 'x' : '-');
 		$this->output->line($status, $method, sprintf('%.5f', $duration), $url, $flags);
 
 		if ($exception !== null) {
@@ -136,9 +135,9 @@ final class FrankenRequestOutput
 
 			return (
 				is_array($values)
-				&& isset($values[0])
-				&& is_string($values[0])
-				&& strtolower($values[0]) === 'xmlhttprequest'
+					&& isset($values[0])
+					&& is_string($values[0])
+					&& strtolower($values[0]) === 'xmlhttprequest'
 			);
 		}
 

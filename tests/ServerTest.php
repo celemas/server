@@ -143,11 +143,11 @@ final class ServerTest extends TestCase
 		file_put_contents(
 			$executable,
 			"#!/bin/sh\nprintf '%s\\n' "
-			. escapeshellarg($marker)
-			. " >&2\nprintf '%s\\n' '{\"level\":\"info\",\"ts\":1784570344.75,"
-			. '"logger":"http.log.access","msg":"handled request",'
-			. '"request":{"method":"GET","uri":"/test","headers":{}},'
-			. "\"duration\":0.001,\"status\":200}' >&2\n",
+				. escapeshellarg($marker)
+				. " >&2\nprintf '%s\\n' '{\"level\":\"info\",\"ts\":1784570344.75,"
+				. '"logger":"http.log.access","msg":"handled request",'
+				. '"request":{"method":"GET","uri":"/test","headers":{}},'
+				. "\"duration\":0.001,\"status\":200}' >&2\n",
 		);
 		chmod($executable, 0o755);
 		$socket = stream_socket_server('tcp://127.0.0.1:0');
@@ -187,7 +187,7 @@ final class ServerTest extends TestCase
 		file_put_contents(
 			$executable,
 			"#!/bin/sh\nprintf '%s\\n' "
-			. "'[Sun Jul 20 17:12:05 2026] celema-request 200 GET 0.00016 -- /test' >&2\n",
+				. "'[Sun Jul 20 17:12:05 2026] celema-request 200 GET 0.00016 -- /test' >&2\n",
 		);
 		chmod($executable, 0o755);
 		$socket = stream_socket_server('tcp://127.0.0.1:0');

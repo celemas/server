@@ -124,24 +124,24 @@ final readonly class Setup
 
 		return (
 			"{\n"
-			. "\tadmin off\n"
-			. "\tauto_https off\n"
-			. "\tpersist_config off\n"
-			. "\tfrankenphp\n"
-			. $debugOption
-			. "}\n"
-			. "{$address} {\n"
-			. "\troot * {$docroot}\n"
-			. "\troute {\n"
-			. "\t\t@prefix path {$prefix} {$files}\n"
-			. "\t\turi @prefix strip_prefix {$prefix}\n"
-			. "\t\tphp_server\n"
-			. "\t}\n"
-			. "\tlog {\n"
-			. "\t\toutput stderr\n"
-			. "\t\tformat json\n"
-			. "\t}\n"
-			. "}\n"
+				. "\tadmin off\n"
+				. "\tauto_https off\n"
+				. "\tpersist_config off\n"
+				. "\tfrankenphp\n"
+				. $debugOption
+				. "}\n"
+				. "{$address} {\n"
+				. "\troot * {$docroot}\n"
+				. "\troute {\n"
+				. "\t\t@prefix path {$prefix} {$files}\n"
+				. "\t\turi @prefix strip_prefix {$prefix}\n"
+				. "\t\tphp_server\n"
+				. "\t}\n"
+				. "\tlog {\n"
+				. "\t\toutput stderr\n"
+				. "\t\tformat json\n"
+				. "\t}\n"
+				. "}\n"
 		);
 	}
 
