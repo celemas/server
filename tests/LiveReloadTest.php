@@ -33,6 +33,31 @@ final class LiveReloadTest extends TestCase
 		}
 	}
 
+	public function testLocalhostListensOnBothLoopbackAddresses(): void
+	{
+		$port = $this->freePort();
+		$endpoint = ReloadEndpoint::listen('localhost', $port);
+		$this->assertInstanceOf(ReloadEndpoint::class, $endpoint);
+
+		try {
+			$this->assertStringStartsWith(
+				"HTTP/1.1 200 OK\r\n",
+				$this->request($endpoint, $port, '/celema-live-reload.js'),
+			);
+
+			if (count($endpoint->streams()) < 2) {
+				$this->markTestSkipped('No IPv6 loopback on this machine.');
+			}
+
+			$this->assertStringStartsWith(
+				"HTTP/1.1 200 OK\r\n",
+				$this->request($endpoint, $port, '/celema-live-reload.js', '[::1]'),
+			);
+		} finally {
+			$endpoint->close();
+		}
+	}
+
 	public function testRejectsUnknownPaths(): void
 	{
 		[$endpoint, $port] = $this->endpoint();
@@ -144,9 +169,13 @@ final class LiveReloadTest extends TestCase
 		return [$endpoint, $port];
 	}
 
-	private function request(ReloadEndpoint $endpoint, int $port, string $path): string
-	{
-		$client = $this->connect($port, "GET {$path} HTTP/1.1\r\nHost: localhost\r\n\r\n");
+	private function request(
+		ReloadEndpoint $endpoint,
+		int $port,
+		string $path,
+		string $address = '127.0.0.1',
+	): string {
+		$client = $this->connect($port, "GET {$path} HTTP/1.1\r\nHost: localhost\r\n\r\n", $address);
 		$this->pump($endpoint);
 		$response = (string) stream_get_contents($client);
 		fclose($client);
@@ -165,9 +194,9 @@ final class LiveReloadTest extends TestCase
 	}
 
 	/** @return resource */
-	private function connect(int $port, string $request): mixed
+	private function connect(int $port, string $request, string $address = '127.0.0.1'): mixed
 	{
-		$client = stream_socket_client("tcp://127.0.0.1:{$port}", timeout: 1);
+		$client = stream_socket_client("tcp://{$address}:{$port}", timeout: 1);
 		$this->assertIsResource($client);
 		stream_set_timeout($client, 1);
 		fwrite($client, $request);

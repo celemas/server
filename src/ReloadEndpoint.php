@@ -23,41 +23,27 @@ final class ReloadEndpoint
 	/** @var array<int, resource> */
 	private array $clients = [];
 
-	/** @param resource $server */
+	/** @param non-empty-list<resource> $servers */
 	private function __construct(
-		private mixed $server,
+		private array $servers,
 	) {}
 
 	public static function listen(string $host, int $port): self|string
 	{
-		$errorCode = 0;
-		$errorMessage = '';
-		/** @var resource|false $server */
-		$server = ErrorTrap::run(
-			static function () use ($host, $port, &$errorCode, &$errorMessage): mixed {
-				return stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage);
-			},
-			$trapped,
-		);
+		$servers = ReloadSockets::open($host, $port);
 
-		if ($server === false) {
-			$detail = $errorMessage !== '' ? $errorMessage : (string) $trapped;
-
-			return "Failed to start live reload on {$host}:{$port}" . ($detail !== '' ? ": {$detail}" : '') . '.';
-		}
-
-		return new self($server);
+		return is_string($servers) ? $servers : new self($servers);
 	}
 
 	/**
-	 * The listening socket and all open connections, to be selected
+	 * The listening sockets and all open connections, to be selected
 	 * for reading.
 	 *
 	 * @return list<resource>
 	 */
 	public function streams(): array
 	{
-		return [$this->server, ...array_column($this->requests, 'stream'), ...array_values($this->clients)];
+		return [...$this->servers, ...array_column($this->requests, 'stream'), ...array_values($this->clients)];
 	}
 
 	/** @param list<resource> $ready Streams from streams() that select reported readable */
@@ -66,8 +52,8 @@ final class ReloadEndpoint
 		foreach ($ready as $stream) {
 			$id = (int) $stream;
 
-			if ($stream === $this->server) {
-				$this->accept();
+			if (in_array($stream, $this->servers, true)) {
+				$this->accept($stream);
 			} elseif (isset($this->requests[$id])) {
 				$this->read($id, $stream);
 			} elseif (isset($this->clients[$id])) {
@@ -94,7 +80,7 @@ final class ReloadEndpoint
 
 	public function close(): void
 	{
-		foreach ([...array_column($this->requests, 'stream'), ...$this->clients, $this->server] as $stream) {
+		foreach ([...array_column($this->requests, 'stream'), ...$this->clients, ...$this->servers] as $stream) {
 			fclose($stream);
 		}
 
@@ -131,10 +117,11 @@ final class ReloadEndpoint
 		}
 	}
 
-	private function accept(): void
+	/** @param resource $server */
+	private function accept(mixed $server): void
 	{
 		/** @var resource|false $stream */
-		$stream = ErrorTrap::run(fn(): mixed => stream_socket_accept($this->server, 0));
+		$stream = ErrorTrap::run(static fn(): mixed => stream_socket_accept($server, 0));
 
 		if ($stream === false) {
 			return;
