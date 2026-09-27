@@ -5,16 +5,26 @@
 [![Software License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 <!-- prettier-ignore-end -->
 
-Development server commands for PHP applications, built on `celema/console`.
+Development server commands for PHP applications, built on `celema/console`, with request logging and live reload.
 
 > [!WARNING] This library is under active development, some of its features are still experimental and subject to change.
 
-It provides two console command classes for local development:
+## Installation
 
-- `Celema\Server\Server` runs the application with the PHP CLI's built-in server.
-- `Celema\Server\FrankenPhp` runs it with the `frankenphp` executable from `PATH`.
+```bash
+composer require --dev celema/server
+```
 
-Register either class with `celema/console` using a factory that supplies the application's public directory. Both commands support host, port, request-log filtering, and a `--watch` mode with live reload. The FrankenPHP command uses classic mode, not worker mode; its `--debug` option enables verbose Caddy logs. FrankenPHP embeds its own PHP runtime, extensions, and configuration rather than using the PHP CLI that starts the command.
+It requires PHP 8.5. The FrankenPHP command additionally needs the `frankenphp` executable on `PATH`; FrankenPHP embeds its own PHP runtime, extensions, and configuration rather than using the PHP CLI that starts the command. Live reload needs no Node.js or other external tools.
+
+## Usage
+
+The package provides two console commands:
+
+- `Celema\Server\Server` (`server`) runs the application with the PHP CLI's built-in server.
+- `Celema\Server\FrankenPhp` (`frankenphp`) runs it with FrankenPHP in classic mode, not worker mode.
+
+Register them with `celema/console`:
 
 ```php
 #!/usr/bin/env php
@@ -28,7 +38,7 @@ use Celema\Server\Server;
 require __DIR__ . '/vendor/autoload.php';
 
 $docroot = __DIR__ . '/public';
-$watch = ['src/**/*.{php,css,js}'];
+$watch = ['src/**/*.{php,css,js}', 'views/**/*.php'];
 $commands = new Commands([
 	new Server($docroot, port: 1973, watch: $watch),
 	new FrankenPhp($docroot, port: 1973, watch: $watch),
@@ -37,11 +47,44 @@ $commands = new Commands([
 exit(new Runner($commands)->run());
 ```
 
+Then start one of them, for example `php run server --watch`.
+
+### Constructor arguments
+
+Both commands take the same arguments:
+
+| Argument | Default | Description |
+| --- | --- | --- |
+| `docroot` | required | The public directory. |
+| `port` | `1983` | The default port. |
+| `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
+| `watch` | `'**/*.{php,js,css}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
+| `executable` | `'php'` or `'frankenphp'` | The executable to run the backend with. |
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| `-h`, `--host=<host>` | Host to bind to. Defaults to `localhost`. |
+| `-p`, `--port=<port>` | Port to listen on. Defaults to the `port` argument. |
+| `-f`, `--filter=<regex>` | Hides request log lines whose URL matches the regex, for example `--filter='#^/assets/#'`. |
+| `-d`, `--debug` | `server`: sets `XDEBUG_SESSION`, so Xdebug debugs every request. `frankenphp`: enables verbose Caddy logs. |
+| `-q`, `--quiet` | Reduces output: runs the PHP server with `-q`, hides FrankenPHP's startup banner, and hides live reload lines while pages are connected. |
+| `-o`, `--open` | Opens the application in the default browser once it responds. |
+| `-w`, `--watch[=<glob>]` | Enables live reload. Given patterns replace the `watch` argument; repeat the option or separate patterns with commas. |
+| `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
+
+## Routing
+
+With the built-in PHP server, requests for existing files in the public directory are handled by the server directly: PHP files run, others are served as they are, and a directory with an `index.html` serves that file. Every other request goes to `index.php` in the public directory, the front controller. FrankenPHP routes requests with its own PHP server defaults. Both commands strip the `routePrefix` from request paths.
+
 ## Live reload
 
-With `--watch`, the command polls the watched files and tells open pages to reload when they change. Changed stylesheets are swapped in place without a full reload. The patterns come from the `watch` constructor argument, relative to the working directory; `--watch=<pattern>` overrides them. A pattern starting with `!` excludes matching files, for example `['src/**/*.php', '!src/cache/**']`; a negated pattern that covers a whole directory, like `!src/cache/**` or `!src/cache/`, skips it while scanning. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed. At startup, the command prints how many files it watches, or warns when the patterns match none.
+With `--watch`, the command polls the watched files and tells open pages to reload when they change. Changed stylesheets are swapped in place without a full reload.
 
-Pages opt in by including the live reload script. The command serves it on a separate port, ten times the public port or the next free port above it unless `--reload-port` sets one, and passes its URL to the application as the `CELEMA_LIVE_RELOAD` environment variable. It is only set while `--watch` runs, so the snippet renders nothing in production. Add it to your layout, before `</body>`:
+Patterns are relative to the working directory. `**` matches across directories, `*` and `?` within one path segment, and braces list alternatives, like `*.{php,js}`. A pattern starting with `!` excludes matching files, for example `['src/**/*.php', '!src/cache/**']`; a negated pattern that covers a whole directory, like `!src/cache/**` or `!src/cache/`, skips it while scanning. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed. At startup, the command prints how many files it watches, or warns when the patterns match none.
+
+Pages opt in by including the live reload script. The command serves it on a separate port and passes its URL to the application as the `CELEMA_LIVE_RELOAD` environment variable. It is only set while `--watch` runs, so the snippet renders nothing in production. Add it to your layout, before `</body>`:
 
 ```php
 <?php if ($liveReload = getenv('CELEMA_LIVE_RELOAD')): ?>
@@ -55,7 +98,13 @@ Open pages also reload once when they reconnect after the command restarts. If a
 
 ## Request log protocol
 
-The served application reports each handled request to the parent command as a structured `celema-request` line on stderr, which the command renders as a request log line. With the built-in PHP server, `index.php` in the public directory is the front controller for every request that does not match a file. If it returns a PSR-7 response, the log shows that response's status; otherwise it shows the status the script set. Applications can additionally report handled exceptions through `Celema\Server\Console` — inert unless the `CELEMA_CLI_SERVER` environment variable set by the dev server is present. `celema/core`'s error handler does this automatically when this package is installed.
+The served application reports each handled request to the parent command as a structured `celema-request` line on stderr, which the command renders as a request log line. With the built-in PHP server, the log shows the status of the PSR-7 response the front controller returns, or otherwise the status the script set.
+
+Applications can additionally report handled exceptions through `Celema\Server\Console`, which is inert unless the `CELEMA_CLI_SERVER` environment variable set by the dev server is present. `celema/core`'s error handler does this automatically when this package is installed.
+
+## Platform support
+
+The commands are developed and tested on macOS and Linux. Windows has basic support, like finding executables with `where`, but is untested.
 
 ## License
 
