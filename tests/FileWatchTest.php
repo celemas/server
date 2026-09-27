@@ -94,6 +94,28 @@ final class FileWatchTest extends TestCase
 		$this->assertSame(['views/page.php'], $watch->changes());
 	}
 
+	public function testGlobsCoverDirectoriesOnlyForAllTheirContents(): void
+	{
+		$this->assertTrue(WatchGlob::compile('cache/**')->coversDirectory('cache'));
+		$this->assertTrue(WatchGlob::compile('cache/')->coversDirectory('cache'));
+		$this->assertTrue(WatchGlob::compile('**/cache/**')->coversDirectory('src/cache'));
+		$this->assertFalse(WatchGlob::compile('cache/*.php')->coversDirectory('cache'));
+		$this->assertFalse(WatchGlob::compile('cache/**/*.php')->coversDirectory('cache'));
+		$this->assertFalse(WatchGlob::compile('cache/**')->coversDirectory('src'));
+	}
+
+	public function testNegatedPatternsExcludeFiles(): void
+	{
+		$watch = new FileWatch(['src/**/*.php', '!src/**/*.cache.php', '!src/generated/**', '!src/tmp/']);
+
+		$this->write('src/App.php');
+		$this->write('src/Views.cache.php');
+		$this->write('src/generated/Proxy.php');
+		$this->write('src/tmp/Compiled.php');
+
+		$this->assertSame(['src/App.php'], $watch->changes());
+	}
+
 	public function testShallowPatternsIgnoreSubdirectories(): void
 	{
 		$watch = new FileWatch(['views/*.php']);

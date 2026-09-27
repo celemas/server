@@ -18,18 +18,11 @@ namespace Celema\Server;
  */
 final class FileScan
 {
-	/**
-	 * Skipped while scanning, unless a pattern's base already points
-	 * into them. Scanning these would make polling expensive.
-	 */
-	private const array SKIPPED = ['node_modules', 'vendor'];
-
 	/** @var array<string, array<string, Listing>> Per base, then per directory */
 	private array $listings = [];
 
-	/** @param array<string, list<WatchGlob>> $globs Grouped by base directory */
 	public function __construct(
-		private readonly array $globs,
+		private readonly WatchFilter $filter,
 	) {}
 
 	/** @return array<string, Stamp> */
@@ -39,7 +32,7 @@ final class FileScan
 		$stamps = [];
 		$now = time();
 
-		foreach (array_keys($this->globs) as $base) {
+		foreach ($this->filter->bases() as $base) {
 			$visited = [];
 			$this->walk($base, $base, $now, $stamps, $visited);
 		}
@@ -106,28 +99,14 @@ final class FileScan
 			$path = $dir === '.' ? $entry : rtrim($dir, '/') . "/{$entry}";
 
 			if (is_dir($path)) {
-				if ($this->descends($base, $entry)) {
+				if ($this->filter->descends($base, $entry, $path)) {
 					$listing['dirs'][] = $path;
 				}
-			} elseif ($this->matches($base, $path)) {
+			} elseif ($this->filter->includes($base, $path)) {
 				$listing['files'][] = $path;
 			}
 		}
 
 		return $this->listings[$base][$dir] = $listing;
-	}
-
-	private function descends(string $base, string $entry): bool
-	{
-		if ($entry[0] === '.' || in_array($entry, self::SKIPPED, true)) {
-			return false;
-		}
-
-		return array_any($this->globs[$base] ?? [], static fn(WatchGlob $glob): bool => $glob->deep);
-	}
-
-	private function matches(string $base, string $path): bool
-	{
-		return array_any($this->globs[$base] ?? [], static fn(WatchGlob $glob): bool => $glob->matches($path));
 	}
 }

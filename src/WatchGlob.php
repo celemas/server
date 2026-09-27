@@ -28,8 +28,9 @@ final readonly class WatchGlob
 	{
 		$pattern = self::normalize($pattern);
 
-		// A plain directory watches everything inside it.
-		if (strcspn($pattern, '*?') === strlen($pattern) && is_dir($pattern)) {
+		// A plain directory, or a path ending in a slash, covers
+		// everything inside it.
+		if (str_ends_with($pattern, '/') || strcspn($pattern, '*?') === strlen($pattern) && is_dir($pattern)) {
 			$pattern = rtrim($pattern, '/') . '/**';
 		}
 
@@ -43,6 +44,18 @@ final readonly class WatchGlob
 	public function matches(string $path): bool
 	{
 		return preg_match($this->regex, $path) === 1;
+	}
+
+	/**
+	 * Whether it matches every path below the directory, so a scan can
+	 * skip the directory as a whole. The probes use a NUL byte, which no
+	 * pattern contains literally, so only wildcards can match them.
+	 */
+	public function coversDirectory(string $dir): bool
+	{
+		$dir = rtrim($dir, '/');
+
+		return $this->matches("{$dir}/\0") && $this->matches("{$dir}/\0/\0");
 	}
 
 	private static function normalize(string $pattern): string

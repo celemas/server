@@ -19,17 +19,24 @@ final class FileWatch
 	/** @var array<string, Stamp> */
 	private array $stamps;
 
-	/** @param list<string> $patterns */
+	/** @param list<string> $patterns Patterns starting with `!` exclude matching files */
 	public function __construct(array $patterns)
 	{
 		$globs = [];
+		$ignore = [];
 
 		foreach ($patterns as $pattern) {
+			if (str_starts_with($pattern, '!')) {
+				$ignore[] = WatchGlob::compile(substr($pattern, 1));
+
+				continue;
+			}
+
 			$glob = WatchGlob::compile($pattern);
 			$globs[$glob->base][] = $glob;
 		}
 
-		$this->scan = new FileScan($globs);
+		$this->scan = new FileScan(new WatchFilter($globs, $ignore));
 		$this->stamps = $this->scan->run();
 	}
 
