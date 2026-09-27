@@ -52,6 +52,15 @@ final class CliRouterTest extends TestCase
 		$this->assertMatchesRegularExpression('#celema-request 201 GET [\d.]+ -- /created#', $log);
 	}
 
+	public function testPassesEveryPathToTheFrontController(): void
+	{
+		file_put_contents("{$this->docroot}/index.php", "<?php\necho 'app';\n");
+
+		[$body] = $this->request('/phpinfo');
+
+		$this->assertSame('app', $body);
+	}
+
 	/** @return array{string, string} */
 	private function request(string $path): array
 	{

@@ -40,15 +40,6 @@ if (PHP_SAPI !== 'cli') {
 			return false;
 		}
 
-		if ($url === '/phpinfo') {
-			// @mago-expect lint:no-debug-symbols
-			echo phpinfo();
-			$status = http_response_code();
-			serverEcho(is_int($status) ? $status : 0, $uri, microtime(true) - $start);
-
-			return true;
-		}
-
 		$_SERVER['SCRIPT_NAME'] = 'index.php';
 
 		/** @psalm-suppress UnresolvableInclude, MixedAssignment */
