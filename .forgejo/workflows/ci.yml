@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ci-base
+    steps:
+      - name: Checkout repo
+        uses: https://code.forgejo.org/actions/checkout@v5
+
+      - name: Install packages with composer
+        run: composer install --prefer-dist --no-interaction
+        env:
+          COMPOSER_AUTH: '{"github-oauth": {"github.com": "${{ secrets.GH_TOKEN }}"}}'
+
+      - name: Run PHP lint checks
+        run: composer lint
+
+      - name: Run Markdown lint checks
+        run: composer docs:lint
+
+      - name: Run tests with coverage
+        run: composer coverage:test
+        env:
+          XDEBUG_MODE: coverage
+
+      - name: Analyze coverage
+        run: composer coverage:analyze
+
+      - name: Deploy code coverage report
+        if: ${{ always() && forgejo.ref == 'refs/heads/main' }}
+        run: deploy-code-coverage .coverage
+
+      - name: Run static analysis
+        if: ${{ always() }}
+        run: |
+          set -o pipefail
+          composer types -- --stats --report=psalm-issues.json 2>&1 | tee psalm-stats.txt
+
+      - name: Deploy type coverage report
+        if: ${{ always() && forgejo.ref == 'refs/heads/main' }}
+        run: deploy-type-coverage
