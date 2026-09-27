@@ -2,10 +2,11 @@
 
 ## [Unreleased]
 
-### Changed
+Initial release. The development server was previously part of `celema/core` in the `Celema\Core\Server` namespace.
 
-- `--watch` no longer runs BrowserSync. The command now polls the watched files itself and serves a live reload script, so Node.js and `npx` are no longer required. The application listens on the requested port directly instead of behind a proxy. Pages must include the script from the `CELEMA_LIVE_RELOAD` environment variable to reload; see the README.
-
-### Added
-
-- Extracted the development server from `celema/core` into the standalone `celema/server` package. The classes moved from the `Celema\Core\Server` namespace to `Celema\Server`; the commands, options, watch mode, and the request-log protocol are unchanged.
+- `Server` command that serves the application with the PHP CLI's built-in server, with an optional Xdebug session.
+- `FrankenPhp` command that serves the application with the `frankenphp` executable in classic mode, with optional verbose Caddy logs.
+- Host, port, and route prefix configuration, with a port availability check at startup.
+- Colored request log lines with status, method, duration, and XHR and exception markers, filterable by regex.
+- Request log protocol through which the served application reports handled requests and exceptions, inert outside the dev server.
+- `--watch` mode with live reload: watched files are polled without Node.js or other external tools, pages that include the script from the `CELEMA_LIVE_RELOAD` environment variable reload on changes, and changed stylesheets are swapped in place.
