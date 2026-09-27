@@ -27,6 +27,7 @@ use InvalidArgumentException;
 #[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
 #[Opt('--debug', 'Enable verbose Caddy logs.', short: '-d')]
 #[Opt('--quiet', 'Reduce server and live reload output.', short: '-q')]
+#[Opt('--open', 'Open the application in the default browser once it responds.', short: '-o')]
 #[Opt(
 	'--reload-port',
 	'Port for live reload in watch mode. Defaults to ten times the port, or the next free port above.',

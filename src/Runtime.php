@@ -55,6 +55,11 @@ abstract class Runtime
 			}
 
 			$this->started();
+
+			if ($this->options->open) {
+				$this->openBrowser();
+			}
+
 			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload);
 
 			return self::normalizeExitCode($backend->close());
@@ -78,6 +83,15 @@ abstract class Runtime
 	protected function started(): void {}
 
 	protected function cleanup(): void {}
+
+	private function openBrowser(): void
+	{
+		$error = Browser::open($this->options->host, $this->options->port);
+
+		if ($error !== null) {
+			$this->io->warn($error);
+		}
+	}
 
 	private function liveReload(): LiveReload|string
 	{

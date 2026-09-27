@@ -38,19 +38,10 @@ final readonly class ReloadResponse
 		};
 	}
 
-	/** The script URL for pages, which cannot connect to a wildcard address. */
+	/** The script URL for pages on the same machine. */
 	public static function url(string $host, int $port): string
 	{
-		$host = match ($host) {
-			'0.0.0.0', '::', '[::]' => 'localhost',
-			default => $host,
-		};
-
-		if (str_contains($host, ':') && !str_starts_with($host, '[')) {
-			$host = "[{$host}]";
-		}
-
-		return "http://{$host}:{$port}" . self::SCRIPT;
+		return Address::url($host, $port) . self::SCRIPT;
 	}
 
 	private static function body(string $status, string $type, string $body): self

@@ -6,6 +6,8 @@ namespace Celema\Server\Tests;
 
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
+use Celema\Server\Address;
+use Celema\Server\Browser;
 use Celema\Server\Console;
 use Celema\Server\ErrorTrap;
 use Celema\Server\FrankenPhp;
@@ -298,6 +300,29 @@ final class ServerTest extends TestCase
 		} finally {
 			unlink($executable);
 		}
+	}
+
+	public function testOpenFlagIsParsed(): void
+	{
+		$this->assertTrue(Options::from(1983, ['**/*.php'], new Args(['--open']))->open);
+		$this->assertTrue(Options::from(1983, ['**/*.php'], new Args(['-o']))->open);
+		$this->assertFalse(Options::from(1983, ['**/*.php'], new Args([]))->open);
+	}
+
+	public function testBrowserCommandMatchesTheOperatingSystem(): void
+	{
+		$url = 'http://localhost:1983';
+
+		$this->assertSame(['open', $url], Browser::command($url, 'Darwin'));
+		$this->assertSame(['cmd', '/c', 'start', '', $url], Browser::command($url, 'Windows'));
+		$this->assertSame(['xdg-open', $url], Browser::command($url, 'Linux'));
+	}
+
+	public function testAddressUsesAReachableHost(): void
+	{
+		$this->assertSame('http://localhost:1983', Address::url('0.0.0.0', 1983));
+		$this->assertSame('http://[::1]:1983', Address::url('::1', 1983));
+		$this->assertSame('http://127.0.0.1:1983', Address::url('127.0.0.1', 1983));
 	}
 
 	public function testReloadPortMustBeValid(): void

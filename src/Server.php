@@ -27,6 +27,7 @@ use InvalidArgumentException;
 #[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
 #[Opt('--debug', 'Enable an Xdebug session for the PHP server.', short: '-d')]
 #[Opt('--quiet', 'Reduce verbose output where supported.', short: '-q')]
+#[Opt('--open', 'Open the application in the default browser once it responds.', short: '-o')]
 #[Opt(
 	'--reload-port',
 	'Port for live reload in watch mode. Defaults to ten times the port, or the next free port above.',
