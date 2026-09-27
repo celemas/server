@@ -39,7 +39,7 @@ exit(new Runner($commands)->run());
 
 ## Live reload
 
-With `--watch`, the command polls the watched files and tells open pages to reload when they change. Changed stylesheets are swapped in place without a full reload. The patterns come from the `watch` constructor argument, relative to the working directory; `--watch=<pattern>` overrides them. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed.
+With `--watch`, the command polls the watched files and tells open pages to reload when they change. Changed stylesheets are swapped in place without a full reload. The patterns come from the `watch` constructor argument, relative to the working directory; `--watch=<pattern>` overrides them. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed. At startup, the command prints how many files it watches, or warns when the patterns match none.
 
 Pages opt in by including the live reload script. The command serves it on a separate port, ten times the public port or the next free port above it, and passes its URL to the application as the `CELEMA_LIVE_RELOAD` environment variable. It is only set while `--watch` runs, so the snippet renders nothing in production. Add it to your layout, before `</body>`:
 

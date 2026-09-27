@@ -260,31 +260,20 @@ final class ServerTest extends TestCase
 
 	public function testWatchPassesLiveReloadScriptToTheBackend(): void
 	{
-		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+		$output = $this->watch('tests/**/*.php');
 
-		if ($executable === false) {
-			$this->fail('Could not create a fake PHP executable.');
-		}
+		$this->assertMatchesRegularExpression(
+			'#Live reload script: (http://127\.0\.0\.1:\d+/celema-live-reload\.js)\n.*script=\1#s',
+			$output,
+		);
+		$this->assertMatchesRegularExpression('#Watching \d+ files#', $output);
+	}
 
-		file_put_contents($executable, "#!/bin/sh\nprintf 'script=%s\\n' \"\$CELEMA_LIVE_RELOAD\" >&2\n");
-		chmod($executable, 0o755);
-		$port = $this->freePort();
+	public function testWatchWarnsWhenNoFilesMatch(): void
+	{
+		$output = $this->watch('no-such-dir/**/*.php');
 
-		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', watch: 'tests/**/*.php', executable: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--watch']),
-				$io,
-			);
-
-			$this->assertSame(0, $exit);
-			$this->assertMatchesRegularExpression(
-				'#Live reload script: (http://127\.0\.0\.1:\d+/celema-live-reload\.js)\n.*script=\1#s',
-				$io->output(),
-			);
-		} finally {
-			unlink($executable);
-		}
+		$this->assertStringContainsString('No files match the watch patterns: no-such-dir/**/*.php', $output);
 	}
 
 	public function testInvalidOptionsReportToStderrAndFail(): void
@@ -541,6 +530,34 @@ final class ServerTest extends TestCase
 			} else {
 				$_SERVER['CELEMA_CLI_SERVER'] = $oldValue;
 			}
+		}
+	}
+
+	/** Runs the server command in watch mode against a backend that exits at once. */
+	private function watch(string $pattern): string
+	{
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+
+		if ($executable === false) {
+			$this->fail('Could not create a fake PHP executable.');
+		}
+
+		file_put_contents($executable, "#!/bin/sh\nprintf 'script=%s\\n' \"\$CELEMA_LIVE_RELOAD\" >&2\n");
+		chmod($executable, 0o755);
+		$port = $this->freePort();
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', watch: $pattern, executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}", '--watch']),
+				$io,
+			);
+
+			$this->assertSame(0, $exit);
+
+			return $io->output();
+		} finally {
+			unlink($executable);
 		}
 	}
 

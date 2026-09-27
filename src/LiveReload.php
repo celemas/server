@@ -48,6 +48,11 @@ final class LiveReload
 		return new self($endpoint, ReloadResponse::url($host, $port), new FileWatch($patterns), $log);
 	}
 
+	public function watched(): int
+	{
+		return $this->files->count();
+	}
+
 	/** @return list<resource> */
 	public function streams(): array
 	{

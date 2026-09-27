@@ -51,7 +51,7 @@ abstract class Runtime
 			}
 
 			if ($liveReload !== null) {
-				$this->io->echoln("Live reload script: {$liveReload->script}");
+				$this->announce($liveReload);
 			}
 
 			$this->started();
@@ -88,6 +88,24 @@ abstract class Runtime
 		}
 
 		return LiveReload::listen($this->options->host, $port, $this->options->watchFiles, $this->changed(...));
+	}
+
+	private function announce(LiveReload $liveReload): void
+	{
+		$this->io->echoln("Live reload script: {$liveReload->script}");
+		$watched = $liveReload->watched();
+
+		if ($watched > 0) {
+			$this->io->echoln('<dim>Watching ' . ($watched === 1 ? '1 file' : "{$watched} files") . '</dim>');
+
+			return;
+		}
+
+		// A typo in a pattern would otherwise go unnoticed.
+		$this->io->echoln(
+			'<yellow>No files match the watch patterns:</yellow> '
+				. $this->io->escape(implode(', ', $this->options->watchFiles)),
+		);
 	}
 
 	/** @param list<string> $files */

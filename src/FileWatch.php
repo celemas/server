@@ -33,6 +33,12 @@ final class FileWatch
 		$this->stamps = $this->scan->run();
 	}
 
+	/** The number of files currently watched. */
+	public function count(): int
+	{
+		return count($this->stamps);
+	}
+
 	/**
 	 * Returns the paths added, removed, or modified since the last call.
 	 *
