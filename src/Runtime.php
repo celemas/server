@@ -8,7 +8,7 @@ use Celema\Console\Io;
 
 /**
  * Shared serve/watch orchestration for the dev-server backends; the
- * subclasses provide the backend process and its startup messages.
+ * subclasses provide the backend process.
  *
  * @internal
  */
@@ -20,8 +20,13 @@ abstract class Runtime
 		protected readonly Io $io,
 	) {}
 
-	/** @param callable(string): void $output */
-	public function serve(callable $output): string|int
+	/**
+	 * Runs the backend until it stops. In watch mode, the live reload
+	 * endpoint runs alongside it in this process.
+	 *
+	 * @param callable(string): void $output
+	 */
+	public function run(callable $output): string|int
 	{
 		$message = $this->missing() ?? Ports::unavailableMessage(
 			$this->options->host,
@@ -32,89 +37,38 @@ abstract class Runtime
 			return $message;
 		}
 
+		$liveReload = $this->options->watch ? $this->liveReload() : null;
+
+		if (is_string($liveReload)) {
+			return $liveReload;
+		}
+
 		try {
-			$backend = $this->start($this->options->port);
+			$backend = $this->start($this->options->port, $liveReload?->script);
 
 			if (is_string($backend)) {
 				return $backend;
 			}
 
+			if ($liveReload !== null) {
+				$this->io->echoln("Live reload script: {$liveReload->script}");
+			}
+
 			$this->started();
-			Relay::run([$backend->binding([1 => $output, 2 => $output])]);
+			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload);
 
 			return self::normalizeExitCode($backend->close());
 		} finally {
+			$liveReload?->close();
 			$this->cleanup();
 		}
 	}
 
 	/**
-	 * @param callable(string): void $output
-	 * @param callable(string): void $browserOutput
+	 * Starts the backend on the given port, or returns an error message.
+	 * The live reload script URL is passed on as CELEMA_LIVE_RELOAD.
 	 */
-	public function watch(callable $output, callable $browserOutput): string|int
-	{
-		$message =
-			$this->missing() ?? $this->missingBrowserSync() ?? Ports::unavailableMessage(
-				$this->options->host,
-				$this->options->port,
-			);
-
-		if ($message !== null) {
-			return $message;
-		}
-
-		$backendPort = Ports::backendPort($this->options->host, $this->options->port);
-
-		if (is_string($backendPort)) {
-			return $backendPort;
-		}
-
-		try {
-			$backend = $this->start($backendPort);
-
-			if (is_string($backend)) {
-				return $backend;
-			}
-
-			$browserSync = Process::start(
-				$this->setup->browserSyncCommand(
-					$this->options->host,
-					$this->options->port,
-					$backendPort,
-					$this->options->quiet,
-				),
-			);
-
-			if ($browserSync === null) {
-				$backend->close(terminate: true);
-
-				return 'Failed to start BrowserSync.';
-			}
-
-			$this->io->echoln(
-				"BrowserSync proxy listening on http://{$this->options->host}:{$this->options->port}",
-			);
-			$this->io->echoln(
-				"{$this->label()} listening on http://{$this->options->host}:{$backendPort}",
-			);
-			$this->started();
-
-			Relay::run([
-				$backend->binding([1 => $output, 2 => $output]),
-				$browserSync->binding([1 => $browserOutput, 2 => $browserOutput]),
-			]);
-
-			return $this->resolve($backend, $browserSync);
-		} finally {
-			$this->cleanup();
-		}
-	}
-
-	/** Starts the backend on the given port, or returns an error message. */
-	abstract protected function start(int $port): Process|string;
-
-	abstract protected function label(): string;
+	abstract protected function start(int $port, ?string $liveReload): Process|string;
 
 	protected function missing(): ?string
 	{
@@ -125,33 +79,40 @@ abstract class Runtime
 
 	protected function cleanup(): void {}
 
-	private function missingBrowserSync(): ?string
+	private function liveReload(): LiveReload|string
 	{
-		$missing = $this->setup->missingBrowserSyncDependencies();
+		$port = Ports::liveReloadPort($this->options->host, $this->options->port);
 
-		if ($missing === []) {
-			return null;
+		if (is_string($port)) {
+			return $port;
 		}
 
-		return 'BrowserSync requires ' . implode(' and ', $missing) . ' in PATH.';
+		return LiveReload::listen($this->options->host, $port, $this->options->watchFiles, $this->changed(...));
 	}
 
-	private function resolve(Process $backend, Process $browserSync): int
+	/** @param list<string> $files */
+	private function changed(string $event, array $files, int $clients): void
 	{
-		$backendStopped = !$backend->running();
-		$browserSyncStopped = !$browserSync->running();
-		$backendExit = $backend->close(terminate: !$backendStopped);
-		$browserSyncExit = $browserSync->close(terminate: !$browserSyncStopped);
-
-		if ($backendStopped && $backendExit !== 0) {
-			return self::normalizeExitCode($backendExit);
+		if ($this->options->quiet && $clients > 0) {
+			return;
 		}
 
-		if ($browserSyncStopped && $browserSyncExit !== 0) {
-			return self::normalizeExitCode($browserSyncExit);
+		$more = count($files) > 1 ? ' <dim>(+' . (count($files) - 1) . ' more)</dim>' : '';
+		$file = $this->io->escape($files[0] ?? '') . $more;
+		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
+
+		if ($clients === 0) {
+			$this->io->echoln(
+				"{$timestamp} <yellow>changed</yellow> {$file} "
+					. '<dim>· no page connected, include the live reload script</dim>',
+			);
+
+			return;
 		}
 
-		return 0;
+		$action = $event === 'css' ? 'restyle' : 'reload';
+		$pages = $clients === 1 ? '1 page' : "{$clients} pages";
+		$this->io->echoln("{$timestamp} <magenta>{$action}</magenta> {$file} <dim>· {$pages}</dim>");
 	}
 
 	private static function normalizeExitCode(int $exitCode): int

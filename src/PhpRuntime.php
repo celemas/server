@@ -10,20 +10,14 @@ use Override;
 final class PhpRuntime extends Runtime
 {
 	#[Override]
-	protected function start(int $port): Process|string
+	protected function start(int $port, ?string $liveReload): Process|string
 	{
 		$php = Process::start(
 			$this->setup->phpCommand($this->options->host, $port, $this->options->quiet),
-			$this->setup->phpEnvironment($this->options->debug),
+			$this->setup->phpEnvironment($this->options->debug, $liveReload),
 		);
 
 		return $php ?? 'Failed to start the PHP server.';
-	}
-
-	#[Override]
-	protected function label(): string
-	{
-		return 'PHP server';
 	}
 
 	#[Override]

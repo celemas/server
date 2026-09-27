@@ -13,14 +13,16 @@ namespace Celema\Server;
 final class Relay
 {
 	/** @param list<Binding> $bindings */
-	public static function run(array $bindings): void
+	public static function run(array $bindings, ?LiveReload $liveReload = null): void
 	{
 		$watchers = Watchers::collect($bindings);
 
 		while ($watchers !== []) {
-			if (self::consume($watchers, 200_000) === false) {
+			if (self::consume($watchers, 200_000, $liveReload) === false) {
 				break;
 			}
+
+			$liveReload?->poll();
 
 			if (self::stopped($bindings)) {
 				self::drain($watchers);
@@ -50,12 +52,12 @@ final class Relay
 	}
 
 	/** @param array<int, Watcher> $watchers */
-	private static function consume(array &$watchers, int $microseconds): int|false
+	private static function consume(array &$watchers, int $microseconds, ?LiveReload $liveReload = null): int|false
 	{
 		// Streams of listed watchers are always open; a watcher is
 		// removed from the list when its stream gets closed.
 		/** @var list<resource> $read */
-		$read = array_column($watchers, 'stream');
+		$read = [...array_column($watchers, 'stream'), ...($liveReload?->streams() ?? [])];
 		$write = null;
 		$except = null;
 		$changed = ErrorTrap::run(
@@ -66,7 +68,19 @@ final class Relay
 			return $changed === false ? false : 0;
 		}
 
-		WatcherOutput::consumeReady($watchers, $read);
+		$output = [];
+		$sockets = [];
+
+		foreach ($read as $stream) {
+			if (isset($watchers[(int) $stream])) {
+				$output[] = $stream;
+			} else {
+				$sockets[] = $stream;
+			}
+		}
+
+		WatcherOutput::consumeReady($watchers, $output);
+		$liveReload?->handle($sockets);
 
 		return $changed;
 	}

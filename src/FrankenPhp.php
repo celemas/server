@@ -20,16 +20,16 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--port',
-	'Public port to listen on. When BrowserSync is enabled, FrankenPHP uses ten times this port, or the next free port above.',
+	'Port to listen on. Live reload uses ten times this port, or the next free port above.',
 	short: '-p',
 	value: 'port',
 )]
 #[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
 #[Opt('--debug', 'Enable verbose Caddy logs.', short: '-d')]
-#[Opt('--quiet', 'Reduce server and BrowserSync output.', short: '-q')]
+#[Opt('--quiet', 'Reduce server and live reload output.', short: '-q')]
 #[Opt(
 	'--watch',
-	'Run BrowserSync in front of FrankenPHP. Optional files override the configured watch patterns.',
+	'Serve the live reload script and reload pages on changes. Optional files override the configured watch patterns.',
 	short: '-w',
 	value: 'file',
 	optionalValue: true,
@@ -49,12 +49,7 @@ class FrankenPhp
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
 			$runtime = new FrankenRuntime(
-				new Setup(
-					$this->docroot,
-					$this->routePrefix,
-					$options->watchFiles,
-					$this->executable,
-				),
+				new Setup($this->docroot, $this->routePrefix, $this->executable),
 				$options,
 				$io,
 			);
@@ -65,15 +60,7 @@ class FrankenPhp
 				$options->quiet,
 				$options->debug,
 			);
-			// BrowserSync's output passes through verbatim; it colors
-			// and formats its own lines.
-			$browserOutput = static function (string $line): void {
-				echo $line;
-			};
-
-			$result = $options->watch
-				? $runtime->watch($output->line(...), $browserOutput)
-				: $runtime->serve($output->line(...));
+			$result = $runtime->run($output->line(...));
 
 			if (is_string($result)) {
 				$io->error($result);

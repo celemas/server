@@ -37,11 +37,13 @@ final class Ports
 	}
 
 	/**
-	 * Picks the BrowserSync backend port: ten times the public port,
-	 * which keeps clear of neighboring dev servers like Vite on the
-	 * next port, then upwards until a free port is found.
+	 * Picks the live reload port: ten times the public port, which
+	 * keeps clear of neighboring dev servers like Vite on the next
+	 * port, then upwards until a free port is found. Derived from the
+	 * public port, it stays the same across restarts, so open pages
+	 * reconnect.
 	 */
-	public static function backendPort(string $host, int $port): int|string
+	public static function liveReloadPort(string $host, int $port): int|string
 	{
 		$start = $port * 10;
 
@@ -54,7 +56,7 @@ final class Ports
 		}
 
 		if ($start > 65_535) {
-			return 'BrowserSync needs a free backend port above the public port.';
+			return 'Live reload needs a free port above the public port.';
 		}
 
 		$last = min($start + 100, 65_535);
@@ -65,6 +67,6 @@ final class Ports
 			}
 		}
 
-		return "No free BrowserSync backend port between {$start} and {$last}.";
+		return "No free live reload port between {$start} and {$last}.";
 	}
 }

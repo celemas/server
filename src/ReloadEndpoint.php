@@ -1,0 +1,172 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Celema\Server;
+
+/**
+ * A minimal HTTP server for the live reload script and its
+ * Server-Sent Events stream; ReloadResponse answers the requests.
+ *
+ * It runs inside Relay's select loop and never waits on a socket:
+ * requests are read once select reports them readable.
+ *
+ * @internal
+ */
+final class ReloadEndpoint
+{
+	private const int MAX_REQUEST = 8192;
+
+	/** @var array<int, array{stream: resource, buffer: string}> */
+	private array $requests = [];
+
+	/** @var array<int, resource> */
+	private array $clients = [];
+
+	/** @param resource $server */
+	private function __construct(
+		private mixed $server,
+	) {}
+
+	public static function listen(string $host, int $port): self|string
+	{
+		$errorCode = 0;
+		$errorMessage = '';
+		/** @var resource|false $server */
+		$server = ErrorTrap::run(
+			static function () use ($host, $port, &$errorCode, &$errorMessage): mixed {
+				return stream_socket_server("tcp://{$host}:{$port}", $errorCode, $errorMessage);
+			},
+			$trapped,
+		);
+
+		if ($server === false) {
+			$detail = $errorMessage !== '' ? $errorMessage : (string) $trapped;
+
+			return "Failed to start live reload on {$host}:{$port}" . ($detail !== '' ? ": {$detail}" : '') . '.';
+		}
+
+		return new self($server);
+	}
+
+	/**
+	 * The listening socket and all open connections, to be selected
+	 * for reading.
+	 *
+	 * @return list<resource>
+	 */
+	public function streams(): array
+	{
+		return [$this->server, ...array_column($this->requests, 'stream'), ...array_values($this->clients)];
+	}
+
+	/** @param list<resource> $ready Streams from streams() that select reported readable */
+	public function handle(array $ready): void
+	{
+		foreach ($ready as $stream) {
+			$id = (int) $stream;
+
+			if ($stream === $this->server) {
+				$this->accept();
+			} elseif (isset($this->requests[$id])) {
+				$this->read($id, $stream);
+			} elseif (isset($this->clients[$id])) {
+				$this->drain($id, $stream);
+			}
+		}
+	}
+
+	/** Sends the event to all connected pages and returns their number. */
+	public function broadcast(string $event): int
+	{
+		foreach ($this->clients as $id => $client) {
+			/** @var int|false $written */
+			$written = ErrorTrap::run(static fn(): mixed => fwrite($client, "event: {$event}\ndata: \n\n"));
+
+			if ($written === false || $written === 0) {
+				unset($this->clients[$id]);
+				fclose($client);
+			}
+		}
+
+		return count($this->clients);
+	}
+
+	public function close(): void
+	{
+		foreach ([...array_column($this->requests, 'stream'), ...$this->clients, $this->server] as $stream) {
+			fclose($stream);
+		}
+
+		$this->requests = [];
+		$this->clients = [];
+	}
+
+	/**
+	 * Event stream clients send nothing after their request; only a
+	 * confirmed end of stream means the page is gone.
+	 *
+	 * @param resource $stream
+	 */
+	private function drain(int $id, mixed $stream): void
+	{
+		$chunk = fread($stream, self::MAX_REQUEST);
+
+		if ($chunk === false || $chunk === '' && feof($stream)) {
+			unset($this->clients[$id]);
+			fclose($stream);
+		}
+	}
+
+	/** @param resource $stream */
+	private function respond(mixed $stream, string $request): void
+	{
+		$response = ReloadResponse::for($request);
+		fwrite($stream, $response->bytes);
+
+		if ($response->events) {
+			$this->clients[(int) $stream] = $stream;
+		} else {
+			fclose($stream);
+		}
+	}
+
+	private function accept(): void
+	{
+		/** @var resource|false $stream */
+		$stream = ErrorTrap::run(fn(): mixed => stream_socket_accept($this->server, 0));
+
+		if ($stream === false) {
+			return;
+		}
+
+		// Reads must never block the relay loop.
+		stream_set_blocking($stream, false);
+		$this->requests[(int) $stream] = ['stream' => $stream, 'buffer' => ''];
+	}
+
+	/** @param resource $stream */
+	private function read(int $id, mixed $stream): void
+	{
+		$chunk = fread($stream, self::MAX_REQUEST);
+		$closed = $chunk === false || $chunk === '' && feof($stream);
+		$buffer = $this->requests[$id]['buffer'] . (string) $chunk;
+
+		if (str_contains($buffer, "\r\n\r\n")) {
+			unset($this->requests[$id]);
+			$this->respond($stream, $buffer);
+
+			return;
+		}
+
+		if ($closed || strlen($buffer) > self::MAX_REQUEST) {
+			// Disconnected mid-request, or oversized.
+			unset($this->requests[$id]);
+			fclose($stream);
+
+			return;
+		}
+
+		$this->requests[$id]['buffer'] = $buffer;
+	}
+}

@@ -235,73 +235,56 @@ final class ServerTest extends TestCase
 		$this->assertSame(['**/*.twig'], $options->watchFiles);
 	}
 
-	public function testBrowserSyncCommandUsesProxyPort(): void
+	public function testEnvironmentPassesLiveReloadScript(): void
 	{
 		$setup = new Setup('/tmp/public', '');
-		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
+		$script = 'http://localhost:19830/celema-live-reload.js';
 
-		$this->assertSame(
-			[
-				'npx',
-				'browser-sync',
-				'start',
-				'--proxy',
-				'http://localhost:1984',
-				'--files',
-				'**/*.{php,js,css}',
-				'--port',
-				'1983',
-				'--host',
-				'localhost',
-				'--no-ui',
-				'--no-notify',
-				'--no-open',
-				'--reload-delay',
-				'100',
-				'--reload-debounce',
-				'300',
-			],
-			$command,
-		);
+		$this->assertSame($script, $setup->phpEnvironment(false, $script)['CELEMA_LIVE_RELOAD']);
+		$this->assertSame($script, $setup->frankenPhpEnvironment($script)['CELEMA_LIVE_RELOAD']);
 	}
 
-	public function testBrowserSyncCommandAddsMultipleFileFlags(): void
+	public function testEnvironmentNeverInheritsLiveReloadScript(): void
 	{
-		$setup = new Setup(
-			'/tmp/public',
-			'',
-			[
-				'app/**/*.php',
-				'vendor/celema/cms/**/*.{js,css,php}',
-			],
-		);
-		$command = $setup->browserSyncCommand('localhost', 1983, 1984, false);
+		putenv('CELEMA_LIVE_RELOAD=http://localhost:1/stale.js');
 
-		$this->assertSame(
-			[
-				'npx',
-				'browser-sync',
-				'start',
-				'--proxy',
-				'http://localhost:1984',
-				'--files',
-				'app/**/*.php',
-				'--files',
-				'vendor/celema/cms/**/*.{js,css,php}',
-				'--port',
-				'1983',
-				'--host',
-				'localhost',
-				'--no-ui',
-				'--no-notify',
-				'--no-open',
-				'--reload-delay',
-				'100',
-				'--reload-debounce',
-				'300',
-			],
-			$command,
-		);
+		try {
+			$setup = new Setup('/tmp/public', '');
+
+			$this->assertArrayNotHasKey('CELEMA_LIVE_RELOAD', $setup->phpEnvironment(false));
+			$this->assertArrayNotHasKey('CELEMA_LIVE_RELOAD', $setup->frankenPhpEnvironment());
+		} finally {
+			putenv('CELEMA_LIVE_RELOAD');
+		}
+	}
+
+	public function testWatchPassesLiveReloadScriptToTheBackend(): void
+	{
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+
+		if ($executable === false) {
+			$this->fail('Could not create a fake PHP executable.');
+		}
+
+		file_put_contents($executable, "#!/bin/sh\nprintf 'script=%s\\n' \"\$CELEMA_LIVE_RELOAD\" >&2\n");
+		chmod($executable, 0o755);
+		$port = $this->freePort();
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', watch: 'tests/**/*.php', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}", '--watch']),
+				$io,
+			);
+
+			$this->assertSame(0, $exit);
+			$this->assertMatchesRegularExpression(
+				'#Live reload script: (http://127\.0\.0\.1:\d+/celema-live-reload\.js)\n.*script=\1#s',
+				$io->output(),
+			);
+		} finally {
+			unlink($executable);
+		}
 	}
 
 	public function testInvalidOptionsReportToStderrAndFail(): void
@@ -360,24 +343,24 @@ final class ServerTest extends TestCase
 		Options::port('foo');
 	}
 
-	public function testBackendPortScalesThePublicPortTimesTen(): void
+	public function testLiveReloadPortScalesThePublicPortTimesTen(): void
 	{
-		$port = Ports::backendPort('127.0.0.1', 1983);
+		$port = Ports::liveReloadPort('127.0.0.1', 1983);
 
 		$this->assertIsInt($port);
 		$this->assertGreaterThanOrEqual(19_830, $port);
 		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
 	}
 
-	public function testBackendPortSkipsOccupiedPorts(): void
+	public function testLiveReloadPortSkipsOccupiedPorts(): void
 	{
-		$first = Ports::backendPort('127.0.0.1', 1983);
+		$first = Ports::liveReloadPort('127.0.0.1', 1983);
 		$this->assertIsInt($first);
 		$socket = stream_socket_server("tcp://127.0.0.1:{$first}");
 		$this->assertIsResource($socket);
 
 		try {
-			$second = Ports::backendPort('127.0.0.1', 1983);
+			$second = Ports::liveReloadPort('127.0.0.1', 1983);
 
 			$this->assertIsInt($second);
 			$this->assertGreaterThan($first, $second);
@@ -386,15 +369,15 @@ final class ServerTest extends TestCase
 		}
 	}
 
-	public function testBackendPortFallsBackWhenTimesTenOverflows(): void
+	public function testLiveReloadPortFallsBackWhenTimesTenOverflows(): void
 	{
-		$port = Ports::backendPort('127.0.0.1', 6913);
+		$port = Ports::liveReloadPort('127.0.0.1', 6913);
 
 		$this->assertIsInt($port);
 		$this->assertGreaterThanOrEqual(16_913, $port);
 	}
 
-	public function testBackendPortReportsAnExhaustedRange(): void
+	public function testLiveReloadPortReportsAnExhaustedRange(): void
 	{
 		// 55534 + 10000 leaves only 65534 and 65535 to try; occupy both.
 		$sockets = [];
@@ -410,9 +393,9 @@ final class ServerTest extends TestCase
 		}
 
 		try {
-			$message = Ports::backendPort('127.0.0.1', 55_534);
+			$message = Ports::liveReloadPort('127.0.0.1', 55_534);
 
-			$this->assertSame('No free BrowserSync backend port between 65534 and 65535.', $message);
+			$this->assertSame('No free live reload port between 65534 and 65535.', $message);
 		} finally {
 			foreach ($sockets as $socket) {
 				fclose($socket);
@@ -420,11 +403,11 @@ final class ServerTest extends TestCase
 		}
 	}
 
-	public function testBackendPortRejectsTheMaximumPublicPort(): void
+	public function testLiveReloadPortRejectsTheMaximumPublicPort(): void
 	{
-		$message = Ports::backendPort('127.0.0.1', 65_535);
+		$message = Ports::liveReloadPort('127.0.0.1', 65_535);
 
-		$this->assertSame('BrowserSync needs a free backend port above the public port.', $message);
+		$this->assertSame('Live reload needs a free port above the public port.', $message);
 	}
 
 	public function testWatchFlagUsesConfiguredPatternWithoutValue(): void
@@ -559,6 +542,17 @@ final class ServerTest extends TestCase
 				$_SERVER['CELEMA_CLI_SERVER'] = $oldValue;
 			}
 		}
+	}
+
+	private function freePort(): int
+	{
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = stream_socket_get_name($socket, false);
+		fclose($socket);
+		$this->assertIsString($address);
+
+		return (int) substr($address, (int) strrpos($address, ':') + 1);
 	}
 
 	/** @param callable(): void $callback */

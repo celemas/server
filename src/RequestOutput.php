@@ -40,12 +40,7 @@ final readonly class RequestOutput
 		$xhr = str_contains($flags, 'x');
 		$labels = ($exception ? '[EXC]' : '') . ($xhr ? '[XHR]' : '');
 		$separator = $labels === '' ? '' : ' ';
-		$time = microtime(true);
-		$timestamp = sprintf(
-			'%s.%02d',
-			date('H:i:s', (int) $time),
-			(int) (($time - floor($time)) * 100.0),
-		);
+		$timestamp = self::timestamp();
 		$spacer = $this->spacer(
 			mb_strwidth("{$timestamp} {$status} {$method} {$url}"),
 			mb_strwidth("{$labels}{$separator}{$duration}s"),
@@ -65,6 +60,13 @@ final readonly class RequestOutput
 				. $separator
 				. "<dim>{$duration}s</dim>",
 		);
+	}
+
+	public static function timestamp(): string
+	{
+		$time = microtime(true);
+
+		return sprintf('%s.%02d', date('H:i:s', (int) $time), (int) (($time - floor($time)) * 100.0));
 	}
 
 	private function spacer(int $left, int $right): string

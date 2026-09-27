@@ -20,7 +20,7 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--port',
-	'Public port to listen on. When BrowserSync is enabled, the PHP server uses ten times this port, or the next free port above.',
+	'Port to listen on. Live reload uses ten times this port, or the next free port above.',
 	short: '-p',
 	value: 'port',
 )]
@@ -29,7 +29,7 @@ use InvalidArgumentException;
 #[Opt('--quiet', 'Reduce verbose output where supported.', short: '-q')]
 #[Opt(
 	'--watch',
-	'Run BrowserSync in front of the PHP server. Optional files override the configured watch patterns.',
+	'Serve the live reload script and reload pages on changes. Optional files override the configured watch patterns.',
 	short: '-w',
 	value: 'file',
 	optionalValue: true,
@@ -49,25 +49,12 @@ class Server
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
 			$runtime = new PhpRuntime(
-				new Setup(
-					$this->docroot,
-					$this->routePrefix,
-					$options->watchFiles,
-					php: $this->executable,
-				),
+				new Setup($this->docroot, $this->routePrefix, php: $this->executable),
 				$options,
 				$io,
 			);
 			$phpOutput = new PhpOutput($io, $options->filter, Setup::terminalColumns());
-			// BrowserSync's output passes through verbatim; it colors
-			// and formats its own lines.
-			$browserOutput = static function (string $line): void {
-				echo $line;
-			};
-
-			$result = $options->watch
-				? $runtime->watch($phpOutput->line(...), $browserOutput)
-				: $runtime->serve($phpOutput->line(...));
+			$result = $runtime->run($phpOutput->line(...));
 
 			// Runtime reports failures as a message string.
 			if (is_string($result)) {

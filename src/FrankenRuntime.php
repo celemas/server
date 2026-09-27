@@ -12,7 +12,7 @@ final class FrankenRuntime extends Runtime
 	private ?string $config = null;
 
 	#[Override]
-	protected function start(int $port): Process|string
+	protected function start(int $port, ?string $liveReload): Process|string
 	{
 		$contents = $this->setup->frankenPhpCaddyfile(
 			$this->options->host,
@@ -35,16 +35,10 @@ final class FrankenRuntime extends Runtime
 				$this->options->debug,
 				$this->config,
 			),
-			$this->setup->frankenPhpEnvironment(),
+			$this->setup->frankenPhpEnvironment($liveReload),
 		);
 
 		return $frankenPhp ?? 'Failed to start FrankenPHP.';
-	}
-
-	#[Override]
-	protected function label(): string
-	{
-		return 'FrankenPHP';
 	}
 
 	#[Override]

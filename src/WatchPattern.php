@@ -22,7 +22,7 @@ final class WatchPattern
 			$patterns = self::fromArray($watch);
 		}
 
-		return WatchBrace::expandList(WatchSymlink::expand($patterns));
+		return WatchBrace::expandList($patterns);
 	}
 
 	/**

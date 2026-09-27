@@ -11,30 +11,12 @@ final readonly class Setup
 {
 	public const DEFAULT_WATCH = ['**/*.{php,js,css}'];
 
-	/** @param list<string> $watch */
 	public function __construct(
 		private string $docroot,
 		private string $routePrefix,
-		private array $watch = self::DEFAULT_WATCH,
 		private string $frankenPhp = 'frankenphp',
 		private string $php = 'php',
 	) {}
-
-	/** @return list<string> */
-	public function missingBrowserSyncDependencies(): array
-	{
-		$missing = [];
-
-		foreach (['node', 'npx'] as $command) {
-			if ($this->commandAvailable($command)) {
-				continue;
-			}
-
-			$missing[] = $command;
-		}
-
-		return $missing;
-	}
 
 	public function missingFrankenPhp(): bool
 	{
@@ -42,13 +24,9 @@ final readonly class Setup
 	}
 
 	/** @return array<string, string> */
-	public function phpEnvironment(bool $debug): array
+	public function phpEnvironment(bool $debug, ?string $liveReload = null): array
 	{
-		$environment = array_merge(getenv(), [
-			'CELEMA_CLI_SERVER' => '1',
-			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
-			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
-		]);
+		$environment = $this->environment('1', $liveReload);
 
 		if ($debug) {
 			$environment['XDEBUG_SESSION'] = '1';
@@ -145,50 +123,10 @@ final readonly class Setup
 		);
 	}
 
-	/** @return list<string> */
-	public function browserSyncCommand(string $host, int $port, int $backendPort, bool $quiet): array
-	{
-		$command = [
-			'npx',
-			'browser-sync',
-			'start',
-			'--proxy',
-			"http://{$host}:{$backendPort}",
-		];
-
-		foreach ($this->watch as $pattern) {
-			$command[] = '--files';
-			$command[] = $pattern;
-		}
-
-		$command[] = '--port';
-		$command[] = (string) $port;
-		$command[] = '--host';
-		$command[] = $host;
-		$command[] = '--no-ui';
-		$command[] = '--no-notify';
-		$command[] = '--no-open';
-		$command[] = '--reload-delay';
-		$command[] = '100';
-		$command[] = '--reload-debounce';
-		$command[] = '300';
-
-		if ($quiet) {
-			$command[] = '--logLevel';
-			$command[] = 'silent';
-		}
-
-		return $command;
-	}
-
 	/** @return array<string, string> */
-	public function frankenPhpEnvironment(): array
+	public function frankenPhpEnvironment(?string $liveReload = null): array
 	{
-		return array_merge(getenv(), [
-			'CELEMA_CLI_SERVER' => 'frankenphp',
-			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
-			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
-		]);
+		return $this->environment('frankenphp', $liveReload);
 	}
 
 	public static function terminalColumns(): int
@@ -207,6 +145,26 @@ final readonly class Setup
 		} catch (Throwable) {
 			return 80;
 		}
+	}
+
+	/** @return array<string, string> */
+	private function environment(string $server, ?string $liveReload): array
+	{
+		$environment = array_merge(getenv(), [
+			'CELEMA_CLI_SERVER' => $server,
+			'CELEMA_DOCUMENT_ROOT' => $this->docroot,
+			'CELEMA_ROUTE_PREFIX' => $this->routePrefix,
+		]);
+
+		// Never inherited: pages must only include the script while
+		// this command serves it.
+		unset($environment['CELEMA_LIVE_RELOAD']);
+
+		if ($liveReload !== null) {
+			$environment['CELEMA_LIVE_RELOAD'] = $liveReload;
+		}
+
+		return $environment;
 	}
 
 	private static function caddyToken(string $value): string
