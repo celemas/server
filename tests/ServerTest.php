@@ -269,6 +269,45 @@ final class ServerTest extends TestCase
 		$this->assertMatchesRegularExpression('#Watching \d+ files#', $output);
 	}
 
+	public function testWatchUsesTheGivenReloadPort(): void
+	{
+		$port = $this->freePort();
+		$output = $this->watch('tests/**/*.php', ["--reload-port={$port}"]);
+
+		$this->assertStringContainsString("script=http://127.0.0.1:{$port}/celema-live-reload.js", $output);
+	}
+
+	public function testWatchRejectsTheServerPortForReload(): void
+	{
+		$port = $this->freePort();
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+		$this->assertIsString($executable);
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}", "--reload-port={$port}", '--watch']),
+				$io,
+			);
+
+			$this->assertSame(1, $exit);
+			$this->assertStringContainsString(
+				'The live reload port must differ from the server port.',
+				$io->errorOutput(),
+			);
+		} finally {
+			unlink($executable);
+		}
+	}
+
+	public function testReloadPortMustBeValid(): void
+	{
+		$this->expectException(InvalidArgumentException::class);
+		$this->expectExceptionMessage("Invalid port 'abc'.");
+
+		Options::from(1983, ['**/*.php'], new Args(['--reload-port=abc']));
+	}
+
 	public function testWatchWarnsWhenNoFilesMatch(): void
 	{
 		$output = $this->watch('no-such-dir/**/*.php');
@@ -533,8 +572,12 @@ final class ServerTest extends TestCase
 		}
 	}
 
-	/** Runs the server command in watch mode against a backend that exits at once. */
-	private function watch(string $pattern): string
+	/**
+	 * Runs the server command in watch mode against a backend that exits at once.
+	 *
+	 * @param list<string> $args
+	 */
+	private function watch(string $pattern, array $args = []): string
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
 
@@ -549,7 +592,7 @@ final class ServerTest extends TestCase
 		try {
 			$io = new BufferedIo();
 			$exit = (new Server('/tmp/public', watch: $pattern, executable: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--watch']),
+				new Args(['--host=127.0.0.1', "--port={$port}", '--watch', ...$args]),
 				$io,
 			);
 

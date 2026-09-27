@@ -16,6 +16,7 @@ final class Options
 	public bool $debug = false;
 	public bool $quiet = false;
 	public bool $watch = false;
+	public ?int $reloadPort = null;
 	/** @var list<string> */
 	public array $watchFiles = Setup::DEFAULT_WATCH;
 
@@ -28,6 +29,8 @@ final class Options
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
 		$options->watch = $args->has('-w') || $args->has('--watch');
+		$reloadPort = $args->opt('--reload-port', '');
+		$options->reloadPort = $reloadPort === '' ? null : self::port($reloadPort);
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);
 
 		return $options;

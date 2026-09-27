@@ -20,13 +20,18 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--port',
-	'Port to listen on. Live reload uses ten times this port, or the next free port above.',
+	'Port to listen on.',
 	short: '-p',
 	value: 'port',
 )]
 #[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
 #[Opt('--debug', 'Enable verbose Caddy logs.', short: '-d')]
 #[Opt('--quiet', 'Reduce server and live reload output.', short: '-q')]
+#[Opt(
+	'--reload-port',
+	'Port for live reload in watch mode. Defaults to ten times the port, or the next free port above.',
+	value: 'port',
+)]
 #[Opt(
 	'--watch',
 	'Serve the live reload script and reload pages on changes. Optional files override the configured watch patterns.',

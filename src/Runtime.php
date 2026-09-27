@@ -81,10 +81,14 @@ abstract class Runtime
 
 	private function liveReload(): LiveReload|string
 	{
-		$port = Ports::liveReloadPort($this->options->host, $this->options->port);
+		$port = $this->options->reloadPort ?? Ports::liveReloadPort($this->options->host, $this->options->port);
 
 		if (is_string($port)) {
 			return $port;
+		}
+
+		if ($port === $this->options->port) {
+			return 'The live reload port must differ from the server port.';
 		}
 
 		return LiveReload::listen($this->options->host, $port, $this->options->watchFiles, $this->changed(...));
