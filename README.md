@@ -7,8 +7,6 @@
 
 Development server commands for PHP applications, built on `celema/console`, with request logging and live reload.
 
-> [!WARNING] This library is under active development, some of its features are still experimental and subject to change.
-
 ## Installation
 
 ```bash
