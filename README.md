@@ -53,7 +53,7 @@ Open pages also reload once when they reconnect after the command restarts. If a
 
 ## Request log protocol
 
-The served application reports each handled request to the parent command as a structured `celema-request` line on stderr, which the command renders as a request log line. Applications can additionally report handled exceptions through `Celema\Server\Console` — inert unless the `CELEMA_CLI_SERVER` environment variable set by the dev server is present. `celema/core`'s error handler does this automatically when this package is installed.
+The served application reports each handled request to the parent command as a structured `celema-request` line on stderr, which the command renders as a request log line. With the built-in PHP server, `index.php` in the public directory is the front controller for every request that does not match a file. If it returns a PSR-7 response, the log shows that response's status; otherwise it shows the status the script set. Applications can additionally report handled exceptions through `Celema\Server\Console` — inert unless the `CELEMA_CLI_SERVER` environment variable set by the dev server is present. `celema/core`'s error handler does this automatically when this package is installed.
 
 ## License
 

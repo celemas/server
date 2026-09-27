@@ -54,12 +54,14 @@ if (PHP_SAPI !== 'cli') {
 		/** @psalm-suppress UnresolvableInclude, MixedAssignment */
 		$response = require_once $publicDir . '/index.php';
 
-		if ($response) {
-			$fromHandler = \Celema\Server\Console::hasException();
-
-			/** @psalm-suppress MixedMethodCall, MixedArgument */
-			serverEcho($response->getStatusCode(), $uri, microtime(true) - $start, $fromHandler);
-		}
+		// Front controllers may return their PSR-7 response; plain scripts
+		// set the status themselves, if at all.
+		/** @psalm-suppress MixedAssignment */
+		$status = is_object($response) && method_exists($response, 'getStatusCode')
+			? $response->getStatusCode()
+			: http_response_code();
+		$fromHandler = \Celema\Server\Console::hasException();
+		serverEcho(is_int($status) ? $status : 200, $uri, microtime(true) - $start, $fromHandler);
 
 		\Celema\Server\Console::flushException();
 
