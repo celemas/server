@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Live reload morphs pages by default instead of reloading them when files other than stylesheets and scripts change. Pages whose scripts render markup or keep state in the DOM, which a morph would break, keep reloading with `<meta name="celema-live-reload" content="reload">`.
 - The default watch patterns include SQL and TPQL files: `**/*.{php,js,css,sql,tpql}`.
 
 ### Fixed
