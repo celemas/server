@@ -90,6 +90,10 @@ final readonly class Setup
 	 * The configuration for a route prefix or worker mode, or null when the
 	 * plain `php-server` command suffices. In worker mode, the admin API
 	 * listens on the given loopback port so changes can restart the worker.
+	 *
+	 * Like `php-server --listen`, the server binds to the host and answers
+	 * every Host header: the host of a Caddy site address would only match
+	 * the Host header, with the listener open on all interfaces.
 	 */
 	public function frankenPhpCaddyfile(string $host, int $port, bool $debug, ?int $adminPort = null): ?string
 	{
@@ -101,7 +105,8 @@ final readonly class Setup
 
 		$admin = $adminPort === null ? 'off' : self::caddyToken("127.0.0.1:{$adminPort}");
 		$debugOption = $debug ? "\tdebug\n" : '';
-		$address = self::caddyToken("http://{$host}:{$port}");
+		$address = self::caddyToken("http://:{$port}");
+		$bind = self::caddyToken($host);
 		$docroot = self::caddyToken($this->docroot);
 		$indent = $prefix === '' ? "\t" : "\t\t";
 		$phpServer = $adminPort === null ? "{$indent}php_server\n" : $this->workerServer($indent);
@@ -126,6 +131,7 @@ final readonly class Setup
 				. $debugOption
 				. "}\n"
 				. "{$address} {\n"
+				. "\tbind {$bind}\n"
 				. "\troot * {$docroot}\n"
 				. $phpServer
 				. "\tlog {\n"

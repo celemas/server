@@ -10,6 +10,10 @@
 
 - The default watch patterns include SQL and TPQL files: `**/*.{php,js,css,sql,tpql}`.
 
+### Fixed
+
+- `frankenphp` with a route prefix binds to `--host` and answers requests under every host name. The generated configuration used the host only to match the `Host` header, so the server listened on all interfaces, and requests under another name for the same address, such as `127.0.0.1` for the default `localhost`, got an empty response.
+
 ## [0.1.0](https://codefloe.com/celema/server/src/tag/0.1.0) (2026-09-27)
 
 Initial release. The development server was previously part of `celema/core` in the `Celema\Core\Server` namespace.

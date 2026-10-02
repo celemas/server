@@ -83,10 +83,17 @@ final class ServerTest extends TestCase
 
 		$this->assertIsString($config);
 		$this->assertStringContainsString("\tdebug\n", $config);
-		$this->assertStringContainsString('"http://localhost:1983"', $config);
 		$this->assertStringContainsString('root * "/tmp/public"', $config);
 		$this->assertStringContainsString('@prefix path "/prefix" "/prefix/*"', $config);
 		$this->assertNull(new Setup('/tmp/public', '')->frankenPhpCaddyfile('localhost', 1983, false));
+	}
+
+	public function testFrankenPhpCaddyfileBindsToTheHostForEveryHostHeader(): void
+	{
+		$config = new Setup('/tmp/public', '/prefix')->frankenPhpCaddyfile('127.0.0.1', 1983, false);
+
+		$this->assertIsString($config);
+		$this->assertStringContainsString("\n\"http://:1983\" {\n\tbind \"127.0.0.1\"\n", $config);
 	}
 
 	public function testFrankenPhpEnvironmentIdentifiesServer(): void
