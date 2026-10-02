@@ -12,6 +12,7 @@
 
 ### Fixed
 
+- Live reload applies changes to stylesheets that a linked stylesheet imports with `@import`. Only the linked file was fetched anew; the browser kept taking its imports from the cache, for good when they were served as immutable.
 - `frankenphp` with a route prefix binds to `--host` and answers requests under every host name. The generated configuration used the host only to match the `Host` header, so the server listened on all interfaces, and requests under another name for the same address, such as `127.0.0.1` for the default `localhost`, got an empty response.
 
 ## [0.1.0](https://codefloe.com/celema/server/src/tag/0.1.0) (2026-09-27)
