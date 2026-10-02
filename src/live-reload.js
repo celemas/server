@@ -24,9 +24,10 @@
 	});
 
 	// Updates run one after another, each on the page the last one left.
+	// A failed update leaves the page in an unknown state, so it reloads.
 	let updates = Promise.resolve();
 	const update = (task) => {
-		updates = updates.then(task);
+		updates = updates.then(task).catch(() => location.reload());
 	};
 
 	source.addEventListener('reload', () => location.reload());
@@ -63,10 +64,9 @@
 			const page = new DOMParser().parseFromString(await response.text(), 'text/html');
 			const { Idiomorph } = await import(new URL('idiomorph.js', script.src).href);
 			keepSwapped(page);
-			// Idiomorph takes a whole document only as markup. Blocking waits
-			// for added stylesheets before the body changes.
-			await Idiomorph.morph(document.documentElement, page.documentElement.outerHTML, {
-				head: { block: true },
+			await preload(page);
+			// Idiomorph takes a whole document only as markup.
+			Idiomorph.morph(document.documentElement, page.documentElement.outerHTML, {
 				callbacks: { beforeAttributeUpdated: (name, element) => !(edits.has(name) && edited(element)) },
 			});
 		} catch {
@@ -80,6 +80,36 @@
 		}
 
 		document.dispatchEvent(new CustomEvent('celema:morphed'));
+	}
+
+	/**
+	 * Adds the stylesheets the new page links before the morph, so new
+	 * markup never shows unstyled, and waits until they loaded or failed.
+	 * Idiomorph keeps them, as their markup matches the new page. Its own
+	 * blocking would wait for the load event of every added element with
+	 * a URL, which never comes for a failed stylesheet or a canonical link.
+	 */
+	function preload(page) {
+		const present = new Set([...document.head.children].map((element) => element.outerHTML));
+		const loads = [];
+
+		for (const link of page.head.children) {
+			if (!link.matches('link[rel="stylesheet"][href]') || present.has(link.outerHTML)) {
+				continue;
+			}
+
+			const fresh = document.importNode(link);
+			loads.push(
+				new Promise((resolve) => {
+					fresh.addEventListener('load', resolve);
+					fresh.addEventListener('error', resolve);
+				}),
+			);
+			document.head.append(fresh);
+		}
+
+		// A stalled request must not hold up live reload for good.
+		return Promise.race([Promise.all(loads), new Promise((resolve) => setTimeout(resolve, 5000))]);
 	}
 
 	// Idiomorph resets form controls to the rendered markup. Controls the
