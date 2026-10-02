@@ -45,6 +45,30 @@ final readonly class ReloadResponse
 		};
 	}
 
+	/**
+	 * Writes the whole response, which may take several writes. Returns
+	 * false once the client stops taking it.
+	 *
+	 * @param resource $stream
+	 */
+	public function send(mixed $stream): bool
+	{
+		$bytes = $this->bytes;
+
+		while ($bytes !== '') {
+			/** @var int|false $written */
+			$written = ErrorTrap::run(static fn(): mixed => fwrite($stream, $bytes));
+
+			if ($written === false || $written === 0) {
+				return false;
+			}
+
+			$bytes = substr($bytes, $written);
+		}
+
+		return true;
+	}
+
 	/** The script URL for pages on the same machine. */
 	public static function url(string $host, int $port): string
 	{

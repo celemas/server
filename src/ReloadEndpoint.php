@@ -16,6 +16,7 @@ namespace Celema\Server;
 final class ReloadEndpoint
 {
 	private const int MAX_REQUEST = 8192;
+	private const int WRITE_TIMEOUT = 2;
 
 	/** @var array<int, array{stream: resource, buffer: string}> */
 	private array $requests = [];
@@ -104,13 +105,22 @@ final class ReloadEndpoint
 		}
 	}
 
-	/** @param resource $stream */
+	/**
+	 * Responses like the Idiomorph module exceed what a non-blocking write
+	 * takes at once, so they are written in blocking mode. Pages read them
+	 * right away; the timeout keeps a stalled client from holding up the
+	 * relay loop for long.
+	 *
+	 * @param resource $stream
+	 */
 	private function respond(mixed $stream, string $request): void
 	{
 		$response = ReloadResponse::for($request);
-		fwrite($stream, $response->bytes);
+		stream_set_blocking($stream, true);
+		stream_set_timeout($stream, self::WRITE_TIMEOUT);
 
-		if ($response->events) {
+		if ($response->send($stream) && $response->events) {
+			stream_set_blocking($stream, false);
 			$this->clients[(int) $stream] = $stream;
 		} else {
 			fclose($stream);

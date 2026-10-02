@@ -39,10 +39,11 @@ final class LiveReloadTest extends TestCase
 
 		try {
 			$response = $this->request($endpoint, $port, '/idiomorph.js');
+			$module = (string) file_get_contents(dirname(__DIR__) . '/src/idiomorph/idiomorph.esm.js');
 
 			$this->assertStringStartsWith("HTTP/1.1 200 OK\r\n", $response);
 			$this->assertStringContainsString('Content-Type: text/javascript', $response);
-			$this->assertStringContainsString('export {Idiomorph}', $response);
+			$this->assertStringEndsWith("\r\n\r\n" . $module, $response, 'Serves the whole module.');
 		} finally {
 			$endpoint->close();
 		}
