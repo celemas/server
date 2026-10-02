@@ -63,11 +63,11 @@ final class ReloadEndpoint
 	}
 
 	/** Sends the event to all connected pages and returns their number. */
-	public function broadcast(string $event): int
+	public function broadcast(string $event, string $data = ''): int
 	{
 		foreach ($this->clients as $id => $client) {
 			/** @var int|false $written */
-			$written = ErrorTrap::run(static fn(): mixed => fwrite($client, "event: {$event}\ndata: \n\n"));
+			$written = ErrorTrap::run(static fn(): mixed => fwrite($client, "event: {$event}\ndata: {$data}\n\n"));
 
 			if ($written === false || $written === 0) {
 				unset($this->clients[$id]);

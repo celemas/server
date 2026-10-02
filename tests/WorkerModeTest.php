@@ -175,7 +175,7 @@ final class WorkerModeTest extends TestCase
 				$lines++;
 			}])], $liveReload);
 
-			$this->assertSame(['restarted', 'reload reload'], $events);
+			$this->assertSame(['restarted', 'reload morph'], $events);
 			$this->assertSame(20_000, $lines);
 		} finally {
 			$backend->close(terminate: true);
@@ -273,7 +273,7 @@ final class WorkerModeTest extends TestCase
 			$this->poll($liveReload);
 			$this->poll($liveReload);
 
-			$this->assertSame(['before reload page', 'log reload'], $calls);
+			$this->assertSame(['before morph page', 'log morph'], $calls);
 		} finally {
 			$liveReload->close();
 			unlink($file);

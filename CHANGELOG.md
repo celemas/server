@@ -4,7 +4,8 @@
 
 ### Added
 
-- `frankenphp --worker` serves the application with one FrankenPHP worker and implies `--watch`. Changes to watched files other than stylesheets and scripts restart the worker through FrankenPHP's admin API, bound to a random loopback port, before pages reload.
+- `frankenphp --worker` serves the application with one FrankenPHP worker and implies `--watch`. Changes to watched files other than stylesheets and scripts restart the worker through FrankenPHP's admin API, bound to a random loopback port, before pages update.
+- Live reload morphs pages into a freshly rendered copy with Idiomorph when files other than stylesheets and scripts change, which keeps the scroll position, focus, and changed form input. Pages opt out with `<meta name="celema-live-reload" content="reload">`, and a `celema:morphed` event follows each morph. Changed scripts still reload the page.
 
 ### Changed
 

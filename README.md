@@ -79,7 +79,19 @@ With the built-in PHP server, requests for existing files in the public director
 
 ## Live reload
 
-With `--watch`, the command polls the watched files and tells open pages to reload when they change. Changed stylesheets are swapped in place without a full reload.
+With `--watch`, the command polls the watched files and tells open pages to update when they change:
+
+- Changed stylesheets are swapped in place, including the stylesheets they import.
+- Other changes, such as code or templates, morph the page into a freshly rendered copy with [Idiomorph](https://github.com/bigskysoftware/idiomorph), which the command serves itself. The scroll position, focus, and form input the user changed are kept, and scripts do not run again. The page reloads instead when its URL no longer answers with an HTML page, for example after a redirect.
+- Changed scripts reload the page.
+
+Pages that a morph would break, like pages whose scripts render markup or keep state in the DOM, opt out with a meta tag; they reload for every change other than stylesheets:
+
+```html
+<meta name="celema-live-reload" content="reload" />
+```
+
+After a morph, the script dispatches a `celema:morphed` event on the document, so pages can set up behaviors for new markup.
 
 Patterns are relative to the working directory. `**` matches across directories, `*` and `?` within one path segment, and braces list alternatives, like `*.{php,js}`. A pattern starting with `!` excludes matching files, for example `['src/**/*.php', '!src/cache/**']`; a negated pattern that covers a whole directory, like `!src/cache/**` or `!src/cache/`, skips it while scanning. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed. At startup, the command prints how many files it watches, or warns when the patterns match none.
 
@@ -99,7 +111,7 @@ Open pages also reload once when they reconnect after the command restarts. If a
 
 `frankenphp --worker` serves the application with one [FrankenPHP worker](https://frankenphp.dev/docs/worker/) that runs the document root's `index.php` and keeps the application in memory between requests, as a production worker does. The front controller has to support worker mode, for example through Celema core's `App::serve()`.
 
-A worker only sees code changes after a restart. Worker mode therefore always watches the files: when watched files other than stylesheets and scripts change, the command restarts the worker through FrankenPHP's admin API before it tells pages to reload. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
+A worker only sees code changes after a restart. Worker mode therefore always watches the files: when watched files other than stylesheets and scripts change, the command restarts the worker through FrankenPHP's admin API before it tells pages to update. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
 
 One worker handles requests one after another, which keeps restarts quick and the request log in order.
 

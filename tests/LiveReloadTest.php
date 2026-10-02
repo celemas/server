@@ -33,6 +33,21 @@ final class LiveReloadTest extends TestCase
 		}
 	}
 
+	public function testServesIdiomorph(): void
+	{
+		[$endpoint, $port] = $this->endpoint();
+
+		try {
+			$response = $this->request($endpoint, $port, '/idiomorph.js');
+
+			$this->assertStringStartsWith("HTTP/1.1 200 OK\r\n", $response);
+			$this->assertStringContainsString('Content-Type: text/javascript', $response);
+			$this->assertStringContainsString('export {Idiomorph}', $response);
+		} finally {
+			$endpoint->close();
+		}
+	}
+
 	public function testLocalhostListensOnBothLoopbackAddresses(): void
 	{
 		$port = $this->freePort();
@@ -94,20 +109,22 @@ final class LiveReloadTest extends TestCase
 		}
 	}
 
-	public function testReloadsPagesOnceChangesSettle(): void
+	public function testUpdatesPagesOnceChangesSettle(): void
 	{
 		$dir = sys_get_temp_dir() . '/celema-reload-' . bin2hex(random_bytes(4));
 		mkdir($dir);
 		$file = "{$dir}/page.php";
 		$css = "{$dir}/app.css";
+		$js = "{$dir}/app.js";
 		file_put_contents($file, 'content');
 		file_put_contents($css, 'body {}');
+		file_put_contents($js, '');
 		$port = $this->freePort();
 		$log = [];
 		$liveReload = LiveReload::listen(
 			'127.0.0.1',
 			$port,
-			[$file, $css],
+			[$file, $css, $js],
 			static function (string $event, array $files, int $pages) use (&$log): void {
 				$log[] = [$event, $files, $pages];
 			},
@@ -124,20 +141,40 @@ final class LiveReloadTest extends TestCase
 			$this->poll($liveReload);
 
 			$this->assertSame([['css', [$css], 1]], $log);
-			$this->assertStringContainsString("event: css\n", $this->receive($page));
+			$this->assertStringContainsString("event: css\ndata: \n\n", $this->receive($page));
 
 			file_put_contents($file, 'changed content');
+			$this->poll($liveReload);
+			$this->poll($liveReload);
+
+			$this->assertSame(['morph', [$file], 1], $log[1] ?? null);
+			$this->assertStringContainsString("event: morph\ndata: \n\n", $this->receive($page));
+
+			file_put_contents($file, 'content');
 			file_put_contents($css, 'body { color: blue }');
 			$this->poll($liveReload);
 			$this->poll($liveReload);
 
-			$this->assertSame('reload', $log[1][0] ?? null);
+			$this->assertSame('morph', $log[2][0] ?? null);
+			$this->assertStringContainsString(
+				"event: morph\ndata: css\n\n",
+				$this->receive($page),
+				'Changed stylesheets are swapped after the morph.',
+			);
+
+			file_put_contents($file, 'changed content');
+			file_put_contents($js, 'console.log(1);');
+			$this->poll($liveReload);
+			$this->poll($liveReload);
+
+			$this->assertSame('reload', $log[3][0] ?? null);
 			$this->assertStringContainsString("event: reload\n", $this->receive($page));
 			fclose($page);
 		} finally {
 			$liveReload->close();
 			unlink($file);
 			unlink($css);
+			unlink($js);
 			rmdir($dir);
 		}
 	}

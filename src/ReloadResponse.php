@@ -6,7 +6,8 @@ namespace Celema\Server;
 
 /**
  * Answers the reload endpoint's requests: the browser script, the
- * event stream pages subscribe to, and 404 for everything else.
+ * Idiomorph module it morphs pages with, the event stream pages
+ * subscribe to, and 404 for everything else.
  *
  * @internal
  */
@@ -14,6 +15,7 @@ final readonly class ReloadResponse
 {
 	public const string SCRIPT = '/celema-live-reload.js';
 	private const string EVENTS = '/events';
+	private const string IDIOMORPH = '/idiomorph.js';
 
 	private function __construct(
 		public string $bytes,
@@ -33,6 +35,11 @@ final readonly class ReloadResponse
 				'200 OK',
 				'text/javascript',
 				(string) file_get_contents(__DIR__ . '/live-reload.js'),
+			),
+			self::IDIOMORPH => self::body(
+				'200 OK',
+				'text/javascript',
+				(string) file_get_contents(__DIR__ . '/idiomorph/idiomorph.esm.js'),
 			),
 			default => self::body('404 Not Found', 'text/plain', ''),
 		};

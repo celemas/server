@@ -164,7 +164,7 @@ abstract class Runtime
 			return;
 		}
 
-		$action = $event === 'css' ? 'restyle' : 'reload';
+		$action = $event === 'css' ? 'restyle' : $event;
 		$pages = $clients === 1 ? '1 page' : "{$clients} pages";
 		$this->io->echoln("{$timestamp} <magenta>{$action}</magenta> {$file} <dim>· {$pages}</dim>");
 	}

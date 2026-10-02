@@ -6,7 +6,7 @@ namespace Celema\Server;
 
 /**
  * Watch mode: polls the watched files and tells the pages connected to
- * the reload endpoint to reload when they change. Pages opt in by
+ * the reload endpoint to update when they change. Pages opt in by
  * including the endpoint's script, whose URL the backend gets as
  * CELEMA_LIVE_RELOAD.
  *
@@ -138,23 +138,48 @@ final class LiveReload
 	private function notify(): void
 	{
 		$event = self::event($this->changed);
-		($this->log)($event, $this->changed, $this->endpoint->broadcast($event));
+		// A morph keeps the stylesheets that are still linked; the page has
+		// to swap them as well when they changed.
+		$data = $event === 'morph' && self::has($this->changed, ['css']) ? 'css' : '';
+		($this->log)($event, $this->changed, $this->endpoint->broadcast($event, $data));
 		$this->changed = [];
 	}
 
 	/**
-	 * Stylesheets can be swapped in place; everything else reloads the page.
+	 * Stylesheets can be swapped in place. Pages morph into a freshly
+	 * rendered copy when other files change, such as code or templates,
+	 * which keeps the scroll position and form input. Scripts that already
+	 * ran cannot be replaced, so they reload the page.
 	 *
 	 * @param list<string> $changed
 	 */
 	private static function event(array $changed): string
 	{
+		if (self::has($changed, ['js', 'mjs', 'cjs'])) {
+			return 'reload';
+		}
+
 		foreach ($changed as $path) {
-			if (!str_ends_with(strtolower($path), '.css')) {
-				return 'reload';
+			if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'css') {
+				return 'morph';
 			}
 		}
 
 		return 'css';
+	}
+
+	/**
+	 * @param list<string> $changed
+	 * @param list<string> $extensions
+	 */
+	private static function has(array $changed, array $extensions): bool
+	{
+		foreach ($changed as $path) {
+			if (in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), $extensions, true)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
