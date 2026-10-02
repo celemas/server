@@ -36,6 +36,26 @@ final class Ports
 		return null;
 	}
 
+	/** A free port the operating system picks, for endpoints nobody types in. */
+	public static function ephemeral(string $host = '127.0.0.1'): int|string
+	{
+		$errorCode = 0;
+		$errorMessage = '';
+		/** @var resource|false $server */
+		$server = ErrorTrap::run(
+			static fn(): mixed => stream_socket_server("tcp://{$host}:0", $errorCode, $errorMessage),
+		);
+
+		if ($server === false) {
+			return "No free port on {$host}: {$errorMessage}";
+		}
+
+		$name = (string) stream_socket_get_name($server, false);
+		fclose($server);
+
+		return (int) substr($name, (int) strrpos($name, ':') + 1);
+	}
+
 	/**
 	 * Picks the live reload port: ten times the public port, which
 	 * keeps clear of neighboring dev servers like Vite on the next

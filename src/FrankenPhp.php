@@ -34,6 +34,10 @@ use InvalidArgumentException;
 	value: 'port',
 )]
 #[Opt(
+	'--worker',
+	'Keep the application in memory with one FrankenPHP worker. Implies --watch; changes to files other than CSS or JS restart the worker.',
+)]
+#[Opt(
 	'--watch',
 	'Serve the live reload script and reload pages on changes. Optional files override the configured watch patterns.',
 	short: '-w',

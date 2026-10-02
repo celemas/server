@@ -9,7 +9,7 @@ use Throwable;
 /** @internal */
 final readonly class Setup
 {
-	public const DEFAULT_WATCH = ['**/*.{php,js,css}'];
+	public const DEFAULT_WATCH = ['**/*.{php,js,css,sql,tpql}'];
 
 	public function __construct(
 		private string $docroot,
@@ -86,23 +86,40 @@ final readonly class Setup
 		return $command;
 	}
 
-	public function frankenPhpCaddyfile(string $host, int $port, bool $debug): ?string
+	/**
+	 * The configuration for a route prefix or worker mode, or null when the
+	 * plain `php-server` command suffices. In worker mode, the admin API
+	 * listens on the given loopback port so changes can restart the worker.
+	 */
+	public function frankenPhpCaddyfile(string $host, int $port, bool $debug, ?int $adminPort = null): ?string
 	{
 		$prefix = rtrim($this->routePrefix, '/');
 
-		if ($prefix === '') {
+		if ($prefix === '' && $adminPort === null) {
 			return null;
 		}
 
+		$admin = $adminPort === null ? 'off' : self::caddyToken("127.0.0.1:{$adminPort}");
 		$debugOption = $debug ? "\tdebug\n" : '';
 		$address = self::caddyToken("http://{$host}:{$port}");
 		$docroot = self::caddyToken($this->docroot);
-		$files = self::caddyToken($prefix . '/*');
-		$prefix = self::caddyToken($prefix);
+		$indent = $prefix === '' ? "\t" : "\t\t";
+		$phpServer = $adminPort === null ? "{$indent}php_server\n" : $this->workerServer($indent);
+
+		if ($prefix !== '') {
+			$files = self::caddyToken($prefix . '/*');
+			$prefix = self::caddyToken($prefix);
+			$phpServer =
+				"\troute {\n"
+				. "\t\t@prefix path {$prefix} {$files}\n"
+				. "\t\turi @prefix strip_prefix {$prefix}\n"
+				. $phpServer
+				. "\t}\n";
+		}
 
 		return (
 			"{\n"
-				. "\tadmin off\n"
+				. "\tadmin {$admin}\n"
 				. "\tauto_https off\n"
 				. "\tpersist_config off\n"
 				. "\tfrankenphp\n"
@@ -110,16 +127,30 @@ final readonly class Setup
 				. "}\n"
 				. "{$address} {\n"
 				. "\troot * {$docroot}\n"
-				. "\troute {\n"
-				. "\t\t@prefix path {$prefix} {$files}\n"
-				. "\t\turi @prefix strip_prefix {$prefix}\n"
-				. "\t\tphp_server\n"
-				. "\t}\n"
+				. $phpServer
 				. "\tlog {\n"
 				. "\t\toutput stderr\n"
 				. "\t\tformat json\n"
 				. "\t}\n"
 				. "}\n"
+		);
+	}
+
+	/**
+	 * One worker for the front controller: requests are handled one after
+	 * another, and a restart after a change is quick and deterministic.
+	 */
+	private function workerServer(string $indent): string
+	{
+		$file = self::caddyToken(rtrim($this->docroot, '/\\') . DIRECTORY_SEPARATOR . 'index.php');
+
+		return (
+			"{$indent}php_server {\n"
+				. "{$indent}\tworker {\n"
+				. "{$indent}\t\tfile {$file}\n"
+				. "{$indent}\t\tnum 1\n"
+				. "{$indent}\t}\n"
+				. "{$indent}}\n"
 		);
 	}
 

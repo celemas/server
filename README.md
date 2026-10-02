@@ -20,7 +20,7 @@ It requires PHP 8.5. The FrankenPHP command additionally needs the `frankenphp` 
 The package provides two console commands:
 
 - `Celema\Server\Server` (`server`) runs the application with the PHP CLI's built-in server.
-- `Celema\Server\FrankenPhp` (`frankenphp`) runs it with FrankenPHP in classic mode, not worker mode.
+- `Celema\Server\FrankenPhp` (`frankenphp`) runs it with FrankenPHP, in classic mode or, with `--worker`, in [worker mode](#worker-mode).
 
 Register them with `celema/console`:
 
@@ -56,7 +56,7 @@ Both commands take the same arguments:
 | `docroot` | required | The public directory. |
 | `port` | `1983` | The default port. |
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
-| `watch` | `'**/*.{php,js,css}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
+| `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
 | `executable` | `'php'` or `'frankenphp'` | The executable to run the backend with. |
 
 ### Options
@@ -71,6 +71,7 @@ Both commands take the same arguments:
 | `-o`, `--open` | Opens the application in the default browser once it responds. |
 | `-w`, `--watch[=<glob>]` | Enables live reload. Given patterns replace the `watch` argument; repeat the option or separate patterns with commas. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
+| `--worker` | `frankenphp` only: keeps the application in memory with one FrankenPHP worker. Implies `--watch`. See [Worker mode](#worker-mode). |
 
 ## Routing
 
@@ -93,6 +94,14 @@ Pages opt in by including the live reload script. The command serves it on a sep
 The URL uses the `--host` address, with `localhost` for wildcard addresses, which suits a browser on the same machine. For other devices, virtual machines, or containers, bind a wildcard such as `--host=0.0.0.0` and replace the URL's host with the host the page was requested under. With `localhost`, the script is served on both loopback addresses, so local host names resolving to either work too. Pages served over HTTPS cannot load the script, because it is only served over HTTP.
 
 Open pages also reload once when they reconnect after the command restarts. If a watched file changes while no page is connected, the command says so, which usually means the snippet is missing.
+
+## Worker mode
+
+`frankenphp --worker` serves the application with one [FrankenPHP worker](https://frankenphp.dev/docs/worker/) that runs the document root's `index.php` and keeps the application in memory between requests, as a production worker does. The front controller has to support worker mode, for example through Celema core's `App::serve()`.
+
+A worker only sees code changes after a restart. Worker mode therefore always watches the files: when watched files other than stylesheets and scripts change, the command restarts the worker through FrankenPHP's admin API before it tells pages to reload. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
+
+One worker handles requests one after another, which keeps restarts quick and the request log in order.
 
 ## Request log protocol
 

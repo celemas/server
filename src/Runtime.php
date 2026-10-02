@@ -82,6 +82,13 @@ abstract class Runtime
 
 	protected function started(): void {}
 
+	/**
+	 * Runs once watched files changed, before pages are told to reload.
+	 *
+	 * @param list<string> $files
+	 */
+	protected function reloading(string $event, array $files): void {}
+
 	protected function cleanup(): void {}
 
 	private function openBrowser(): void
@@ -105,7 +112,13 @@ abstract class Runtime
 			return 'The live reload port must differ from the server port.';
 		}
 
-		return LiveReload::listen($this->options->host, $port, $this->options->watchFiles, $this->changed(...));
+		return LiveReload::listen(
+			$this->options->host,
+			$port,
+			$this->options->watchFiles,
+			$this->changed(...),
+			$this->reloading(...),
+		);
 	}
 
 	private function announce(LiveReload $liveReload): void

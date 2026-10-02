@@ -16,6 +16,7 @@ final class Options
 	public bool $debug = false;
 	public bool $quiet = false;
 	public bool $watch = false;
+	public bool $worker = false;
 	public bool $open = false;
 	public ?int $reloadPort = null;
 	/** @var list<string> */
@@ -29,7 +30,9 @@ final class Options
 		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
-		$options->watch = $args->has('-w') || $args->has('--watch');
+		$options->worker = $args->has('--worker');
+		// A worker keeps the code in memory, so it has to watch for changes.
+		$options->watch = $options->worker || $args->has('-w') || $args->has('--watch');
 		$options->open = $args->has('-o') || $args->has('--open');
 		$reloadPort = $args->opt('--reload-port', '');
 		$options->reloadPort = $reloadPort === '' ? null : self::port($reloadPort);

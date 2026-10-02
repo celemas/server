@@ -10,14 +10,26 @@ use Override;
 final class FrankenRuntime extends Runtime
 {
 	private ?string $config = null;
+	private ?WorkerRestart $restart = null;
 
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
 	{
+		if ($this->options->worker) {
+			$adminPort = Ports::ephemeral();
+
+			if (is_string($adminPort)) {
+				return $adminPort;
+			}
+
+			$this->restart = new WorkerRestart($adminPort);
+		}
+
 		$contents = $this->setup->frankenPhpCaddyfile(
 			$this->options->host,
 			$port,
 			$this->options->debug,
+			$this->restart?->adminPort,
 		);
 
 		if ($contents !== null) {
@@ -39,6 +51,27 @@ final class FrankenRuntime extends Runtime
 		);
 
 		return $frankenPhp ?? 'Failed to start FrankenPHP.';
+	}
+
+	#[Override]
+	protected function reloading(string $event, array $files): void
+	{
+		if ($this->restart === null || !WorkerRestart::needed($files)) {
+			return;
+		}
+
+		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
+		$error = ($this->restart)();
+
+		if ($error !== null) {
+			$this->io->echoln("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
+
+			return;
+		}
+
+		if (!$this->options->quiet) {
+			$this->io->echoln("{$timestamp} <cyan>restart</cyan> worker");
+		}
 	}
 
 	#[Override]

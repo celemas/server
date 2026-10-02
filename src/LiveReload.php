@@ -23,12 +23,16 @@ final class LiveReload
 
 	private int $scanned;
 
-	/** @param ChangeLog $log */
+	/**
+	 * @param ChangeLog $log
+	 * @param ?callable(string, list<string>): void $beforeReload
+	 */
 	private function __construct(
 		private readonly ReloadEndpoint $endpoint,
 		public readonly string $script,
 		private readonly FileWatch $files,
 		private readonly mixed $log,
+		private readonly mixed $beforeReload = null,
 	) {
 		$this->scanned = hrtime(true);
 	}
@@ -36,16 +40,23 @@ final class LiveReload
 	/**
 	 * @param list<string> $patterns
 	 * @param ChangeLog $log Receives the event, the changed files, and the number of notified pages
+	 * @param ?callable(string, list<string>): void $beforeReload Runs before pages are notified,
+	 *     for example to restart a worker that has to serve the reloaded pages
 	 */
-	public static function listen(string $host, int $port, array $patterns, callable $log): self|string
-	{
+	public static function listen(
+		string $host,
+		int $port,
+		array $patterns,
+		callable $log,
+		?callable $beforeReload = null,
+	): self|string {
 		$endpoint = ReloadEndpoint::listen($host, $port);
 
 		if (is_string($endpoint)) {
 			return $endpoint;
 		}
 
-		return new self($endpoint, ReloadResponse::url($host, $port), new FileWatch($patterns), $log);
+		return new self($endpoint, ReloadResponse::url($host, $port), new FileWatch($patterns), $log, $beforeReload);
 	}
 
 	public function watched(): int
@@ -93,6 +104,11 @@ final class LiveReload
 		}
 
 		$event = self::event($this->changed);
+
+		if ($this->beforeReload !== null) {
+			($this->beforeReload)($event, $this->changed);
+		}
+
 		($this->log)($event, $this->changed, $this->endpoint->broadcast($event));
 		$this->changed = [];
 	}

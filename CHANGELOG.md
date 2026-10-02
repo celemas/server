@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased](https://codefloe.com/celema/server/compare/0.1.0...HEAD)
+
+### Added
+
+- `frankenphp --worker` serves the application with one FrankenPHP worker and implies `--watch`. Changes to watched files other than stylesheets and scripts restart the worker through FrankenPHP's admin API, bound to a random loopback port, before pages reload.
+
+### Changed
+
+- The default watch patterns include SQL and TPQL files: `**/*.{php,js,css,sql,tpql}`.
+
 ## [0.1.0](https://codefloe.com/celema/server/src/tag/0.1.0) (2026-09-27)
 
 Initial release. The development server was previously part of `celema/core` in the `Celema\Core\Server` namespace.
