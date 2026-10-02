@@ -23,6 +23,45 @@
 		lost = opened;
 	});
 
+	// A page a form posted to differs from what a GET request for its URL
+	// answers, so it reloads, which posts again, rather than morphing.
+	// Submitting leaves a flag for the next page; the page keeps it in
+	// its history entry, which survives reloads. A redirect after the post
+	// leads to a GET request.
+	const POSTED = 'celemaLiveReloadPosted';
+	let posted = history.state?.[POSTED] === true;
+
+	try {
+		const navigation = performance.getEntriesByType('navigation')[0];
+
+		if (sessionStorage.getItem(POSTED) !== null) {
+			sessionStorage.removeItem(POSTED);
+			posted ||= !navigation?.redirectCount;
+		}
+
+		if (posted && (history.state === null || typeof history.state === 'object')) {
+			history.replaceState({ ...history.state, [POSTED]: true }, '');
+		}
+	} catch {
+		// Without session storage, posted pages morph like the others.
+	}
+
+	addEventListener('submit', (event) => {
+		const submitter = event.submitter;
+		const method = submitter?.hasAttribute('formmethod') ? submitter.formMethod : event.target.method;
+		const target = submitter?.hasAttribute('formtarget') ? submitter.formTarget : event.target.target;
+
+		if (event.defaultPrevented || method !== 'post' || (target && target !== '_self')) {
+			return;
+		}
+
+		try {
+			sessionStorage.setItem(POSTED, '1');
+		} catch {
+			// See above.
+		}
+	});
+
 	// Updates run one after another, each on the page the last one left.
 	// A failed update leaves the page in an unknown state, so it reloads.
 	let updates = Promise.resolve();
@@ -48,7 +87,7 @@
 	 * page of the same URL to morph into, the page reloads.
 	 */
 	async function morph(css) {
-		if (document.querySelector('meta[name="celema-live-reload"][content="reload"]')) {
+		if (posted || document.querySelector('meta[name="celema-live-reload"][content="reload"]')) {
 			location.reload();
 
 			return;
