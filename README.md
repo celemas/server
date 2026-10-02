@@ -77,6 +77,10 @@ Both commands take the same arguments:
 
 With the built-in PHP server, requests for existing files in the public directory are handled by the server directly: PHP files run, others are served as they are, and a directory with an `index.html` serves that file. Every other request goes to `index.php` in the public directory, the front controller. FrankenPHP routes requests with its own PHP server defaults. Both commands strip the `routePrefix` from request paths.
 
+## PHP settings
+
+Both commands make OPcache check for changed files on every request, so a request right after saving a file never runs its previous version. They add the `src/ini` directory of this package to `PHP_INI_SCAN_DIR` for that, after the directories PHP scans anyway.
+
 ## Live reload
 
 With `--watch`, the command polls the watched files and tells open pages to update when they change:

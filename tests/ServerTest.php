@@ -13,6 +13,7 @@ use Celema\Server\ErrorTrap;
 use Celema\Server\FrankenPhp;
 use Celema\Server\Options;
 use Celema\Server\Ports;
+use Celema\Server\Process;
 use Celema\Server\Server;
 use Celema\Server\Setup;
 use InvalidArgumentException;
@@ -251,6 +252,59 @@ final class ServerTest extends TestCase
 
 		$this->assertSame($script, $setup->phpEnvironment(false, $script)['CELEMA_LIVE_RELOAD']);
 		$this->assertSame($script, $setup->frankenPhpEnvironment($script)['CELEMA_LIVE_RELOAD']);
+	}
+
+	public function testEnvironmentAddsTheServerIniSettings(): void
+	{
+		$dir = dirname(__DIR__) . '/src/ini';
+		$inherited = getenv('PHP_INI_SCAN_DIR');
+
+		try {
+			putenv('PHP_INI_SCAN_DIR');
+			$setup = new Setup('/tmp/public', '');
+
+			$this->assertSame(PATH_SEPARATOR . $dir, $setup->phpEnvironment(false)['PHP_INI_SCAN_DIR']);
+			$this->assertSame(PATH_SEPARATOR . $dir, $setup->frankenPhpEnvironment()['PHP_INI_SCAN_DIR']);
+
+			putenv('PHP_INI_SCAN_DIR=/etc/php/conf.d');
+			$this->assertSame(
+				'/etc/php/conf.d' . PATH_SEPARATOR . $dir,
+				$setup->phpEnvironment(false)['PHP_INI_SCAN_DIR'],
+			);
+
+			putenv('PHP_INI_SCAN_DIR=');
+			$this->assertSame($dir, $setup->phpEnvironment(false)['PHP_INI_SCAN_DIR']);
+		} finally {
+			putenv($inherited === false ? 'PHP_INI_SCAN_DIR' : "PHP_INI_SCAN_DIR={$inherited}");
+		}
+	}
+
+	public function testServerLoadsTheIniSettings(): void
+	{
+		$dir = sys_get_temp_dir() . '/celema-ini-' . bin2hex(random_bytes(4));
+		mkdir($dir);
+		file_put_contents("{$dir}/index.php", '<?php echo php_ini_scanned_files();');
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+		$setup = new Setup($dir, '', php: PHP_BINARY);
+		$server = Process::start($setup->phpCommand('127.0.0.1', $port, true), $setup->phpEnvironment(false));
+		$this->assertInstanceOf(Process::class, $server);
+
+		try {
+			$response = false;
+
+			for ($i = 0; $i < 50 && $response === false; $i++) {
+				usleep(100_000);
+				$response = ErrorTrap::run(static fn(): mixed => file_get_contents("http://127.0.0.1:{$port}/"));
+			}
+
+			$this->assertIsString($response);
+			$this->assertStringContainsString('/src/ini/celema-server.ini', $response);
+		} finally {
+			$server->close(terminate: true);
+			unlink("{$dir}/index.php");
+			rmdir($dir);
+		}
 	}
 
 	public function testEnvironmentNeverInheritsLiveReloadScript(): void

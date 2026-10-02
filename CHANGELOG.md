@@ -13,6 +13,7 @@
 
 ### Fixed
 
+- Both commands make OPcache check for changed files on every request. With the default `opcache.revalidate_freq` of two seconds, a request soon after an earlier one could run the previous version of a file that was just saved, which live reload made likely.
 - Live reload applies changes to stylesheets that a linked stylesheet imports with `@import`. Only the linked file was fetched anew; the browser kept taking its imports from the cache, for good when they were served as immutable.
 - `frankenphp` with a route prefix binds to `--host` and answers requests under every host name. The generated configuration used the host only to match the `Host` header, so the server listened on all interfaces, and requests under another name for the same address, such as `127.0.0.1` for the default `localhost`, got an empty response.
 

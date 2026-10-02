@@ -197,11 +197,30 @@ final readonly class Setup
 		// this command serves it.
 		unset($environment['CELEMA_LIVE_RELOAD']);
 
+		$environment['PHP_INI_SCAN_DIR'] = self::iniScanDir($environment['PHP_INI_SCAN_DIR'] ?? null);
+
 		if ($liveReload !== null) {
 			$environment['CELEMA_LIVE_RELOAD'] = $liveReload;
 		}
 
 		return $environment;
+	}
+
+	/**
+	 * Adds the directory of the server's ini settings to the directories
+	 * PHP scans for additional ini files. A leading separator keeps the
+	 * default directory, where extensions like Xdebug are usually set up.
+	 * An empty value disables the default, and stays without it.
+	 */
+	private static function iniScanDir(?string $inherited): string
+	{
+		$dir = __DIR__ . DIRECTORY_SEPARATOR . 'ini';
+
+		return match ($inherited) {
+			null => PATH_SEPARATOR . $dir,
+			'' => $dir,
+			default => $inherited . PATH_SEPARATOR . $dir,
+		};
 	}
 
 	private static function caddyToken(string $value): string
