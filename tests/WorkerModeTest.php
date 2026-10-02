@@ -64,7 +64,7 @@ final class WorkerModeTest extends TestCase
 
 	public function testOnlyStylesheetsAndScriptsNeedNoRestart(): void
 	{
-		$this->assertFalse(WorkerRestart::needed(['public/app.css', 'public/app.JS']));
+		$this->assertFalse(WorkerRestart::needed(['public/app.css', 'public/app.JS', 'public/app.mjs']));
 		$this->assertTrue(WorkerRestart::needed(['public/app.css', 'src/Page.php']));
 		$this->assertTrue(WorkerRestart::needed(['db/sql/nodes/find.sql']));
 		$this->assertTrue(WorkerRestart::needed(['lang/de.php']));

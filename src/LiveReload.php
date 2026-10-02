@@ -17,6 +17,8 @@ namespace Celema\Server;
 final class LiveReload
 {
 	private const int INTERVAL = 200_000_000;
+	private const array SCRIPTS = ['js', 'mjs', 'cjs'];
+	private const array STYLESHEETS = ['css'];
 
 	/** @var list<string> */
 	private array $changed = [];
@@ -140,9 +142,20 @@ final class LiveReload
 		$event = self::event($this->changed);
 		// A morph keeps the stylesheets that are still linked; the page has
 		// to swap them as well when they changed.
-		$data = $event === 'morph' && self::has($this->changed, ['css']) ? 'css' : '';
+		$data = $event === 'morph' && self::any($this->changed, self::STYLESHEETS) ? 'css' : '';
 		($this->log)($event, $this->changed, $this->endpoint->broadcast($event, $data));
 		$this->changed = [];
+	}
+
+	/**
+	 * Whether the browser loads all the files itself, so serving them
+	 * needs nothing from the backend, like a worker restart.
+	 *
+	 * @param list<string> $files
+	 */
+	public static function browserOnly(array $files): bool
+	{
+		return self::all($files, [...self::SCRIPTS, ...self::STYLESHEETS]);
 	}
 
 	/**
@@ -155,31 +168,45 @@ final class LiveReload
 	 */
 	private static function event(array $changed): string
 	{
-		if (self::has($changed, ['js', 'mjs', 'cjs'])) {
+		if (self::any($changed, self::SCRIPTS)) {
 			return 'reload';
 		}
 
-		foreach ($changed as $path) {
-			if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) !== 'css') {
-				return 'morph';
-			}
-		}
-
-		return 'css';
+		return self::all($changed, self::STYLESHEETS) ? 'css' : 'morph';
 	}
 
 	/**
-	 * @param list<string> $changed
+	 * @param list<string> $files
 	 * @param list<string> $extensions
 	 */
-	private static function has(array $changed, array $extensions): bool
+	private static function any(array $files, array $extensions): bool
 	{
-		foreach ($changed as $path) {
-			if (in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), $extensions, true)) {
+		foreach ($files as $file) {
+			if (in_array(self::extension($file), $extensions, true)) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * @param list<string> $files
+	 * @param list<string> $extensions
+	 */
+	private static function all(array $files, array $extensions): bool
+	{
+		foreach ($files as $file) {
+			if (!in_array(self::extension($file), $extensions, true)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static function extension(string $file): string
+	{
+		return strtolower(pathinfo($file, PATHINFO_EXTENSION));
 	}
 }

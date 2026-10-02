@@ -47,15 +47,7 @@ final class WorkerRestart implements Pending
 	 */
 	public static function needed(array $files): bool
 	{
-		foreach ($files as $file) {
-			$extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-
-			if ($extension !== 'css' && $extension !== 'js') {
-				return true;
-			}
-		}
-
-		return false;
+		return !LiveReload::browserOnly($files);
 	}
 
 	/**
