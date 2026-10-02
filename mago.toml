@@ -33,4 +33,5 @@ no-else-clause = { enabled = false }
 no-global = { exclude = ["tests"] }
 no-isset = { enabled = false }
 no-shorthand-ternary = { enabled = false }
+prefer-early-continue = { enabled = false }
 too-many-methods = { enabled = false }
