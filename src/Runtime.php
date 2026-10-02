@@ -84,10 +84,15 @@ abstract class Runtime
 
 	/**
 	 * Runs once watched files changed, before pages are told to reload.
+	 * Work that takes a while is returned instead of waited for, so the
+	 * backend's output is still relayed; pages reload once it is finished.
 	 *
 	 * @param list<string> $files
 	 */
-	protected function reloading(string $event, array $files): void {}
+	protected function reloading(string $event, array $files): ?Pending
+	{
+		return null;
+	}
 
 	protected function cleanup(): void {}
 

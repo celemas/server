@@ -23,9 +23,12 @@ final class LiveReload
 
 	private int $scanned;
 
+	/** Work the next reload waits for. */
+	private ?Pending $pending = null;
+
 	/**
 	 * @param ChangeLog $log
-	 * @param ?callable(string, list<string>): void $beforeReload
+	 * @param ?callable(string, list<string>): ?Pending $beforeReload
 	 */
 	private function __construct(
 		private readonly ReloadEndpoint $endpoint,
@@ -40,8 +43,9 @@ final class LiveReload
 	/**
 	 * @param list<string> $patterns
 	 * @param ChangeLog $log Receives the event, the changed files, and the number of notified pages
-	 * @param ?callable(string, list<string>): void $beforeReload Runs before pages are notified,
-	 *     for example to restart a worker that has to serve the reloaded pages
+	 * @param ?callable(string, list<string>): ?Pending $beforeReload Runs before pages are notified,
+	 *     for example to restart a worker that has to serve the reloaded pages. Pages are notified
+	 *     once the work it returns is finished.
 	 */
 	public static function listen(
 		string $host,
@@ -67,7 +71,7 @@ final class LiveReload
 	/** @return list<resource> */
 	public function streams(): array
 	{
-		return $this->endpoint->streams();
+		return [...$this->endpoint->streams(), ...($this->pending?->streams() ?? [])];
 	}
 
 	/** @param list<resource> $ready */
@@ -84,6 +88,16 @@ final class LiveReload
 	 */
 	public function poll(): void
 	{
+		if ($this->pending !== null) {
+			// Changes made meanwhile are found by the next scan.
+			if (!$this->pending->advance()) {
+				return;
+			}
+
+			$this->pending = null;
+			$this->notify();
+		}
+
 		$now = hrtime(true);
 
 		if (($now - $this->scanned) < self::INTERVAL) {
@@ -103,19 +117,29 @@ final class LiveReload
 			return;
 		}
 
-		$event = self::event($this->changed);
+		$pending = $this->beforeReload === null
+			? null
+			: ($this->beforeReload)(self::event($this->changed), $this->changed);
 
-		if ($this->beforeReload !== null) {
-			($this->beforeReload)($event, $this->changed);
+		if ($pending !== null && !$pending->advance()) {
+			$this->pending = $pending;
+
+			return;
 		}
 
-		($this->log)($event, $this->changed, $this->endpoint->broadcast($event));
-		$this->changed = [];
+		$this->notify();
 	}
 
 	public function close(): void
 	{
 		$this->endpoint->close();
+	}
+
+	private function notify(): void
+	{
+		$event = self::event($this->changed);
+		($this->log)($event, $this->changed, $this->endpoint->broadcast($event));
+		$this->changed = [];
 	}
 
 	/**

@@ -10,7 +10,7 @@ use Override;
 final class FrankenRuntime extends Runtime
 {
 	private ?string $config = null;
-	private ?WorkerRestart $restart = null;
+	private ?int $adminPort = null;
 
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
@@ -22,14 +22,14 @@ final class FrankenRuntime extends Runtime
 				return $adminPort;
 			}
 
-			$this->restart = new WorkerRestart($adminPort);
+			$this->adminPort = $adminPort;
 		}
 
 		$contents = $this->setup->frankenPhpCaddyfile(
 			$this->options->host,
 			$port,
 			$this->options->debug,
-			$this->restart?->adminPort,
+			$this->adminPort,
 		);
 
 		if ($contents !== null) {
@@ -54,14 +54,18 @@ final class FrankenRuntime extends Runtime
 	}
 
 	#[Override]
-	protected function reloading(string $event, array $files): void
+	protected function reloading(string $event, array $files): ?Pending
 	{
-		if ($this->restart === null || !WorkerRestart::needed($files)) {
-			return;
+		if ($this->adminPort === null || !WorkerRestart::needed($files)) {
+			return null;
 		}
 
+		return WorkerRestart::send($this->adminPort, $this->restarted(...));
+	}
+
+	private function restarted(?string $error): void
+	{
 		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
-		$error = ($this->restart)();
 
 		if ($error !== null) {
 			$this->io->echoln("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
