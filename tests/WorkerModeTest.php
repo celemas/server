@@ -244,6 +244,15 @@ final class WorkerModeTest extends TestCase
 		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
 	}
 
+	public function testEphemeralPortReportsWhyBindingFailed(): void
+	{
+		// A documentation address, never assigned to this machine.
+		$message = Ports::ephemeral('192.0.2.1');
+
+		$this->assertIsString($message);
+		$this->assertMatchesRegularExpression('/^No free port on 192\.0\.2\.1: \S/', $message);
+	}
+
 	public function testBeforeReloadRunsBeforePagesAreNotified(): void
 	{
 		$dir = sys_get_temp_dir() . '/celema-worker-' . bin2hex(random_bytes(4));

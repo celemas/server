@@ -42,12 +42,16 @@ final class Ports
 		$errorCode = 0;
 		$errorMessage = '';
 		/** @var resource|false $server */
+		// An arrow function would only fill copies of the error variables.
 		$server = ErrorTrap::run(
-			static fn(): mixed => stream_socket_server("tcp://{$host}:0", $errorCode, $errorMessage),
+			static function () use ($host, &$errorCode, &$errorMessage): mixed {
+				return stream_socket_server("tcp://{$host}:0", $errorCode, $errorMessage);
+			},
+			$trapped,
 		);
 
 		if ($server === false) {
-			return "No free port on {$host}: {$errorMessage}";
+			return "No free port on {$host}: " . ($errorMessage !== '' ? $errorMessage : (string) $trapped);
 		}
 
 		$name = (string) stream_socket_get_name($server, false);
