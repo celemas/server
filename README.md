@@ -86,7 +86,7 @@ Both commands make OPcache check for changed files on every request, so a reques
 With `--watch`, the command polls the watched files and tells open pages to update when they change:
 
 - Changed stylesheets are swapped in place, including the stylesheets they import.
-- Other changes, such as code or templates, morph the page into a freshly rendered copy with [Idiomorph](https://github.com/bigskysoftware/idiomorph), which the command serves itself. The scroll position, focus, and form input the user changed are kept, and scripts do not run again. The page reloads instead when its URL no longer answers with an HTML page, for example after a redirect.
+- Other changes, such as code or templates, morph the page into a freshly rendered copy with [Idiomorph](https://github.com/bigskysoftware/idiomorph), which the command serves itself. The scroll position, focus, and form input the user changed are kept, and scripts do not run again. The page reloads instead when its scripts changed, inline ones included, or when its URL no longer answers with an HTML page, for example after a redirect.
 - Changed scripts reload the page.
 
 Pages that a morph would break, like pages whose scripts render markup or keep state in the DOM, opt out with a meta tag; they reload for every change other than stylesheets:

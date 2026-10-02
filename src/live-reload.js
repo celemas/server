@@ -62,11 +62,26 @@
 			}
 
 			const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+
+			if (scripts(page) !== scripts(document)) {
+				location.reload();
+
+				return;
+			}
+
 			const { Idiomorph } = await import(new URL('idiomorph.js', script.src).href);
 			keepSwapped(page);
 			await preload(page);
+
+			// Idiomorph would add head scripts again whose markup differs,
+			// like by a per-request nonce, and the browser would run them.
+			for (const element of page.head.querySelectorAll('script')) {
+				element.remove();
+			}
+
 			// Idiomorph takes a whole document only as markup.
 			Idiomorph.morph(document.documentElement, page.documentElement.outerHTML, {
+				head: { shouldPreserve: (element) => element.matches('script') },
 				callbacks: { beforeAttributeUpdated: (name, element) => !(edits.has(name) && edited(element)) },
 			});
 		} catch {
@@ -80,6 +95,25 @@
 		}
 
 		document.dispatchEvent(new CustomEvent('celema:morphed'));
+	}
+
+	/**
+	 * The scripts of a page, without data blocks like JSON. Scripts that
+	 * ran cannot be replaced, so a page whose scripts changed reloads.
+	 */
+	function scripts(page) {
+		const signatures = [];
+
+		for (const element of page.querySelectorAll('script')) {
+			const type = element.type.trim().toLowerCase();
+
+			if (!type || type === 'module' || type === 'importmap' || type.includes('javascript')) {
+				const src = element.getAttribute('src');
+				signatures.push(`${type} ${src === null ? element.text : new URL(src, location.href).href}`);
+			}
+		}
+
+		return signatures.join('\n');
 	}
 
 	/**
