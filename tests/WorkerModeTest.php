@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Celema\Server\Tests;
 
 use Celema\Console\Args;
+use Celema\Console\BufferedIo;
+use Celema\Console\Commands;
+use Celema\Console\Runner;
+use Celema\Server\FrankenPhp;
 use Celema\Server\LiveReload;
 use Celema\Server\Options;
 use Celema\Server\Pending;
@@ -13,6 +17,7 @@ use Celema\Server\Process;
 use Celema\Server\Relay;
 use Celema\Server\Setup;
 use Celema\Server\WorkerRestart;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class WorkerModeTest extends TestCase
@@ -48,13 +53,97 @@ final class WorkerModeTest extends TestCase
 		$this->assertStringContainsString("\t\tphp_server\n", $config);
 	}
 
-	public function testWorkerOptionImpliesWatching(): void
+	/** @param list<string> $args */
+	#[DataProvider('workerOptions')]
+	public function testWorkerOptionSelectsCountAndImpliesWatching(array $args, ?int $workers): void
 	{
-		$options = Options::from(1983, Setup::DEFAULT_WATCH, new Args(['--worker']));
+		$options = Options::from(1983, Setup::DEFAULT_WATCH, new Args($args));
 
-		$this->assertTrue($options->worker);
-		$this->assertTrue($options->watch);
-		$this->assertFalse(Options::from(1983, Setup::DEFAULT_WATCH, new Args([]))->worker);
+		$this->assertSame($workers, $options->workers);
+		$this->assertSame($workers !== null, $options->watch);
+	}
+
+	public static function workerOptions(): array
+	{
+		return [
+			'classic' => [[], null],
+			'default' => [['--worker'], 1],
+			'explicit one' => [['--worker=1'], 1],
+			'multiple' => [['--worker=8'], 8],
+			'maximum integer' => [['--worker=' . PHP_INT_MAX], PHP_INT_MAX],
+		];
+	}
+
+	#[DataProvider('invalidWorkerCounts')]
+	public function testInvalidWorkerCountFailsBeforeStartup(string $count): void
+	{
+		$io = new BufferedIo();
+		$exit = (new FrankenPhp('/tmp/public', executable: '__missing_frankenphp_binary__'))(
+			new Args(["--worker={$count}"]),
+			$io,
+		);
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString('must be a positive integer', $io->errorOutput());
+	}
+
+	public static function invalidWorkerCounts(): array
+	{
+		return [
+			'empty' => [''],
+			'zero' => ['0'],
+			'negative' => ['-1'],
+			'fraction' => ['1.5'],
+			'text' => ['eight'],
+			'exponent' => ['1e2'],
+			'sign' => ['+8'],
+			'whitespace' => [' 8'],
+			'newline' => ["8\n"],
+			'overflow' => [(string) PHP_INT_MAX . '0'],
+		];
+	}
+
+	#[DataProvider('workerCommands')]
+	public function testCommandPassesWorkerCountToBackend(string $option, int $count, string $prefix): void
+	{
+		$dir = sys_get_temp_dir() . '/celema-worker-command-' . bin2hex(random_bytes(4));
+		mkdir($dir);
+		$executable = "{$dir}/frankenphp";
+		$config = "{$dir}/Caddyfile";
+		// Capture the configuration while it exists; the backend then exits.
+		file_put_contents($executable, '#!/bin/sh' . "\ncp \"\$3\" " . escapeshellarg($config) . "\n");
+		chmod($executable, 0o755);
+		$argv = $_SERVER['argv'];
+
+		try {
+			$port = Ports::ephemeral();
+			$this->assertIsInt($port);
+			$_SERVER['argv'] = ['run', 'frankenphp', $option, '--host=127.0.0.1', "--port={$port}"];
+			$io = new BufferedIo();
+			$command = new FrankenPhp($dir, routePrefix: $prefix, watch: [$executable], executable: $executable);
+
+			$this->assertSame(0, new Runner(new Commands([$command]), $io)->run(), $io->errorOutput());
+			$contents = file_get_contents($config);
+			$this->assertIsString($contents);
+			$this->assertStringContainsString("num {$count}\n", $contents);
+			$this->assertStringContainsString('file "' . $dir . '/index.php"', $contents);
+			$this->assertStringContainsString('admin "127.0.0.1:', $contents);
+			$this->assertStringContainsString('Live reload script:', $io->output());
+		} finally {
+			$_SERVER['argv'] = $argv;
+			array_map(unlink(...), glob("{$dir}/*") ?: []);
+			rmdir($dir);
+		}
+	}
+
+	public static function workerCommands(): array
+	{
+		return [
+			'default' => ['--worker', 1, ''],
+			'multiple' => ['--worker=8', 8, ''],
+			'prefixed default' => ['--worker', 1, '/site'],
+			'prefixed multiple' => ['--worker=8', 8, '/site'],
+		];
 	}
 
 	public function testDefaultWatchPatternsIncludeSqlFiles(): void

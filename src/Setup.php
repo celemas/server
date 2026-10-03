@@ -95,8 +95,13 @@ final readonly class Setup
 	 * every Host header: the host of a Caddy site address would only match
 	 * the Host header, with the listener open on all interfaces.
 	 */
-	public function frankenPhpCaddyfile(string $host, int $port, bool $debug, ?int $adminPort = null): ?string
-	{
+	public function frankenPhpCaddyfile(
+		string $host,
+		int $port,
+		bool $debug,
+		?int $adminPort = null,
+		int $workers = 1,
+	): ?string {
 		$prefix = rtrim($this->routePrefix, '/');
 
 		if ($prefix === '' && $adminPort === null) {
@@ -109,7 +114,7 @@ final readonly class Setup
 		$bind = self::caddyToken($host);
 		$docroot = self::caddyToken($this->docroot);
 		$indent = $prefix === '' ? "\t" : "\t\t";
-		$phpServer = $adminPort === null ? "{$indent}php_server\n" : $this->workerServer($indent);
+		$phpServer = $adminPort === null ? "{$indent}php_server\n" : $this->workerServer($indent, $workers);
 
 		if ($prefix !== '') {
 			$files = self::caddyToken($prefix . '/*');
@@ -142,11 +147,7 @@ final readonly class Setup
 		);
 	}
 
-	/**
-	 * One worker for the front controller: requests are handled one after
-	 * another, and a restart after a change is quick and deterministic.
-	 */
-	private function workerServer(string $indent): string
+	private function workerServer(string $indent, int $workers): string
 	{
 		$file = self::caddyToken(rtrim($this->docroot, '/\\') . DIRECTORY_SEPARATOR . 'index.php');
 
@@ -154,7 +155,7 @@ final readonly class Setup
 			"{$indent}php_server {\n"
 				. "{$indent}\tworker {\n"
 				. "{$indent}\t\tfile {$file}\n"
-				. "{$indent}\t\tnum 1\n"
+				. "{$indent}\t\tnum {$workers}\n"
 				. "{$indent}\t}\n"
 				. "{$indent}}\n"
 		);

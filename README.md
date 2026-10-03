@@ -71,7 +71,7 @@ Both commands take the same arguments:
 | `-o`, `--open` | Opens the application in the default browser once it responds. |
 | `-w`, `--watch[=<glob>]` | Enables live reload. Given patterns replace the `watch` argument; repeat the option or separate patterns with commas. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
-| `--worker` | `frankenphp` only: keeps the application in memory with one FrankenPHP worker. Implies `--watch`. See [Worker mode](#worker-mode). |
+| `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. Implies `--watch`. See [Worker mode](#worker-mode). |
 
 ## Routing
 
@@ -117,7 +117,7 @@ Open pages also reload once when they reconnect after the command restarts. If a
 
 A worker only sees code changes after a restart. Worker mode therefore always watches the files: when watched files other than stylesheets and scripts change, the command restarts the worker through FrankenPHP's admin API before it tells pages to update. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
 
-One worker handles requests one after another, which keeps restarts quick and the request log in order.
+By default, one worker handles requests one after another, which keeps restarts quick and the request log in order. Pass a positive integer, such as `frankenphp --worker=8`, to run multiple workers and handle PHP requests concurrently. Each worker keeps its own application instance in memory. File watching remains enabled, and code changes restart all workers.
 
 ## Request log protocol
 

@@ -35,7 +35,9 @@ use InvalidArgumentException;
 )]
 #[Opt(
 	'--worker',
-	'Keep the application in memory with one FrankenPHP worker. Implies --watch; changes to files other than CSS or JS restart the worker.',
+	'Keep the application in memory with FrankenPHP workers (default: 1). Implies --watch; changes to files other than CSS or JS restart the workers.',
+	value: 'count',
+	optionalValue: true,
 )]
 #[Opt(
 	'--watch',

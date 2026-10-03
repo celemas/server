@@ -15,7 +15,7 @@ final class FrankenRuntime extends Runtime
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
 	{
-		if ($this->options->worker) {
+		if ($this->options->workers !== null) {
 			$adminPort = Ports::ephemeral();
 
 			if (is_string($adminPort)) {
@@ -30,6 +30,7 @@ final class FrankenRuntime extends Runtime
 			$port,
 			$this->options->debug,
 			$this->adminPort,
+			$this->options->workers ?? 1,
 		);
 
 		if ($contents !== null) {

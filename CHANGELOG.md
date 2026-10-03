@@ -2,7 +2,9 @@
 
 ## [Unreleased](https://codefloe.com/celema/server/compare/0.2.0...HEAD)
 
-No notable changes since the last release.
+### Added
+
+- `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker and implies `--watch`.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)
 

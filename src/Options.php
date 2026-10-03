@@ -16,7 +16,7 @@ final class Options
 	public bool $debug = false;
 	public bool $quiet = false;
 	public bool $watch = false;
-	public bool $worker = false;
+	public ?int $workers = null;
 	public bool $open = false;
 	public ?int $reloadPort = null;
 	/** @var list<string> */
@@ -30,15 +30,26 @@ final class Options
 		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
-		$options->worker = $args->has('--worker');
-		// A worker keeps the code in memory, so it has to watch for changes.
-		$options->watch = $options->worker || $args->has('-w') || $args->has('--watch');
+		$options->workers = $args->has('--worker') ? self::workerCount($args->opt('--worker', '1')) : null;
+		// Workers keep the code in memory, so they have to watch for changes.
+		$options->watch = $options->workers !== null || $args->has('-w') || $args->has('--watch');
 		$options->open = $args->has('-o') || $args->has('--open');
 		$reloadPort = $args->opt('--reload-port', '');
 		$options->reloadPort = $reloadPort === '' ? null : self::port($reloadPort);
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);
 
 		return $options;
+	}
+
+	private static function workerCount(string $value): int
+	{
+		$count = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+		if (!preg_match('/^[1-9][0-9]*$/D', $value) || $count === false) {
+			throw new InvalidArgumentException("Worker count '{$value}' must be a positive integer.");
+		}
+
+		return $count;
 	}
 
 	public static function port(string $value): int
