@@ -6,6 +6,8 @@ namespace Celema\Server\Tests;
 
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
+use Celema\Console\Commands;
+use Celema\Console\Runner;
 use Celema\Server\Address;
 use Celema\Server\Browser;
 use Celema\Server\Console;
@@ -17,6 +19,7 @@ use Celema\Server\Process;
 use Celema\Server\Server;
 use Celema\Server\Setup;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -232,7 +235,7 @@ final class ServerTest extends TestCase
 				'--filter=#health#',
 				'--debug',
 				'--quiet',
-				'--watch=**/*.twig',
+				'--watch-files=**/*.twig',
 			]),
 		);
 
@@ -321,15 +324,76 @@ final class ServerTest extends TestCase
 		}
 	}
 
-	public function testWatchPassesLiveReloadScriptToTheBackend(): void
+	#[DataProvider('serverCommands')]
+	public function testWatchPassesLiveReloadScriptToTheBackendByDefault(string $command): void
 	{
-		$output = $this->watch('tests/**/*.php');
+		$output = $this->watch('tests/**/*.php', command: $command);
 
 		$this->assertMatchesRegularExpression(
 			'#Live reload script: (http://127\.0\.0\.1:\d+/celema-live-reload\.js)\n.*script=\1#s',
 			$output,
 		);
 		$this->assertMatchesRegularExpression('#Watching \d+ files#', $output);
+	}
+
+	public static function serverCommands(): array
+	{
+		return [['server'], ['frankenphp']];
+	}
+
+	#[DataProvider('serverCommands')]
+	public function testNoWatchDisablesLiveReloadEvenWithPatternOverrides(string $command): void
+	{
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = stream_socket_get_name($socket, false);
+		$this->assertIsString($address);
+		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
+		$inherited = getenv('CELEMA_LIVE_RELOAD');
+		putenv('CELEMA_LIVE_RELOAD=http://localhost:1/stale.js');
+
+		try {
+			// The occupied reload port must not prevent serving without watching.
+			$output = $this->watch(
+				'tests/**/*.php',
+				[
+					'--no-watch',
+					'--watch-files=src/**/*.php',
+					"--reload-port={$port}",
+				],
+				$command,
+			);
+
+			$this->assertSame("script=unset\n", $output);
+		} finally {
+			fclose($socket);
+			putenv($inherited === false ? 'CELEMA_LIVE_RELOAD' : "CELEMA_LIVE_RELOAD={$inherited}");
+		}
+	}
+
+	#[DataProvider('serverCommands')]
+	public function testWatchFilesOverridesConfiguredPatterns(string $command): void
+	{
+		$output = $this->watch('no-such-dir/**/*.php', ['--watch-files=src/Options.php'], $command);
+
+		$this->assertStringContainsString('Watching 1 file', $output);
+	}
+
+	#[DataProvider('serverCommands')]
+	public function testWatchFilesRequiresAValue(string $command): void
+	{
+		$argv = $_SERVER['argv'];
+		$_SERVER['argv'] = ['run', $command, '--watch-files'];
+
+		try {
+			$io = new BufferedIo();
+			$commands = new Commands([new Server('/tmp/public'), new FrankenPhp('/tmp/public')]);
+
+			$this->assertSame(1, new Runner($commands, $io)->run());
+			$this->assertStringContainsString("Option '--watch-files' requires a value", $io->errorOutput());
+		} finally {
+			$_SERVER['argv'] = $argv;
+		}
 	}
 
 	public function testWatchUsesTheGivenReloadPort(): void
@@ -349,7 +413,7 @@ final class ServerTest extends TestCase
 		try {
 			$io = new BufferedIo();
 			$exit = (new Server('/tmp/public', executable: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", "--reload-port={$port}", '--watch']),
+				new Args(['--host=127.0.0.1', "--port={$port}", "--reload-port={$port}"]),
 				$io,
 			);
 
@@ -524,34 +588,34 @@ final class ServerTest extends TestCase
 		$this->assertSame('Live reload needs a free port above the public port.', $message);
 	}
 
-	public function testWatchFlagUsesConfiguredPatternWithoutValue(): void
+	public function testWatchingUsesConfiguredPatternsByDefault(): void
 	{
-		$options = Options::from(1983, ['**/*.php', '**/*.css'], new Args(['--watch']));
+		$options = Options::from(1983, ['**/*.php', '**/*.css'], new Args([]));
 
 		$this->assertTrue($options->watch);
 		$this->assertSame(['**/*.php', '**/*.css'], $options->watchFiles);
 	}
 
-	public function testWatchFlagValueOverridesConfiguredPattern(): void
+	public function testWatchFilesValueOverridesConfiguredPattern(): void
 	{
 		$options = Options::from(
 			1983,
 			['**/*.php', '**/*.css'],
-			new Args(['--watch=**/*.twig']),
+			new Args(['--watch-files=**/*.twig']),
 		);
 
 		$this->assertTrue($options->watch);
 		$this->assertSame(['**/*.twig'], $options->watchFiles);
 	}
 
-	public function testWatchFlagSupportsMultipleValues(): void
+	public function testWatchFilesSupportsMultipleValues(): void
 	{
 		$options = Options::from(
 			1983,
 			Setup::DEFAULT_WATCH,
 			new Args([
-				'--watch=app/**/*.php',
-				'--watch=vendor/celema/cms/**/*.{js,css,php}',
+				'--watch-files=app/**/*.php',
+				'--watch-files=vendor/celema/cms/**/*.{js,css,php}',
 			]),
 		);
 
@@ -572,7 +636,7 @@ final class ServerTest extends TestCase
 		$options = Options::from(
 			1983,
 			'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celema/cms/**/*.{js,css,php}',
-			new Args(['--watch']),
+			new Args([]),
 		);
 
 		$this->assertSame(
@@ -663,7 +727,7 @@ final class ServerTest extends TestCase
 	 *
 	 * @param list<string> $args
 	 */
-	private function watch(string $pattern, array $args = []): string
+	private function watch(string $pattern, array $args = [], string $command = 'server'): string
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
 
@@ -671,21 +735,25 @@ final class ServerTest extends TestCase
 			$this->fail('Could not create a fake PHP executable.');
 		}
 
-		file_put_contents($executable, "#!/bin/sh\nprintf 'script=%s\\n' \"\$CELEMA_LIVE_RELOAD\" >&2\n");
+		file_put_contents($executable, "#!/bin/sh\nprintf 'script=%s\\n' \"\${CELEMA_LIVE_RELOAD-unset}\" >&2\n");
 		chmod($executable, 0o755);
 		$port = $this->freePort();
+		$argv = $_SERVER['argv'];
+		$_SERVER['argv'] = ['run', $command, '--host=127.0.0.1', "--port={$port}", ...$args];
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', watch: $pattern, executable: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--watch', ...$args]),
-				$io,
-			);
+			$commands = new Commands([
+				new Server('/tmp/public', watch: $pattern, executable: $executable),
+				new FrankenPhp('/tmp/public', watch: $pattern, executable: $executable),
+			]);
+			$exit = new Runner($commands, $io)->run();
 
-			$this->assertSame(0, $exit);
+			$this->assertSame(0, $exit, $io->errorOutput());
 
 			return $io->output();
 		} finally {
+			$_SERVER['argv'] = $argv;
 			unlink($executable);
 		}
 	}

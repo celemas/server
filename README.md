@@ -45,7 +45,7 @@ $commands = new Commands([
 exit(new Runner($commands)->run());
 ```
 
-Then start one of them, for example `php run server --watch`.
+Then start one of them, for example `php run server`. Both commands watch files and serve live reload by default. Pass `--no-watch` to disable both.
 
 ### Constructor arguments
 
@@ -69,9 +69,10 @@ Both commands take the same arguments:
 | `-d`, `--debug` | `server`: sets `XDEBUG_SESSION`, so Xdebug debugs every request. `frankenphp`: enables verbose Caddy logs. |
 | `-q`, `--quiet` | Reduces output: runs the PHP server with `-q`, hides FrankenPHP's startup banner, and hides live reload lines while pages are connected. |
 | `-o`, `--open` | Opens the application in the default browser once it responds. |
-| `-w`, `--watch[=<glob>]` | Enables live reload. Given patterns replace the `watch` argument; repeat the option or separate patterns with commas. |
+| `--no-watch` | Disables file watching, live reload, and automatic worker restarts. |
+| `--watch-files=<glob>` | Replaces the `watch` argument's patterns; repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
-| `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. Implies `--watch`. See [Worker mode](#worker-mode). |
+| `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
 
 ## Routing
 
@@ -83,7 +84,7 @@ Both commands make OPcache check for changed files on every request, so a reques
 
 ## Live reload
 
-With `--watch`, the command polls the watched files and tells open pages to update when they change:
+By default, the command polls the watched files and tells open pages to update when they change:
 
 - Changed stylesheets are swapped in place, including the stylesheets they import.
 - Other changes, such as code or templates, morph the page into a freshly rendered copy with [Idiomorph](https://github.com/bigskysoftware/idiomorph), which the command serves itself. The scroll position, focus, and form input the user changed are kept, and scripts do not run again. The page reloads instead when its scripts changed, inline ones included, when a form posted to it without a redirect, or when its URL no longer answers with an HTML page, for example after a redirect.
@@ -99,7 +100,7 @@ After a morph, the script dispatches a `celema:morphed` event on the document, s
 
 Patterns are relative to the working directory. `**` matches across directories, `*` and `?` within one path segment, and braces list alternatives, like `*.{php,js}`. A pattern starting with `!` excludes matching files, for example `['src/**/*.php', '!src/cache/**']`; a negated pattern that covers a whole directory, like `!src/cache/**` or `!src/cache/`, skips it while scanning. Directories named `node_modules`, `vendor`, or starting with a dot are skipped, unless a pattern's fixed path already points into them, like `vendor/acme/lib/**/*.php`. Symlinked directories are followed. At startup, the command prints how many files it watches, or warns when the patterns match none.
 
-Pages opt in by including the live reload script. The command serves it on a separate port and passes its URL to the application as the `CELEMA_LIVE_RELOAD` environment variable. It is only set while `--watch` runs, so the snippet renders nothing in production. Add it to your layout, before `</body>`:
+Pages opt in by including the live reload script. The command serves it on a separate port and passes its URL to the application as the `CELEMA_LIVE_RELOAD` environment variable. It is only set while the development server serves live reload, so the snippet renders nothing with `--no-watch` or in production. Add it to your layout, before `</body>`:
 
 ```php
 <?php if ($liveReload = getenv('CELEMA_LIVE_RELOAD')): ?>
@@ -109,15 +110,19 @@ Pages opt in by including the live reload script. The command serves it on a sep
 
 The URL uses the `--host` address, with `localhost` for wildcard addresses, which suits a browser on the same machine. For other devices, virtual machines, or containers, bind a wildcard such as `--host=0.0.0.0` and replace the URL's host with the host the page was requested under. With `localhost`, the script is served on both loopback addresses, so local host names resolving to either work too. Pages served over HTTPS cannot load the script, because it is only served over HTTP.
 
+Pass `--no-watch` to skip file polling and the live reload endpoint entirely. Omitting the script from a layout only disables automatic updates for those pages; file watching and worker restarts still run.
+
 Open pages also reload once when they reconnect after the command restarts. If a watched file changes while no page is connected, the command says so, which usually means the snippet is missing.
 
 ## Worker mode
 
 `frankenphp --worker` serves the application with one [FrankenPHP worker](https://frankenphp.dev/docs/worker/) that runs the document root's `index.php` and keeps the application in memory between requests, as a production worker does. The front controller has to support worker mode, for example through Celema core's `App::serve()`.
 
-A worker only sees code changes after a restart. Worker mode therefore always watches the files: when watched files other than stylesheets and scripts change, the command restarts the worker through FrankenPHP's admin API before it tells pages to update. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
+A worker only sees code changes after a restart. With the default file watching enabled, changes to watched files other than stylesheets and scripts restart all workers through FrankenPHP's admin API before pages update. The admin API listens on a random loopback port for that and is not reachable from other machines. FrankenPHP's own `watch` directive is not used, as it does not follow symlinked package directories such as path repositories in `vendor`.
 
-By default, one worker handles requests one after another, which keeps restarts quick and the request log in order. Pass a positive integer, such as `frankenphp --worker=8`, to run multiple workers and handle PHP requests concurrently. Each worker keeps its own application instance in memory. File watching remains enabled, and code changes restart all workers.
+By default, one worker handles requests one after another, which keeps restarts quick and the request log in order. Pass a positive integer, such as `frankenphp --worker=8`, to run multiple workers and handle PHP requests concurrently. Each worker keeps its own application instance in memory.
+
+For uninterrupted load or memory-leak testing, use `frankenphp --worker=8 --no-watch`. Workers still run, but file watching, live reload, and the admin API are disabled. Restart the command manually to pick up application code changes.
 
 ## Request log protocol
 

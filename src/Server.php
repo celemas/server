@@ -30,15 +30,14 @@ use InvalidArgumentException;
 #[Opt('--open', 'Open the application in the default browser once it responds.', short: '-o')]
 #[Opt(
 	'--reload-port',
-	'Port for live reload in watch mode. Defaults to ten times the port, or the next free port above.',
+	'Port for live reload. Defaults to ten times the port, or the next free port above.',
 	value: 'port',
 )]
+#[Opt('--no-watch', 'Disable file watching and live reload.')]
 #[Opt(
-	'--watch',
-	'Serve the live reload script and reload pages on changes. Optional files override the configured watch patterns.',
-	short: '-w',
-	value: 'file',
-	optionalValue: true,
+	'--watch-files',
+	'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
+	value: 'glob',
 )]
 class Server
 {

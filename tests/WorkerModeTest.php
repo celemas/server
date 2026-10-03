@@ -24,7 +24,7 @@ final class WorkerModeTest extends TestCase
 {
 	public function testWorkerCaddyfileRunsOneWorkerBehindALoopbackAdminApi(): void
 	{
-		$config = new Setup('/srv/site/public', '')->frankenPhpCaddyfile('localhost', 1983, false, 4321);
+		$config = new Setup('/srv/site/public', '')->frankenPhpCaddyfile('localhost', 1983, false, 4321, 1);
 
 		$this->assertIsString($config);
 		$this->assertStringContainsString("\tadmin \"127.0.0.1:4321\"\n", $config);
@@ -37,7 +37,7 @@ final class WorkerModeTest extends TestCase
 
 	public function testWorkerCaddyfileKeepsTheRoutePrefix(): void
 	{
-		$config = new Setup('/srv/site/public', '/site')->frankenPhpCaddyfile('localhost', 1983, false, 4321);
+		$config = new Setup('/srv/site/public', '/site')->frankenPhpCaddyfile('localhost', 1983, false, 4321, 1);
 
 		$this->assertIsString($config);
 		$this->assertStringContainsString('@prefix path "/site" "/site/*"', $config);
@@ -55,22 +55,25 @@ final class WorkerModeTest extends TestCase
 
 	/** @param list<string> $args */
 	#[DataProvider('workerOptions')]
-	public function testWorkerOptionSelectsCountAndImpliesWatching(array $args, ?int $workers): void
+	public function testWorkerCountAndWatchingAreIndependent(array $args, ?int $workers, bool $watch): void
 	{
 		$options = Options::from(1983, Setup::DEFAULT_WATCH, new Args($args));
 
 		$this->assertSame($workers, $options->workers);
-		$this->assertSame($workers !== null, $options->watch);
+		$this->assertSame($watch, $options->watch);
 	}
 
 	public static function workerOptions(): array
 	{
 		return [
-			'classic' => [[], null],
-			'default' => [['--worker'], 1],
-			'explicit one' => [['--worker=1'], 1],
-			'multiple' => [['--worker=8'], 8],
-			'maximum integer' => [['--worker=' . PHP_INT_MAX], PHP_INT_MAX],
+			'classic' => [[], null, true],
+			'default' => [['--worker'], 1, true],
+			'explicit one' => [['--worker=1'], 1, true],
+			'multiple' => [['--worker=8'], 8, true],
+			'maximum integer' => [['--worker=' . PHP_INT_MAX], PHP_INT_MAX, true],
+			'classic without watching' => [['--no-watch'], null, false],
+			'default without watching' => [['--worker', '--no-watch'], 1, false],
+			'multiple without watching' => [['--worker=8', '--no-watch'], 8, false],
 		];
 	}
 
@@ -104,7 +107,7 @@ final class WorkerModeTest extends TestCase
 	}
 
 	#[DataProvider('workerCommands')]
-	public function testCommandPassesWorkerCountToBackend(string $option, int $count, string $prefix): void
+	public function testCommandPassesWorkerCountToBackend(string $option, int $count, string $prefix, bool $watch): void
 	{
 		$dir = sys_get_temp_dir() . '/celema-worker-command-' . bin2hex(random_bytes(4));
 		mkdir($dir);
@@ -119,6 +122,11 @@ final class WorkerModeTest extends TestCase
 			$port = Ports::ephemeral();
 			$this->assertIsInt($port);
 			$_SERVER['argv'] = ['run', 'frankenphp', $option, '--host=127.0.0.1', "--port={$port}"];
+
+			if (!$watch) {
+				$_SERVER['argv'][] = '--no-watch';
+			}
+
 			$io = new BufferedIo();
 			$command = new FrankenPhp($dir, routePrefix: $prefix, watch: [$executable], executable: $executable);
 
@@ -127,8 +135,13 @@ final class WorkerModeTest extends TestCase
 			$this->assertIsString($contents);
 			$this->assertStringContainsString("num {$count}\n", $contents);
 			$this->assertStringContainsString('file "' . $dir . '/index.php"', $contents);
-			$this->assertStringContainsString('admin "127.0.0.1:', $contents);
-			$this->assertStringContainsString('Live reload script:', $io->output());
+			if ($watch) {
+				$this->assertStringContainsString('admin "127.0.0.1:', $contents);
+				$this->assertStringContainsString('Live reload script:', $io->output());
+			} else {
+				$this->assertStringContainsString("\tadmin off\n", $contents);
+				$this->assertSame('', $io->output());
+			}
 		} finally {
 			$_SERVER['argv'] = $argv;
 			array_map(unlink(...), glob("{$dir}/*") ?: []);
@@ -139,10 +152,13 @@ final class WorkerModeTest extends TestCase
 	public static function workerCommands(): array
 	{
 		return [
-			'default' => ['--worker', 1, ''],
-			'multiple' => ['--worker=8', 8, ''],
-			'prefixed default' => ['--worker', 1, '/site'],
-			'prefixed multiple' => ['--worker=8', 8, '/site'],
+			'default' => ['--worker', 1, '', true],
+			'multiple' => ['--worker=8', 8, '', true],
+			'prefixed default' => ['--worker', 1, '/site', true],
+			'prefixed multiple' => ['--worker=8', 8, '/site', true],
+			'default without watching' => ['--worker', 1, '', false],
+			'multiple without watching' => ['--worker=8', 8, '', false],
+			'prefixed without watching' => ['--worker=8', 8, '/site', false],
 		];
 	}
 

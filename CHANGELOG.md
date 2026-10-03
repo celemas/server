@@ -4,7 +4,12 @@
 
 ### Added
 
-- `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker and implies `--watch`.
+- `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker.
+
+### Changed
+
+- **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
+- **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)
 

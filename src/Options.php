@@ -15,7 +15,7 @@ final class Options
 	public string $filter = '';
 	public bool $debug = false;
 	public bool $quiet = false;
-	public bool $watch = false;
+	public bool $watch = true;
 	public ?int $workers = null;
 	public bool $open = false;
 	public ?int $reloadPort = null;
@@ -31,8 +31,7 @@ final class Options
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
 		$options->workers = $args->has('--worker') ? self::workerCount($args->opt('--worker', '1')) : null;
-		// Workers keep the code in memory, so they have to watch for changes.
-		$options->watch = $options->workers !== null || $args->has('-w') || $args->has('--watch');
+		$options->watch = !$args->has('--no-watch');
 		$options->open = $args->has('-o') || $args->has('--open');
 		$reloadPort = $args->opt('--reload-port', '');
 		$options->reloadPort = $reloadPort === '' ? null : self::port($reloadPort);
@@ -86,29 +85,8 @@ final class Options
 	/** @return list<string> */
 	public static function watchFiles(Args $args, array|string $defaultWatch): array
 	{
-		$watch = WatchPattern::list($defaultWatch);
-		$values = self::watchValues($args);
+		$values = $args->opts('--watch-files');
 
-		if ($values === []) {
-			return $watch;
-		}
-
-		return WatchPattern::list($values);
-	}
-
-	/** @return list<string> */
-	private static function watchValues(Args $args): array
-	{
-		$values = [];
-
-		if ($args->has('-w')) {
-			$values = array_merge($values, $args->opts('-w', []));
-		}
-
-		if ($args->has('--watch')) {
-			$values = array_merge($values, $args->opts('--watch', []));
-		}
-
-		return $values;
+		return WatchPattern::list($values === [] ? $defaultWatch : $values);
 	}
 }

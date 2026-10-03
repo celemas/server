@@ -88,8 +88,9 @@ final readonly class Setup
 
 	/**
 	 * The configuration for a route prefix or worker mode, or null when the
-	 * plain `php-server` command suffices. In worker mode, the admin API
-	 * listens on the given loopback port so changes can restart the worker.
+	 * plain `php-server` command suffices. When watching in worker mode,
+	 * the admin API listens on the given loopback port so changes can
+	 * restart the workers. Without watching, workers run with the API off.
 	 *
 	 * Like `php-server --listen`, the server binds to the host and answers
 	 * every Host header: the host of a Caddy site address would only match
@@ -100,11 +101,11 @@ final readonly class Setup
 		int $port,
 		bool $debug,
 		?int $adminPort = null,
-		int $workers = 1,
+		?int $workers = null,
 	): ?string {
 		$prefix = rtrim($this->routePrefix, '/');
 
-		if ($prefix === '' && $adminPort === null) {
+		if ($prefix === '' && $workers === null) {
 			return null;
 		}
 
@@ -114,7 +115,7 @@ final readonly class Setup
 		$bind = self::caddyToken($host);
 		$docroot = self::caddyToken($this->docroot);
 		$indent = $prefix === '' ? "\t" : "\t\t";
-		$phpServer = $adminPort === null ? "{$indent}php_server\n" : $this->workerServer($indent, $workers);
+		$phpServer = $workers === null ? "{$indent}php_server\n" : $this->workerServer($indent, $workers);
 
 		if ($prefix !== '') {
 			$files = self::caddyToken($prefix . '/*');
