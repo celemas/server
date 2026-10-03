@@ -17,7 +17,7 @@ use InvalidArgumentException;
 final class Options
 {
 	public string $host = 'localhost';
-	public int $port = 1983;
+	public int $port = 2130;
 	public string $filter = '';
 	public bool $debug = false;
 	public bool $quiet = false;

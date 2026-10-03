@@ -16,6 +16,7 @@
 
 ### Changed
 
+- **Breaking:** The default application port for `server` and `frankenphp` is now `2130` instead of `1983`. The derived live reload port and the standalone `reload` command's default are now `21300` instead of `19830`. Explicitly configured ports are unchanged; update fixed URLs that relied on the old defaults, or set `--port` to retain them.
 - **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
 - `frankenphp` runs FrankenPHP with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.

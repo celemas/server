@@ -42,7 +42,7 @@ $docroot = __DIR__ . '/public';
 $watch = ['src/**/*.{php,css,js}', 'views/**/*.php'];
 $commands = new Commands([
 	new Server($docroot, port: 1973, watch: $watch),
-	new FrankenPhp($docroot, port: 1973, watch: $watch),
+	new FrankenPhp($docroot, port: 1975, watch: $watch),
 	new FrankenInstall(),
 ]);
 
@@ -70,7 +70,7 @@ Both server commands take these arguments:
 | Argument | Default | Description |
 | --- | --- | --- |
 | `docroot` | required | The public directory. |
-| `port` | `1983` | The default port. |
+| `port` | `2130` | The default port. |
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
 | `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
 | `executable` | `'php'`, or none for FrankenPHP | The executable to run the backend with. For FrankenPHP, it replaces the [lookup](#installing-frankenphp). |
@@ -93,6 +93,8 @@ Both server commands take these arguments:
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
 | `--processes=<count>` | `server` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
 | `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
+
+Both commands check whether the application port is available before starting. A busy port is an error; they do not switch to another application port. The automatically selected live reload port tries its initial candidate and up to 100 higher ports, stopping at 65535. An explicit `--reload-port` must be available.
 
 ## Routing
 
@@ -124,7 +126,9 @@ By default, the command polls the watched files and tells open pages to update w
 Pages that a morph would break, like pages whose scripts render markup or keep state in the DOM, opt out with a meta tag; they reload for every change other than stylesheets:
 
 ```html
-<meta name="celema-live-reload" content="reload" />
+<meta
+	name="celema-live-reload"
+	content="reload" />
 ```
 
 After a morph, the script dispatches a `celema:morphed` event on the document, so pages can set up behaviors for new markup.
@@ -157,10 +161,10 @@ It prints the `CELEMA_LIVE_RELOAD` value the application needs to include the sc
 
 ```yaml
 environment:
-  CELEMA_LIVE_RELOAD: http://localhost:19830/celema-live-reload.js
+    CELEMA_LIVE_RELOAD: http://localhost:21300/celema-live-reload.js
 ```
 
-The endpoint listens on a fixed port, by default 19830, the server commands' default live reload port. A busy port is an error rather than a reason to pick another one, which the application would not know about. Pages connect from the browser, so the address must be reachable from there, not from the container.
+The endpoint listens on a fixed port, by default 21300, the server commands' default live reload port. A busy port is an error rather than a reason to pick another one, which the application would not know about. Pages connect from the browser, so the address must be reachable from there, not from the container.
 
 With `--admin=<url>`, or the `admin` argument, changes to watched files other than stylesheets and scripts restart the workers of a FrankenPHP served elsewhere through its admin API, before pages update. In a container, the admin API only listens on the container's own loopback interface by default. Set `admin 0.0.0.0:2019` in its Caddyfile, and publish the port only on the host's loopback interface, like `127.0.0.1:2019:2019`: the admin API has no authentication.
 

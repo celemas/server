@@ -38,7 +38,7 @@ class Reload
 	 * reload by default, so pages keep loading the script when switching.
 	 */
 	public function __construct(
-		protected readonly int $port = 19_830,
+		protected readonly int $port = 21_300,
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 		protected readonly ?string $admin = null,
 		protected readonly array $companions = [],

@@ -61,7 +61,7 @@ class FrankenPhp
 	// @mago-expect lint:excessive-parameter-list
 	public function __construct(
 		protected readonly string $docroot,
-		protected readonly int $port = 1983,
+		protected readonly int $port = 2130,
 		protected readonly string $routePrefix = '',
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 		protected readonly ?string $executable = null,

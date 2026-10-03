@@ -205,6 +205,37 @@ final class ServerTest extends TestCase
 		}
 	}
 
+	#[DataProvider('serverCommands')]
+	public function testServerCommandsUseTheDefaultPort(string $command): void
+	{
+		$message = Ports::unavailableMessage('127.0.0.1', 2130);
+
+		if ($message !== null) {
+			$this->markTestSkipped($message);
+		}
+
+		$executable = tempnam(sys_get_temp_dir(), 'fake-backend-');
+		$this->assertIsString($executable);
+		file_put_contents($executable, "#!/bin/sh\nexit 0\n");
+		chmod($executable, 0o755);
+
+		try {
+			$io = new BufferedIo();
+			$backend = $command === 'server'
+				? new Server('/tmp/public', executable: $executable)
+				: new FrankenPhp('/tmp/public', executable: $executable);
+			$exit = $backend(
+				new Args(['--host=127.0.0.1', '--no-watch']),
+				$io,
+			);
+
+			$this->assertSame(0, $exit, $io->errorOutput());
+			$this->assertSame("Serving http://127.0.0.1:2130\n", $io->output());
+		} finally {
+			unlink($executable);
+		}
+	}
+
 	public function testServerAnnouncesItsAddressAndPhpVersion(): void
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
@@ -527,10 +558,10 @@ final class ServerTest extends TestCase
 
 	public function testLiveReloadPortScalesThePublicPortTimesTen(): void
 	{
-		$port = Ports::liveReloadPort('127.0.0.1', 1983);
+		$port = Ports::liveReloadPort('127.0.0.1', 2130);
 
 		$this->assertIsInt($port);
-		$this->assertGreaterThanOrEqual(19_830, $port);
+		$this->assertGreaterThanOrEqual(21_300, $port);
 		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
 	}
 

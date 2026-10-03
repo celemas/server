@@ -39,16 +39,24 @@ final class ReloadTest extends TestCase
 		exec('rm -rf ' . escapeshellarg($this->dir));
 	}
 
-	public function testPagesReloadAfterTheWorkersOfTheExternalServerRestarted(): void
+	#[DataProvider('ports')]
+	public function testPagesReloadAfterTheWorkersOfTheExternalServerRestarted(bool $defaultPort): void
 	{
 		if (!function_exists('posix_setsid')) {
 			$this->markTestSkipped('Needs the posix extension.');
 		}
 
-		$admin = $this->adminApi();
-		$port = Ports::ephemeral();
+		$port = $defaultPort ? 21_300 : Ports::ephemeral();
 		$this->assertIsInt($port);
-		[$command, $pid] = $this->start(["--port={$port}", "--admin=http://127.0.0.1:{$admin}"]);
+		$message = Ports::unavailableMessage('127.0.0.1', $port);
+
+		if ($message !== null) {
+			$this->markTestSkipped($message);
+		}
+
+		$admin = $this->adminApi();
+		$args = $defaultPort ? [] : ["--port={$port}"];
+		[$command, $pid] = $this->start([...$args, "--admin=http://127.0.0.1:{$admin}"]);
 		$this->waitFor(static fn(): bool => Ports::unavailableMessage('127.0.0.1', $port) !== null);
 
 		$script = file_get_contents("http://127.0.0.1:{$port}/celema-live-reload.js");
@@ -79,6 +87,11 @@ final class ReloadTest extends TestCase
 			$output,
 		);
 		$this->assertStringContainsString('restart worker', $output);
+	}
+
+	public static function ports(): array
+	{
+		return ['default' => [true], 'explicit' => [false]];
 	}
 
 	public function testUnreachableAdminApiIsReported(): void
