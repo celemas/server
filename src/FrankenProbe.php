@@ -29,7 +29,7 @@ final class FrankenProbe
 		}
 
 		/** @var mixed $loaded */
-		$loaded = json_decode(Process::output($setup->frankenPhpProbeCommand()) ?? '', true);
+		$loaded = json_decode(Capture::output($setup->frankenPhpProbeCommand()) ?? '', true);
 
 		if (!is_array($loaded)) {
 			return [];

@@ -61,6 +61,7 @@ Both server commands take these arguments:
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
 | `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
 | `executable` | `'php'`, or none for FrankenPHP | The executable to run the backend with. For FrankenPHP, it replaces the [lookup](#installing-frankenphp). |
+| `companions` | `[]` | Processes to run alongside the server, like asset watchers. See [Companion processes](#companion-processes). |
 | `version` | none | `FrankenPhp` only: the FrankenPHP version to run from the shared cache, like `'1.12.7'`. See [Installing FrankenPHP](#installing-frankenphp). |
 
 ### Options
@@ -74,6 +75,7 @@ Both server commands take these arguments:
 | `-q`, `--quiet` | Reduces output: runs the PHP server with `-q` and hides live reload lines while pages are connected. |
 | `-o`, `--open` | Opens the application in the default browser once it responds. |
 | `--no-watch` | Disables file watching, live reload, and automatic worker restarts. |
+| `--no-companions` | Does not start the configured [companion processes](#companion-processes). |
 | `--watch-files=<glob>` | Replaces the `watch` argument's patterns; repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
 | `--processes=<count>` | `server` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
@@ -120,6 +122,21 @@ The URL uses the `--host` address, with `localhost` for wildcard addresses, whic
 Pass `--no-watch` to skip file polling and the live reload endpoint entirely. Omitting the script from a layout only disables automatic updates for those pages; file watching and worker restarts still run.
 
 Open pages also reload once when they reconnect after the command restarts. If a watched file changes while no page is connected, the command says so, which usually means the snippet is missing.
+
+## Companion processes
+
+Companion processes run alongside the server, like a CSS or JavaScript watcher or a queue worker. Name each one, with a command line for the shell or a list of arguments:
+
+```php
+new Server($docroot, companions: [
+	'css' => 'npx @tailwindcss/cli -i src/app.css -o public/app.css --watch',
+	'js' => ['npx', 'esbuild', 'src/app.js', '--bundle', '--outfile=public/app.js', '--watch'],
+]),
+```
+
+Their output appears after their name, without colors and with only the last state of lines that redraw themselves, like progress bars. When a companion exits by itself, the command reports its exit code and keeps serving. Companions stop together with the server, including the processes they start, like the one `npx` runs. Their input stays open while the server runs, as watchers like esbuild's stop when it closes. Pass `--no-companions` to start the server without them, for example when the watchers already run elsewhere.
+
+Each companion and the server run in their own process group, given the `pcntl` and `posix` extensions, so stopping the command stops every process they started, like the processes of `server --processes`.
 
 ## Installing FrankenPHP
 

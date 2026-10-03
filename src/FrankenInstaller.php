@@ -73,7 +73,7 @@ final readonly class FrankenInstaller
 
 		chmod($file, 0o755);
 		// Catches a build for another architecture, or one the system refuses to run.
-		$version = Process::output([$file, 'version'], timeout: 10.0) ?? '';
+		$version = Capture::output([$file, 'version'], timeout: 10.0) ?? '';
 
 		if (preg_match('/^FrankenPHP v?' . preg_quote($release->version, '/') . '\s/', $version . ' ') !== 1) {
 			return "The downloaded FrankenPHP {$release->version} does not run on this system.";

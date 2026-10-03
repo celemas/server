@@ -40,6 +40,7 @@ use InvalidArgumentException;
 	optionalValue: true,
 )]
 #[Opt('--no-watch', 'Disable file watching, live reload, and automatic worker restarts.')]
+#[Opt('--no-companions', 'Do not start the configured companion processes.')]
 #[Opt(
 	'--watch-files',
 	'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
@@ -52,6 +53,9 @@ class FrankenPhp
 	 * FrankenPHP from the shared cache, or else `frankenphp` on PATH or
 	 * the newest cached version. A missing FrankenPHP is downloaded once
 	 * the user agrees.
+	 *
+	 * The `companions` run alongside the server, like asset watchers: each
+	 * name with a command line or a list of arguments.
 	 */
 	// One parameter per setting keeps the run scripts' named arguments simple.
 	// @mago-expect lint:excessive-parameter-list
@@ -62,12 +66,14 @@ class FrankenPhp
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 		protected readonly ?string $executable = null,
 		protected readonly ?string $version = null,
+		protected readonly array $companions = [],
 	) {}
 
 	public function __invoke(Args $args, Io $io): int
 	{
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
+			$companions = Companion::validate($this->companions);
 			$binary = $this->binary($io);
 
 			if (is_string($binary)) {
@@ -80,6 +86,7 @@ class FrankenPhp
 				new Setup($this->docroot, $this->routePrefix, $binary->path),
 				$options,
 				$io,
+				$companions,
 			);
 			$output = new FrankenOutput(
 				$io,

@@ -40,6 +40,7 @@ final class FrankenRuntime extends Runtime
 		$frankenPhp = Process::start(
 			$this->setup->frankenPhpCommand($this->config),
 			$this->setup->frankenPhpEnvironment($liveReload),
+			group: true,
 		);
 
 		return $frankenPhp ?? 'Failed to start FrankenPHP.';
@@ -73,7 +74,7 @@ final class FrankenRuntime extends Runtime
 	#[Override]
 	protected function details(): string
 	{
-		$version = Process::output($this->setup->frankenPhpVersionCommand()) ?? '';
+		$version = Capture::output($this->setup->frankenPhpVersionCommand()) ?? '';
 
 		return preg_match('/^FrankenPHP v?(\S+) PHP (\S+)/', $version, $match) === 1
 			? "FrankenPHP {$match[1]}, PHP {$match[2]}"

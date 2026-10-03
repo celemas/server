@@ -8,6 +8,7 @@
 - `frankenphp` downloads FrankenPHP into a cache that all projects share when it finds none, once the user agrees in a terminal. Builds are checked against their published checksum and run once before they are installed. The new `frankenphp:install [<version>]` command, `Celema\Server\FrankenInstall`, downloads a release without starting the server.
 - The new `version` argument of `FrankenPhp` pins the FrankenPHP version from the shared cache. Without a pin, `frankenphp` on `PATH` comes before the newest cached version.
 - `frankenphp` prints the FrankenPHP and PHP versions at startup, and warns about extensions the project's `composer.json` requires that FrankenPHP's embedded PHP lacks.
+- Both commands run companion processes alongside the server, like asset watchers, configured with the new `companions` argument. Their output appears with their names; when one exits, the server keeps running, and they stop with the server, together with the processes they start. `--no-companions` skips them.
 - `server --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
 
 ### Changed
@@ -21,6 +22,8 @@
 ### Fixed
 
 - Ctrl+C, or a SIGTERM sent to the command, stops the backend and removes the temporary FrankenPHP configuration, given the `pcntl` extension. The configuration was left in the temporary directory, and a SIGTERM sent to the command alone left the backend running. The command exits with 130 or 143, as shells report a stopped process.
+- Stopping the command stops every process of the server, like the forked processes of a PHP server with multiple processes, which kept the port taken. The server runs in its own process group, given the `pcntl` and `posix` extensions.
+- The server process no longer inherits the live reload endpoint's listening socket, which kept the live reload port taken when the server outlived the command.
 - The `server` request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)

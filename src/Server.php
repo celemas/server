@@ -40,6 +40,7 @@ use InvalidArgumentException;
 	default: '1',
 )]
 #[Opt('--no-watch', 'Disable file watching and live reload.')]
+#[Opt('--no-companions', 'Do not start the configured companion processes.')]
 #[Opt(
 	'--watch-files',
 	'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
@@ -47,12 +48,19 @@ use InvalidArgumentException;
 )]
 class Server
 {
+	/**
+	 * The `companions` run alongside the server, like asset watchers: each
+	 * name with a command line or a list of arguments.
+	 */
+	// One parameter per setting keeps the run scripts' named arguments simple.
+	// @mago-expect lint:excessive-parameter-list
 	public function __construct(
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
 		protected readonly string $routePrefix = '',
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
 		protected readonly string $executable = 'php',
+		protected readonly array $companions = [],
 	) {}
 
 	public function __invoke(Args $args, Io $io): int
@@ -63,6 +71,7 @@ class Server
 				new Setup($this->docroot, $this->routePrefix, php: $this->executable),
 				$options,
 				$io,
+				Companion::validate($this->companions),
 			);
 			$phpOutput = new PhpOutput($io, $options->filter, Setup::terminalColumns());
 			$result = $runtime->run($phpOutput->line(...));

@@ -15,6 +15,7 @@ final class PhpRuntime extends Runtime
 		$php = Process::start(
 			$this->setup->phpCommand($this->options->host, $port, $this->options->quiet),
 			$this->setup->phpEnvironment($this->options->debug, $liveReload, $this->options->processes),
+			group: true,
 		);
 
 		return $php ?? 'Failed to start the PHP server.';
@@ -34,7 +35,7 @@ final class PhpRuntime extends Runtime
 	#[Override]
 	protected function details(): string
 	{
-		$version = Process::output($this->setup->phpVersionCommand());
+		$version = Capture::output($this->setup->phpVersionCommand());
 
 		return $version !== null && preg_match('/^\d+\.\d+\.\d+\S*$/D', $version) === 1 ? "PHP {$version}" : '';
 	}

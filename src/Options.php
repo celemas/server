@@ -26,6 +26,7 @@ final class Options
 	public ?int $processes = null;
 	public bool $open = false;
 	public ?int $reloadPort = null;
+	public bool $companions = true;
 	/** @var list<string> */
 	public array $watchFiles = Setup::DEFAULT_WATCH;
 
@@ -41,6 +42,7 @@ final class Options
 		$options->processes = $args->has('--processes') ? self::count($args->opt('--processes'), 'Process') : null;
 		$options->watch = !$args->has('--no-watch');
 		$options->open = $args->has('-o') || $args->has('--open');
+		$options->companions = !$args->has('--no-companions');
 		$reloadPort = $args->opt('--reload-port', '');
 		$options->reloadPort = $reloadPort === '' ? null : self::port($reloadPort);
 		$options->watchFiles = self::watchFiles($args, $defaultWatch);

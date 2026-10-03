@@ -14,15 +14,21 @@ use Celema\Console\Io;
  */
 abstract class Runtime
 {
+	private readonly ReloadLog $log;
+
+	/** @param array<string, list<string>|string> $companions */
 	public function __construct(
 		protected readonly Setup $setup,
 		protected readonly Options $options,
 		protected readonly Io $io,
-	) {}
+		private readonly array $companions = [],
+	) {
+		$this->log = new ReloadLog($io, $options->quiet, $options->watchFiles);
+	}
 
 	/**
-	 * Runs the backend until it stops. In watch mode, the live reload
-	 * endpoint runs alongside it in this process.
+	 * Runs the backend, and the companions alongside it, until the backend
+	 * stops. In watch mode, the live reload endpoint runs in this process.
 	 *
 	 * @param callable(string): void $output
 	 */
@@ -37,25 +43,41 @@ abstract class Runtime
 			return $message;
 		}
 
-		$liveReload = $this->options->watch ? $this->liveReload() : null;
+		$reloadPort = $this->options->watch ? $this->reloadPort() : null;
 
-		if (is_string($liveReload)) {
-			return $liveReload;
+		if (is_string($reloadPort)) {
+			return $reloadPort;
 		}
 
 		$interrupt = Interrupt::catch();
+		$backend = null;
+		$companions = [];
+		$liveReload = null;
 
 		try {
-			$backend = $this->start($this->options->port, $liveReload?->script);
+			$script = $reloadPort === null ? null : ReloadResponse::url($this->options->host, $reloadPort);
+			$backend = $this->start($this->options->port, $script);
 
 			if (is_string($backend)) {
 				return $backend;
 			}
 
+			$companions = $this->companions();
+
+			// Only now: the processes would inherit the listening sockets,
+			// and keep the port taken when they outlive this command.
+			if ($reloadPort !== null) {
+				$liveReload = $this->listen($reloadPort);
+
+				if (is_string($liveReload)) {
+					return $liveReload;
+				}
+			}
+
 			$this->serving();
 
 			if ($liveReload !== null) {
-				$this->announce($liveReload);
+				$this->log->announce($liveReload);
 			}
 
 			$this->started();
@@ -64,13 +86,26 @@ abstract class Runtime
 				$this->openBrowser();
 			}
 
-			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload, $interrupt);
+			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload, $interrupt, $companions);
 			$exitCode = $backend->close(terminate: $interrupt->received());
 
 			return $interrupt->exitCode() ?? self::normalizeExitCode($exitCode);
 		} finally {
+			foreach ($companions as $companion) {
+				$companion->stop();
+			}
+
+			// Stops a backend left running by an error; a closed one stays as it is.
+			if ($backend instanceof Process) {
+				$backend->stop();
+			}
+
 			$interrupt->release();
-			$liveReload?->close();
+
+			if ($liveReload instanceof LiveReload) {
+				$liveReload->close();
+			}
+
 			$this->cleanup();
 		}
 	}
@@ -117,23 +152,44 @@ abstract class Runtime
 		}
 	}
 
-	private function liveReload(): LiveReload|string
+	/** @return list<Companion> */
+	private function companions(): array
+	{
+		if (!$this->options->companions) {
+			return [];
+		}
+
+		$started = [];
+
+		foreach ($this->companions as $name => $command) {
+			$companion = Companion::start($name, $command, $this->io);
+
+			if ($companion !== null) {
+				$started[] = $companion;
+			}
+		}
+
+		return $started;
+	}
+
+	private function reloadPort(): int|string
 	{
 		$port = $this->options->reloadPort ?? Ports::liveReloadPort($this->options->host, $this->options->port);
-
-		if (is_string($port)) {
-			return $port;
-		}
 
 		if ($port === $this->options->port) {
 			return 'The live reload port must differ from the server port.';
 		}
 
+		return $port;
+	}
+
+	private function listen(int $port): LiveReload|string
+	{
 		return LiveReload::listen(
 			$this->options->host,
 			$port,
 			$this->options->watchFiles,
-			$this->changed(...),
+			$this->log->changed(...),
 			$this->reloading(...),
 		);
 	}
@@ -144,49 +200,6 @@ abstract class Runtime
 		$details = $this->details();
 		$details = $details === '' ? '' : ' <dim>(' . $this->io->escape($details) . ')</dim>';
 		$this->io->echoln("Serving {$url}{$details}");
-	}
-
-	private function announce(LiveReload $liveReload): void
-	{
-		$this->io->echoln("Live reload script: {$liveReload->script}");
-		$watched = $liveReload->watched();
-
-		if ($watched > 0) {
-			$this->io->echoln('<dim>Watching ' . ($watched === 1 ? '1 file' : "{$watched} files") . '</dim>');
-
-			return;
-		}
-
-		// A typo in a pattern would otherwise go unnoticed.
-		$this->io->echoln(
-			'<yellow>No files match the watch patterns:</yellow> '
-				. $this->io->escape(implode(', ', $this->options->watchFiles)),
-		);
-	}
-
-	/** @param list<string> $files */
-	private function changed(string $event, array $files, int $clients): void
-	{
-		if ($this->options->quiet && $clients > 0) {
-			return;
-		}
-
-		$more = count($files) > 1 ? ' <dim>(+' . (count($files) - 1) . ' more)</dim>' : '';
-		$file = $this->io->escape($files[0] ?? '') . $more;
-		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
-
-		if ($clients === 0) {
-			$this->io->echoln(
-				"{$timestamp} <yellow>changed</yellow> {$file} "
-					. '<dim>· no page connected, include the live reload script</dim>',
-			);
-
-			return;
-		}
-
-		$action = $event === 'css' ? 'restyle' : $event;
-		$pages = $clients === 1 ? '1 page' : "{$clients} pages";
-		$this->io->echoln("{$timestamp} <magenta>{$action}</magenta> {$file} <dim>· {$pages}</dim>");
 	}
 
 	private static function normalizeExitCode(int $exitCode): int

@@ -66,11 +66,30 @@ final class InterruptTest extends TestCase
 		];
 	}
 
+	public function testStoppingThePhpServerStopsAllItsProcesses(): void
+	{
+		file_put_contents("{$this->dir}/index.php", '<?php echo "served";');
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+		[$command, $pid] = $this->start(['--processes=2', '--no-watch'], 'server', $port);
+
+		for ($i = 0; $i < 100 && Ports::unavailableMessage('127.0.0.1', $port) === null; $i++) {
+			usleep(50_000);
+		}
+
+		$this->assertSame('served', file_get_contents("http://127.0.0.1:{$port}/"));
+		posix_kill($pid, SIGTERM);
+
+		$this->assertSame(143, $this->wait($command));
+		// The forked server processes would keep the port.
+		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
+	}
+
 	/**
 	 * @param list<string> $args
 	 * @return array{resource, int}
 	 */
-	private function start(array $args): array
+	private function start(array $args, string $name = 'frankenphp', ?int $port = null): array
 	{
 		$dir = $this->dir;
 		file_put_contents(
@@ -78,19 +97,27 @@ final class InterruptTest extends TestCase
 			"#!/bin/sh\n[ \"\$1\" = run ] || exit 0\nprintf '%s' \"\$3\" > config-path\necho \$\$ > backend.pid\nexec sleep 30\n",
 		);
 		chmod("{$dir}/frankenphp", 0o755);
-		file_put_contents("{$dir}/index.php", '<?php');
+
+		if (!is_file("{$dir}/index.php")) {
+			file_put_contents("{$dir}/index.php", '<?php');
+		}
+
 		$autoload = dirname(__DIR__) . '/vendor/autoload.php';
+		$php = PHP_BINARY;
 		file_put_contents("{$dir}/run", <<<PHP
 			<?php
 			require '{$autoload}';
 			posix_setsid();
-			\$command = new Celema\\Server\\FrankenPhp('{$dir}', watch: '*.php', executable: '{$dir}/frankenphp');
-			exit(new Celema\\Console\\Runner(new Celema\\Console\\Commands([\$command]))->run());
+			\$commands = [
+				new Celema\\Server\\FrankenPhp('{$dir}', watch: '*.php', executable: '{$dir}/frankenphp'),
+				new Celema\\Server\\Server('{$dir}', watch: '*.php', executable: '{$php}'),
+			];
+			exit(new Celema\\Console\\Runner(new Celema\\Console\\Commands(\$commands))->run());
 			PHP);
-		$port = Ports::ephemeral();
+		$port ??= Ports::ephemeral();
 		$this->assertIsInt($port);
 		$command = proc_open(
-			[PHP_BINARY, "{$dir}/run", 'frankenphp', '--host=127.0.0.1', "--port={$port}", ...$args],
+			[PHP_BINARY, "{$dir}/run", $name, '--host=127.0.0.1', "--port={$port}", ...$args],
 			[1 => ['file', '/dev/null', 'w'], 2 => ['file', "{$dir}/stderr", 'w']],
 			$pipes,
 			$dir,

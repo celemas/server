@@ -14,13 +14,22 @@ final class Relay
 {
 	/**
 	 * Relays the output of the processes until one of them stops or the
-	 * command is interrupted.
+	 * command is interrupted. Companions only have their output relayed;
+	 * when one exits, the others keep running.
 	 *
 	 * @param list<Binding> $bindings
+	 * @param list<Companion> $companions
 	 */
-	public static function run(array $bindings, ?LiveReload $liveReload = null, ?Interrupt $interrupt = null): void
-	{
-		$watchers = Watchers::collect($bindings);
+	public static function run(
+		array $bindings,
+		?LiveReload $liveReload = null,
+		?Interrupt $interrupt = null,
+		array $companions = [],
+	): void {
+		$watchers = Watchers::collect([
+			...$bindings,
+			...array_map(static fn(Companion $companion): array => $companion->binding(), $companions),
+		]);
 
 		while ($watchers !== []) {
 			// A signal also interrupts the select call, which then fails.
@@ -29,6 +38,10 @@ final class Relay
 			}
 
 			$liveReload?->poll();
+
+			foreach ($companions as $companion) {
+				$companion->check();
+			}
 
 			if (self::stopped($bindings)) {
 				self::drain($watchers);
@@ -48,7 +61,8 @@ final class Relay
 	 */
 	private static function drain(array &$watchers): void
 	{
-		while ($watchers !== []) {
+		// Bounded, as companions may keep writing.
+		for ($round = 0; $round < 100 && $watchers !== []; $round++) {
 			$changed = self::consume($watchers, 0);
 
 			if (!is_int($changed) || $changed === 0) {
