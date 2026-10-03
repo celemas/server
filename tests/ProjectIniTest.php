@@ -139,6 +139,41 @@ final class ProjectIniTest extends TestCase
 		$this->assertDirectoryDoesNotExist($scan[count($scan) - 1]);
 	}
 
+	public function testFrankenPhpProbesExtensionsWithProjectSettings(): void
+	{
+		file_put_contents("{$this->dir}/cserve.ini", "user_agent=project-extension\n");
+		file_put_contents("{$this->dir}/composer.json", json_encode([
+			'require' => ['ext-project-extension' => '*', 'ext-missing' => '*'],
+		]));
+		$executable = "{$this->dir}/backend";
+		// Model an extension enabled by project settings without requiring
+		// a loadable extension on the test machine. PHP still reads the ini.
+		$probe = escapeshellarg("echo json_encode([ini_get('user_agent')]);");
+		$php = escapeshellarg(PHP_BINARY);
+		file_put_contents($executable, "#!/bin/sh\ncase \"\$1\" in php-cli) exec {$php} -r {$probe};; esac\n");
+		chmod($executable, 0o755);
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+		$cwd = (string) getcwd();
+		chdir($this->dir);
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new FrankenPhp($this->dir, executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']),
+				$io,
+			);
+		} finally {
+			chdir($cwd);
+		}
+
+		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertStringContainsString(
+			'FrankenPHP lacks extensions the project requires: ext-missing.',
+			$io->errorOutput(),
+		);
+	}
+
 	public static function commands(): array
 	{
 		return [['server'], ['frankenphp']];

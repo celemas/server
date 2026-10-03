@@ -13,10 +13,11 @@ final class Capture
 	 * or does not finish within the timeout.
 	 *
 	 * @param list<string> $command
+	 * @param array<string, string>|null $environment
 	 */
-	public static function output(array $command, float $timeout = 2.0): ?string
+	public static function output(array $command, float $timeout = 2.0, ?array $environment = null): ?string
 	{
-		$process = Process::start($command);
+		$process = Process::start($command, $environment);
 
 		if ($process === null) {
 			return null;

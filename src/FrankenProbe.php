@@ -16,11 +16,14 @@ final class FrankenProbe
 {
 	/**
 	 * The required extensions FrankenPHP lacks, like `ext-intl`. Empty
-	 * when the project requires none, or when the probe fails.
+	 * when the project requires none, or when the probe fails. Uses the
+	 * backend's environment so project-configured extensions are visible.
+	 *
+	 * @param array<string, string> $environment
 	 *
 	 * @return list<string>
 	 */
-	public static function missing(Setup $setup, string $dir): array
+	public static function missing(Setup $setup, string $dir, array $environment): array
 	{
 		$required = self::required($dir);
 
@@ -29,7 +32,10 @@ final class FrankenProbe
 		}
 
 		/** @var mixed $loaded */
-		$loaded = json_decode(Capture::output($setup->frankenPhpProbeCommand()) ?? '', true);
+		$loaded = json_decode(
+			Capture::output($setup->frankenPhpProbeCommand(), environment: $environment) ?? '',
+			true,
+		);
 
 		if (!is_array($loaded)) {
 			return [];

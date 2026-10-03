@@ -75,7 +75,11 @@ final class FrankenRuntime extends Runtime
 	#[Override]
 	protected function started(): void
 	{
-		$missing = FrankenProbe::missing($this->setup, (string) getcwd());
+		$missing = FrankenProbe::missing(
+			$this->setup,
+			(string) getcwd(),
+			$this->setup->frankenPhpEnvironment(iniDir: $this->ini?->dir),
+		);
 
 		if ($missing !== []) {
 			$this->io->warn('FrankenPHP lacks extensions the project requires: ' . implode(', ', $missing) . '.');
