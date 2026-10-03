@@ -50,6 +50,12 @@ final readonly class PhpOutput
 			$line = substr($line, self::TIMESTAMP);
 		}
 
+		// The command announces the server itself; with multiple processes,
+		// each of them would print this line.
+		if (preg_match('/^PHP \S+ Development Server \(.+\) started$/', $line) === 1) {
+			return;
+		}
+
 		if (str_starts_with($line, 'celema-request ')) {
 			$this->request($line);
 

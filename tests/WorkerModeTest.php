@@ -26,7 +26,6 @@ final class WorkerModeTest extends TestCase
 	{
 		$config = new Setup('/srv/site/public', '')->frankenPhpCaddyfile('localhost', 1983, false, 4321, 1);
 
-		$this->assertIsString($config);
 		$this->assertStringContainsString("\tadmin \"127.0.0.1:4321\"\n", $config);
 		$this->assertStringContainsString(
 			"\tphp_server {\n\t\tworker {\n\t\t\tfile \"/srv/site/public/index.php\"\n\t\t\tnum 1\n\t\t}\n\t}\n",
@@ -39,7 +38,6 @@ final class WorkerModeTest extends TestCase
 	{
 		$config = new Setup('/srv/site/public', '/site')->frankenPhpCaddyfile('localhost', 1983, false, 4321, 1);
 
-		$this->assertIsString($config);
 		$this->assertStringContainsString('@prefix path "/site" "/site/*"', $config);
 		$this->assertStringContainsString("\t\tphp_server {\n\t\t\tworker {\n", $config);
 	}
@@ -48,7 +46,6 @@ final class WorkerModeTest extends TestCase
 	{
 		$config = new Setup('/srv/site/public', '/site')->frankenPhpCaddyfile('localhost', 1983, false);
 
-		$this->assertIsString($config);
 		$this->assertStringContainsString("\tadmin off\n", $config);
 		$this->assertStringContainsString("\t\tphp_server\n", $config);
 	}
@@ -140,7 +137,7 @@ final class WorkerModeTest extends TestCase
 				$this->assertStringContainsString('Live reload script:', $io->output());
 			} else {
 				$this->assertStringContainsString("\tadmin off\n", $contents);
-				$this->assertSame('', $io->output());
+				$this->assertMatchesRegularExpression('#^Serving http://127\.0\.0\.1:\d+\n$#', $io->output());
 			}
 		} finally {
 			$_SERVER['argv'] = $argv;

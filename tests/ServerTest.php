@@ -44,25 +44,6 @@ final class ServerTest extends TestCase
 		);
 	}
 
-	public function testFrankenPhpCommandUsesConfiguredServer(): void
-	{
-		$setup = new Setup('/tmp/public', '');
-
-		$this->assertSame(
-			[
-				'frankenphp',
-				'php-server',
-				'--root',
-				'/tmp/public',
-				'--listen',
-				'localhost:1983',
-				'--access-log',
-				'--debug',
-			],
-			$setup->frankenPhpCommand('localhost', 1983, true),
-		);
-	}
-
 	public function testFrankenPhpCommandUsesCaddyfile(): void
 	{
 		$setup = new Setup('/tmp/public', '/prefix');
@@ -76,7 +57,7 @@ final class ServerTest extends TestCase
 				'--adapter',
 				'caddyfile',
 			],
-			$setup->frankenPhpCommand('localhost', 1983, true, '/tmp/Caddyfile'),
+			$setup->frankenPhpCommand('/tmp/Caddyfile'),
 		);
 	}
 
@@ -85,18 +66,25 @@ final class ServerTest extends TestCase
 		$setup = new Setup('/tmp/public', '/prefix/');
 		$config = $setup->frankenPhpCaddyfile('localhost', 1983, true);
 
-		$this->assertIsString($config);
 		$this->assertStringContainsString("\tdebug\n", $config);
 		$this->assertStringContainsString('root * "/tmp/public"', $config);
 		$this->assertStringContainsString('@prefix path "/prefix" "/prefix/*"', $config);
-		$this->assertNull(new Setup('/tmp/public', '')->frankenPhpCaddyfile('localhost', 1983, false));
+	}
+
+	public function testFrankenPhpCaddyfileServesClassicModeLikePhpServer(): void
+	{
+		$config = new Setup('/tmp/public', '')->frankenPhpCaddyfile('localhost', 1983, false);
+
+		$this->assertStringContainsString("\tadmin off\n", $config);
+		$this->assertStringContainsString("\troot * \"/tmp/public\"\n\tencode zstd gzip\n\tphp_server\n", $config);
+		$this->assertStringNotContainsString('@prefix', $config);
+		$this->assertStringNotContainsString('debug', $config);
 	}
 
 	public function testFrankenPhpCaddyfileBindsToTheHostForEveryHostHeader(): void
 	{
 		$config = new Setup('/tmp/public', '/prefix')->frankenPhpCaddyfile('127.0.0.1', 1983, false);
 
-		$this->assertIsString($config);
 		$this->assertStringContainsString("\n\"http://:1983\" {\n\tbind \"127.0.0.1\"\n", $config);
 	}
 
@@ -219,6 +207,29 @@ final class ServerTest extends TestCase
 
 			$this->assertSame(0, $exit);
 			$this->assertStringContainsString('200 GET /test', $io->output());
+		} finally {
+			unlink($executable);
+		}
+	}
+
+	public function testServerAnnouncesItsAddressAndPhpVersion(): void
+	{
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+		$this->assertIsString($executable);
+		// Answers the version query, and serves nothing otherwise.
+		file_put_contents($executable, "#!/bin/sh\n[ \"\$1\" = -n ] && printf '8.5.0'\nexit 0\n");
+		chmod($executable, 0o755);
+		$port = $this->freePort();
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']),
+				$io,
+			);
+
+			$this->assertSame(0, $exit);
+			$this->assertSame("Serving http://127.0.0.1:{$port} (PHP 8.5.0)\n", $io->output());
 		} finally {
 			unlink($executable);
 		}
@@ -364,7 +375,7 @@ final class ServerTest extends TestCase
 				$command,
 			);
 
-			$this->assertSame("script=unset\n", $output);
+			$this->assertMatchesRegularExpression('#^Serving http://127\.0\.0\.1:\d+\nscript=unset\n$#', $output);
 		} finally {
 			fclose($socket);
 			putenv($inherited === false ? 'CELEMA_LIVE_RELOAD' : "CELEMA_LIVE_RELOAD={$inherited}");

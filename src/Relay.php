@@ -12,13 +12,19 @@ namespace Celema\Server;
  */
 final class Relay
 {
-	/** @param list<Binding> $bindings */
-	public static function run(array $bindings, ?LiveReload $liveReload = null): void
+	/**
+	 * Relays the output of the processes until one of them stops or the
+	 * command is interrupted.
+	 *
+	 * @param list<Binding> $bindings
+	 */
+	public static function run(array $bindings, ?LiveReload $liveReload = null, ?Interrupt $interrupt = null): void
 	{
 		$watchers = Watchers::collect($bindings);
 
 		while ($watchers !== []) {
-			if (self::consume($watchers, 200_000, $liveReload) === false) {
+			// A signal also interrupts the select call, which then fails.
+			if (self::consume($watchers, 200_000, $liveReload) === false || $interrupt?->received()) {
 				break;
 			}
 

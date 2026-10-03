@@ -109,14 +109,19 @@ final class PhpOutputTest extends TestCase
 	public function testPassthroughTrimsTheTimestamp(): void
 	{
 		$io = new BufferedIo();
-		new PhpOutput($io, '', 60)->line(
-			self::TIMESTAMP . "PHP 8.5.8 Development Server (http://localhost:1983) started\n",
-		);
+		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "PHP Warning:  Undefined variable \$x\n");
 
-		$this->assertSame(
-			"PHP 8.5.8 Development Server (http://localhost:1983) started\n",
-			$io->output(),
-		);
+		$this->assertSame("PHP Warning:  Undefined variable \$x\n", $io->output());
+	}
+
+	public function testStartupMessageIsLeftToTheCommand(): void
+	{
+		$io = new BufferedIo();
+		$output = new PhpOutput($io, '', 60);
+		$output->line(self::TIMESTAMP . "PHP 8.5.8 Development Server (http://localhost:1983) started\n");
+		$output->line('[18020] ' . self::TIMESTAMP . "PHP 8.5.8 Development Server (http://localhost:1983) started\n");
+
+		$this->assertSame('', $io->output());
 	}
 
 	public function testPassthroughIsEscaped(): void

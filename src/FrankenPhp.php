@@ -26,7 +26,7 @@ use InvalidArgumentException;
 )]
 #[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
 #[Opt('--debug', 'Enable verbose Caddy logs.', short: '-d')]
-#[Opt('--quiet', 'Reduce server and live reload output.', short: '-q')]
+#[Opt('--quiet', 'Reduce live reload output.', short: '-q')]
 #[Opt('--open', 'Open the application in the default browser once it responds.', short: '-o')]
 #[Opt(
 	'--reload-port',
@@ -68,7 +68,6 @@ class FrankenPhp
 				$io,
 				$options->filter,
 				Setup::terminalColumns(),
-				$options->quiet,
 				$options->debug,
 			);
 			$result = $runtime->run($output->line(...));

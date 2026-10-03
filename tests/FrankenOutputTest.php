@@ -13,7 +13,7 @@ final class FrankenOutputTest extends TestCase
 	public function testAccessLogRendersRequest(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->access('/foo'));
 
 		$this->assertMatchesRegularExpression(
@@ -25,7 +25,7 @@ final class FrankenOutputTest extends TestCase
 	public function testAccessLogUsesExceptionMarkerAndXhrHeader(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
 			'msg' => 'celema-exception {"method":"POST","uri":"/api","lines":["RuntimeException: Boom","in /app.php:10"]}',
@@ -44,7 +44,7 @@ final class FrankenOutputTest extends TestCase
 	public function testPendingExceptionMarkersAreBounded(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 
 		for ($i = 0; $i <= 100; $i++) {
 			$output->line($this->entry([
@@ -65,7 +65,7 @@ final class FrankenOutputTest extends TestCase
 	public function testAccessLogFilterAndStringXhrHeader(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '#health#', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '#health#', 60, debug: false);
 		$output->line($this->access('/health'));
 		$output->line($this->access('/home', headers: ['X-Requested-With' => 'xmlhttprequest']));
 
@@ -73,15 +73,14 @@ final class FrankenOutputTest extends TestCase
 		$this->assertStringContainsString('[XHR]', $io->output());
 	}
 
-	public function testStartupOutputHonorsQuietMode(): void
+	public function testStartupMessageIsLeftToTheCommand(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: true, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
 			'msg' => 'FrankenPHP started 🐘',
 		]));
-		$output->line($this->entry(['msg' => 'Caddy serving PHP app on localhost:1983']));
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
 			'msg' => 'PHP warning',
@@ -90,26 +89,10 @@ final class FrankenOutputTest extends TestCase
 		$this->assertSame("PHP warning\n", $io->output());
 	}
 
-	public function testStartupOutputShowsServerMessages(): void
-	{
-		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
-		$output->line($this->entry([
-			'logger' => 'frankenphp',
-			'msg' => 'FrankenPHP started 🐘',
-		]));
-		$output->line($this->entry(['msg' => 'Caddy serving PHP app on localhost:1983']));
-
-		$this->assertSame(
-			"FrankenPHP started 🐘\nCaddy serving PHP app on localhost:1983\n",
-			$io->output(),
-		);
-	}
-
 	public function testDebugOutputPassesOtherJsonThrough(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: true);
+		$output = new FrankenOutput($io, '', 60, debug: true);
 		$line = $this->entry(['level' => 'debug', 'msg' => 'config']);
 		$output->line($line);
 
@@ -119,7 +102,7 @@ final class FrankenOutputTest extends TestCase
 	public function testErrorsGoToStderr(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'level' => 'error',
 			'msg' => 'startup failed',
@@ -133,7 +116,7 @@ final class FrankenOutputTest extends TestCase
 	public function testMalformedOutputPassesThrough(): void
 	{
 		$io = new BufferedIo();
-		$output = new FrankenOutput($io, '', 60, quiet: false, debug: false);
+		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line("plain <output>\n");
 		$output->line($this->entry([
 			'logger' => 'http.log.access',

@@ -32,6 +32,14 @@ final class PhpRuntime extends Runtime
 	}
 
 	#[Override]
+	protected function details(): string
+	{
+		$version = Process::output($this->setup->phpVersionCommand());
+
+		return $version !== null && preg_match('/^\d+\.\d+\.\d+\S*$/D', $version) === 1 ? "PHP {$version}" : '';
+	}
+
+	#[Override]
 	protected function started(): void
 	{
 		if ($this->options->debug) {

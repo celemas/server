@@ -43,12 +43,16 @@ abstract class Runtime
 			return $liveReload;
 		}
 
+		$interrupt = Interrupt::catch();
+
 		try {
 			$backend = $this->start($this->options->port, $liveReload?->script);
 
 			if (is_string($backend)) {
 				return $backend;
 			}
+
+			$this->serving();
 
 			if ($liveReload !== null) {
 				$this->announce($liveReload);
@@ -60,10 +64,12 @@ abstract class Runtime
 				$this->openBrowser();
 			}
 
-			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload);
+			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload, $interrupt);
+			$exitCode = $backend->close(terminate: $interrupt->received());
 
-			return self::normalizeExitCode($backend->close());
+			return $interrupt->exitCode() ?? self::normalizeExitCode($exitCode);
 		} finally {
+			$interrupt->release();
 			$liveReload?->close();
 			$this->cleanup();
 		}
@@ -78,6 +84,12 @@ abstract class Runtime
 	protected function missing(): ?string
 	{
 		return null;
+	}
+
+	/** Backend details for the startup line, such as its version. */
+	protected function details(): string
+	{
+		return '';
 	}
 
 	protected function started(): void {}
@@ -124,6 +136,14 @@ abstract class Runtime
 			$this->changed(...),
 			$this->reloading(...),
 		);
+	}
+
+	private function serving(): void
+	{
+		$url = Address::url($this->options->host, $this->options->port);
+		$details = $this->details();
+		$details = $details === '' ? '' : ' <dim>(' . $this->io->escape($details) . ')</dim>';
+		$this->io->echoln("Serving {$url}{$details}");
 	}
 
 	private function announce(LiveReload $liveReload): void

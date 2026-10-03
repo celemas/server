@@ -11,9 +11,12 @@
 
 - **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
+- `frankenphp` runs FrankenPHP with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.
+- Both commands start with a line that names the served address, with the PHP version for `server`. The startup messages of the PHP server and FrankenPHP are hidden instead, and `frankenphp --quiet` only reduces live reload output.
 
 ### Fixed
 
+- Ctrl+C, or a SIGTERM sent to the command, stops the backend and removes the temporary FrankenPHP configuration, given the `pcntl` extension. The configuration was left in the temporary directory, and a SIGTERM sent to the command alone left the backend running. The command exits with 130 or 143, as shells report a stopped process.
 - The `server` request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)

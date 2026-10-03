@@ -25,29 +25,20 @@ final class FrankenRuntime extends Runtime
 			$this->adminPort = $adminPort;
 		}
 
-		$contents = $this->setup->frankenPhpCaddyfile(
+		$this->config = self::write($this->setup->frankenPhpCaddyfile(
 			$this->options->host,
 			$port,
 			$this->options->debug,
 			$this->adminPort,
 			$this->options->workers,
-		);
+		));
 
-		if ($contents !== null) {
-			$this->config = self::write($contents);
-
-			if ($this->config === null) {
-				return 'Failed to create the FrankenPHP configuration.';
-			}
+		if ($this->config === null) {
+			return 'Failed to create the FrankenPHP configuration.';
 		}
 
 		$frankenPhp = Process::start(
-			$this->setup->frankenPhpCommand(
-				$this->options->host,
-				$port,
-				$this->options->debug,
-				$this->config,
-			),
+			$this->setup->frankenPhpCommand($this->config),
 			$this->setup->frankenPhpEnvironment($liveReload),
 		);
 

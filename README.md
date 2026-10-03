@@ -67,7 +67,7 @@ Both commands take the same arguments:
 | `-p`, `--port=<port>` | Port to listen on. Defaults to the `port` argument. |
 | `-f`, `--filter=<regex>` | Hides request log lines whose URL matches the regex, for example `--filter='#^/assets/#'`. |
 | `-d`, `--debug` | `server`: sets `XDEBUG_SESSION`, so Xdebug debugs every request. `frankenphp`: enables verbose Caddy logs. |
-| `-q`, `--quiet` | Reduces output: runs the PHP server with `-q`, hides FrankenPHP's startup banner, and hides live reload lines while pages are connected. |
+| `-q`, `--quiet` | Reduces output: runs the PHP server with `-q` and hides live reload lines while pages are connected. |
 | `-o`, `--open` | Opens the application in the default browser once it responds. |
 | `--no-watch` | Disables file watching, live reload, and automatic worker restarts. |
 | `--watch-files=<glob>` | Replaces the `watch` argument's patterns; repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
@@ -77,7 +77,9 @@ Both commands take the same arguments:
 
 ## Routing
 
-With the built-in PHP server, requests for existing files in the public directory are handled by the server directly: PHP files run, others are served as they are, and a directory with an `index.html` serves that file. Every other request goes to `index.php` in the public directory, the front controller. FrankenPHP routes requests with its own PHP server defaults. Both commands strip the `routePrefix` from request paths.
+With the built-in PHP server, requests for existing files in the public directory are handled by the server directly: PHP files run, others are served as they are, and a directory with an `index.html` serves that file. Every other request goes to `index.php` in the public directory, the front controller. FrankenPHP routes requests with the defaults of its `php_server` directive, through a configuration the command generates, and compresses responses with Zstandard or gzip. Both commands strip the `routePrefix` from request paths.
+
+Both commands start by printing the address they serve, with the PHP version for the built-in server. Ctrl+C, or a SIGTERM sent to the command, stops the server and removes the temporary FrankenPHP configuration; a second signal stops the command at once. This needs the `pcntl` extension in the PHP CLI that runs the command.
 
 ## PHP settings
 

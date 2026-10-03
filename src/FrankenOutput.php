@@ -15,7 +15,6 @@ final class FrankenOutput
 		private Io $io,
 		string $filter,
 		int $columns,
-		private bool $quiet,
 		private bool $debug,
 	) {
 		$this->requests = new FrankenRequestOutput($io, $filter, $columns);
@@ -55,21 +54,12 @@ final class FrankenOutput
 		}
 
 		if ($logger === 'frankenphp') {
-			if ($this->requests->exception($message)) {
+			// The command announces the server itself.
+			if ($this->requests->exception($message) || $message === 'FrankenPHP started 🐘') {
 				return;
 			}
 
-			if ($message !== 'FrankenPHP started 🐘' || !$this->quiet) {
-				$this->io->echoln($this->io->escape($message));
-			}
-
-			return;
-		}
-
-		if (str_starts_with($message, 'Caddy serving PHP app on ')) {
-			if (!$this->quiet) {
-				$this->io->echoln($this->io->escape($message));
-			}
+			$this->io->echoln($this->io->escape($message));
 
 			return;
 		}

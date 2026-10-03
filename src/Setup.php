@@ -63,50 +63,33 @@ final readonly class Setup
 		return $command;
 	}
 
+	/**
+	 * Queries the version of the PHP executable; without ini files, which
+	 * keeps extensions like Xdebug from adding output.
+	 *
+	 * @return list<string>
+	 */
+	public function phpVersionCommand(): array
+	{
+		return [$this->php, '-n', '-r', 'echo PHP_VERSION;'];
+	}
+
 	/** @return list<string> */
-	public function frankenPhpCommand(
-		string $host,
-		int $port,
-		bool $debug,
-		?string $config = null,
-	): array {
-		if ($config !== null) {
-			return [
-				$this->frankenPhp,
-				'run',
-				'--config',
-				$config,
-				'--adapter',
-				'caddyfile',
-			];
-		}
-
-		$command = [
-			$this->frankenPhp,
-			'php-server',
-			'--root',
-			$this->docroot,
-			'--listen',
-			"{$host}:{$port}",
-			'--access-log',
-		];
-
-		if ($debug) {
-			$command[] = '--debug';
-		}
-
-		return $command;
+	public function frankenPhpCommand(string $config): array
+	{
+		return [$this->frankenPhp, 'run', '--config', $config, '--adapter', 'caddyfile'];
 	}
 
 	/**
-	 * The configuration for a route prefix or worker mode, or null when the
-	 * plain `php-server` command suffices. When watching in worker mode,
-	 * the admin API listens on the given loopback port so changes can
-	 * restart the workers. Without watching, workers run with the API off.
+	 * The FrankenPHP configuration. When watching in worker mode, the
+	 * admin API listens on the given loopback port so changes can restart
+	 * the workers; otherwise it is off.
 	 *
 	 * Like `php-server --listen`, the server binds to the host and answers
 	 * every Host header: the host of a Caddy site address would only match
-	 * the Host header, with the listener open on all interfaces.
+	 * the Host header, with the listener open on all interfaces. Responses
+	 * are compressed like those of `php-server`, without Brotli, which not
+	 * every build includes.
 	 */
 	public function frankenPhpCaddyfile(
 		string $host,
@@ -114,13 +97,8 @@ final readonly class Setup
 		bool $debug,
 		?int $adminPort = null,
 		?int $workers = null,
-	): ?string {
+	): string {
 		$prefix = rtrim($this->routePrefix, '/');
-
-		if ($prefix === '' && $workers === null) {
-			return null;
-		}
-
 		$admin = $adminPort === null ? 'off' : self::caddyToken("127.0.0.1:{$adminPort}");
 		$debugOption = $debug ? "\tdebug\n" : '';
 		$address = self::caddyToken("http://:{$port}");
@@ -151,6 +129,7 @@ final readonly class Setup
 				. "{$address} {\n"
 				. "\tbind {$bind}\n"
 				. "\troot * {$docroot}\n"
+				. "\tencode zstd gzip\n"
 				. $phpServer
 				. "\tlog {\n"
 				. "\t\toutput stderr\n"
