@@ -15,6 +15,8 @@ use Celema\Console\Io;
 abstract class Runtime
 {
 	protected readonly ReloadLog $log;
+	/** The project's PHP settings for the backend, see loadIni(). */
+	protected private(set) ?ProjectIni $ini = null;
 
 	/** @param array<string, list<string>|string> $companions */
 	public function __construct(
@@ -108,6 +110,8 @@ abstract class Runtime
 				$liveReload->close();
 			}
 
+			$this->ini?->remove();
+			$this->ini = null;
 			$this->cleanup();
 		}
 	}
@@ -145,6 +149,18 @@ abstract class Runtime
 	}
 
 	protected function cleanup(): void {}
+
+	/**
+	 * Loads the project's `cserve.ini` for the backend, see ProjectIni,
+	 * or returns an error message. Removed once the command stops.
+	 */
+	protected function loadIni(): ?string
+	{
+		$ini = ProjectIni::load((string) getcwd());
+		$this->ini = $ini instanceof ProjectIni ? $ini : null;
+
+		return is_string($ini) ? $ini : null;
+	}
 
 	private function openBrowser(): void
 	{
@@ -203,6 +219,8 @@ abstract class Runtime
 		$details = $this->details();
 		$details = $details === '' ? '' : ' <dim>(' . $this->io->escape($details) . ')</dim>';
 		$this->io->echoln("Serving {$url}{$details}");
+
+		$this->ini?->announce($this->io);
 
 		if ($liveReload !== null) {
 			$this->io->echoln("Live reload script: {$liveReload->script}");

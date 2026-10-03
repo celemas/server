@@ -15,6 +15,12 @@ final class FrankenRuntime extends Runtime
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
 	{
+		$error = $this->loadIni();
+
+		if ($error !== null) {
+			return $error;
+		}
+
 		if ($this->options->workers !== null && $this->options->watch) {
 			$adminPort = Ports::ephemeral();
 
@@ -39,7 +45,7 @@ final class FrankenRuntime extends Runtime
 
 		$frankenPhp = Process::start(
 			$this->setup->frankenPhpCommand($this->config),
-			$this->setup->frankenPhpEnvironment($liveReload),
+			$this->setup->frankenPhpEnvironment($liveReload, $this->ini?->dir),
 			group: true,
 		);
 

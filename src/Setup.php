@@ -22,12 +22,17 @@ final readonly class Setup
 	 * The PHP server forks the given number of processes to serve
 	 * requests concurrently. One process is the server's default, which
 	 * also overrides an inherited setting; PHP rejects a count of one.
+	 * The `iniDir` holds the project's settings, see ProjectIni.
 	 *
 	 * @return array<string, string>
 	 */
-	public function phpEnvironment(bool $debug, ?string $liveReload = null, ?int $processes = null): array
-	{
-		$environment = $this->environment('1', $liveReload);
+	public function phpEnvironment(
+		bool $debug,
+		?string $liveReload = null,
+		?int $processes = null,
+		?string $iniDir = null,
+	): array {
+		$environment = $this->environment('1', $liveReload, $iniDir);
 
 		if ($debug) {
 			$environment['XDEBUG_SESSION'] = '1';
@@ -164,10 +169,14 @@ final readonly class Setup
 		);
 	}
 
-	/** @return array<string, string> */
-	public function frankenPhpEnvironment(?string $liveReload = null): array
+	/**
+	 * The `iniDir` holds the project's settings, see ProjectIni.
+	 *
+	 * @return array<string, string>
+	 */
+	public function frankenPhpEnvironment(?string $liveReload = null, ?string $iniDir = null): array
 	{
-		return $this->environment('frankenphp', $liveReload);
+		return $this->environment('frankenphp', $liveReload, $iniDir);
 	}
 
 	/** Whether a user can answer questions, as when the command runs in a terminal. */
@@ -195,7 +204,7 @@ final readonly class Setup
 	}
 
 	/** @return array<string, string> */
-	private function environment(string $server, ?string $liveReload): array
+	private function environment(string $server, ?string $liveReload, ?string $iniDir): array
 	{
 		$environment = array_merge(getenv(), [
 			'CELEMA_CLI_SERVER' => $server,
@@ -207,7 +216,7 @@ final readonly class Setup
 		// this command serves it.
 		unset($environment['CELEMA_LIVE_RELOAD']);
 
-		$environment['PHP_INI_SCAN_DIR'] = self::iniScanDir($environment['PHP_INI_SCAN_DIR'] ?? null);
+		$environment['PHP_INI_SCAN_DIR'] = self::iniScanDir($environment['PHP_INI_SCAN_DIR'] ?? null, $iniDir);
 
 		if ($liveReload !== null) {
 			$environment['CELEMA_LIVE_RELOAD'] = $liveReload;
@@ -218,13 +227,18 @@ final readonly class Setup
 
 	/**
 	 * Adds the directory of the server's ini settings to the directories
-	 * PHP scans for additional ini files. A leading separator keeps the
-	 * default directory, where extensions like Xdebug are usually set up.
-	 * An empty value disables the default, and stays without it.
+	 * PHP scans for additional ini files, followed by the project's, whose
+	 * settings thus win. A leading separator keeps the default directory,
+	 * where extensions like Xdebug are usually set up. An empty value
+	 * disables the default, and stays without it.
 	 */
-	private static function iniScanDir(?string $inherited): string
+	private static function iniScanDir(?string $inherited, ?string $iniDir): string
 	{
 		$dir = __DIR__ . DIRECTORY_SEPARATOR . 'ini';
+
+		if ($iniDir !== null) {
+			$dir .= PATH_SEPARATOR . $iniDir;
+		}
 
 		return match ($inherited) {
 			null => PATH_SEPARATOR . $dir,

@@ -12,9 +12,20 @@ final class PhpRuntime extends Runtime
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
 	{
+		$error = $this->loadIni();
+
+		if ($error !== null) {
+			return $error;
+		}
+
 		$php = Process::start(
 			$this->setup->phpCommand($this->options->host, $port, $this->options->quiet),
-			$this->setup->phpEnvironment($this->options->debug, $liveReload, $this->options->processes),
+			$this->setup->phpEnvironment(
+				$this->options->debug,
+				$liveReload,
+				$this->options->processes,
+				$this->ini?->dir,
+			),
 			group: true,
 		);
 
