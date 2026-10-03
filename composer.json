@@ -12,6 +12,9 @@
 	"minimum-stability": "dev",
 	"prefer-stable": true,
 	"homepage": "https://celema.dev/server",
+	"bin": [
+		"bin/celema-server"
+	],
 	"require": {
 		"php": "^8.5",
 		"celema/console": "^0.5.3"
