@@ -22,6 +22,7 @@ The package provides these console commands:
 - `Celema\Server\Server` (`server`) runs the application with the PHP CLI's built-in server.
 - `Celema\Server\FrankenPhp` (`frankenphp`) runs it with FrankenPHP, in classic mode or, with `--worker`, in [worker mode](#worker-mode).
 - `Celema\Server\FrankenInstall` (`frankenphp:install`) downloads FrankenPHP; see [Installing FrankenPHP](#installing-frankenphp).
+- `Celema\Server\Reload` (`reload`) serves live reload for an application that runs elsewhere, like in a container; see [Live reload for other servers](#live-reload-for-other-servers).
 
 Register them with `celema/console`:
 
@@ -122,6 +123,29 @@ The URL uses the `--host` address, with `localhost` for wildcard addresses, whic
 Pass `--no-watch` to skip file polling and the live reload endpoint entirely. Omitting the script from a layout only disables automatic updates for those pages; file watching and worker restarts still run.
 
 Open pages also reload once when they reconnect after the command restarts. If a watched file changes while no page is connected, the command says so, which usually means the snippet is missing.
+
+## Live reload for other servers
+
+The `reload` command watches files and serves live reload without serving the application, for applications that run in a container or under another local server, like Docker, DDEV, Herd, or Valet. Register it like the server commands:
+
+```php
+new Reload(watch: $watch, admin: 'http://localhost:2019'),
+```
+
+It prints the `CELEMA_LIVE_RELOAD` value the application needs to include the script with the [layout snippet](#live-reload), for example in a `compose.yaml`:
+
+```yaml
+environment:
+  CELEMA_LIVE_RELOAD: http://localhost:19830/celema-live-reload.js
+```
+
+The endpoint listens on a fixed port, by default 19830, the server commands' default live reload port. A busy port is an error rather than a reason to pick another one, which the application would not know about. Pages connect from the browser, so the address must be reachable from there, not from the container.
+
+With `--admin=<url>`, or the `admin` argument, changes to watched files other than stylesheets and scripts restart the workers of a FrankenPHP served elsewhere through its admin API, before pages update. In a container, the admin API only listens on the container's own loopback interface by default. Set `admin 0.0.0.0:2019` in its Caddyfile, and publish the port only on the host's loopback interface, like `127.0.0.1:2019:2019`: the admin API has no authentication.
+
+The application does not get this package's [PHP settings](#php-settings) there; set `opcache.validate_timestamps=1` and `opcache.revalidate_freq=0` yourself. Changes must also reach the application's file system before pages update; with slowly synchronized volumes, a page may update before the change arrives.
+
+The command takes `--host`, `--port`, `--admin`, `--quiet`, `--watch-files`, and `--no-companions`, and runs [companion processes](#companion-processes) like the server commands.
 
 ## Companion processes
 

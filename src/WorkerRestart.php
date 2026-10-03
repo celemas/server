@@ -9,7 +9,8 @@ use Override;
 
 /**
  * Restarts the FrankenPHP workers through the admin API, which the
- * generated configuration binds to a loopback port only.
+ * generated configuration binds to a loopback port only; the reload
+ * command may also reach the admin API of a FrankenPHP served elsewhere.
  *
  * The request does not wait for the answer: FrankenPHP logs while it
  * restarts, and that output has to be read meanwhile. Once the pipe is
@@ -55,9 +56,9 @@ final class WorkerRestart implements Pending
 	 *
 	 * @param Closure(?string): void $done Receives an error message, or null once the workers restarted
 	 */
-	public static function send(int $adminPort, Closure $done, int $timeout = 10): self
+	public static function send(string $host, int $port, Closure $done, int $timeout = 10): self
 	{
-		$address = "tcp://127.0.0.1:{$adminPort}";
+		$address = "tcp://{$host}:{$port}";
 		/** @var resource|false $socket */
 		$socket = ErrorTrap::run(
 			static fn(): mixed => stream_socket_client($address, timeout: $timeout),
@@ -76,7 +77,7 @@ final class WorkerRestart implements Pending
 		fwrite(
 			$socket,
 			"POST /frankenphp/workers/restart HTTP/1.1\r\n"
-				. "Host: 127.0.0.1:{$adminPort}\r\n"
+				. "Host: {$host}:{$port}\r\n"
 				. "Content-Length: 0\r\n"
 				. "Connection: close\r\n\r\n",
 		);

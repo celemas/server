@@ -14,7 +14,7 @@ use Celema\Console\Io;
  */
 abstract class Runtime
 {
-	private readonly ReloadLog $log;
+	protected readonly ReloadLog $log;
 
 	/** @param array<string, list<string>|string> $companions */
 	public function __construct(
@@ -29,6 +29,7 @@ abstract class Runtime
 	/**
 	 * Runs the backend, and the companions alongside it, until the backend
 	 * stops. In watch mode, the live reload endpoint runs in this process.
+	 * Without a backend, it runs until the command is interrupted.
 	 *
 	 * @param callable(string): void $output
 	 */
@@ -74,7 +75,7 @@ abstract class Runtime
 				}
 			}
 
-			$this->serving();
+			$this->serving($liveReload);
 
 			if ($liveReload !== null) {
 				$this->log->announce($liveReload);
@@ -86,8 +87,9 @@ abstract class Runtime
 				$this->openBrowser();
 			}
 
-			Relay::run([$backend->binding([1 => $output, 2 => $output])], $liveReload, $interrupt, $companions);
-			$exitCode = $backend->close(terminate: $interrupt->received());
+			$bindings = $backend === null ? [] : [$backend->binding([1 => $output, 2 => $output])];
+			Relay::run($bindings, $liveReload, $interrupt, $companions);
+			$exitCode = $backend?->close(terminate: $interrupt->received()) ?? 0;
 
 			return $interrupt->exitCode() ?? self::normalizeExitCode($exitCode);
 		} finally {
@@ -111,10 +113,11 @@ abstract class Runtime
 	}
 
 	/**
-	 * Starts the backend on the given port, or returns an error message.
-	 * The live reload script URL is passed on as CELEMA_LIVE_RELOAD.
+	 * Starts the backend on the given port, or returns an error message;
+	 * null runs no backend. The live reload script URL is passed on as
+	 * CELEMA_LIVE_RELOAD.
 	 */
-	abstract protected function start(int $port, ?string $liveReload): Process|string;
+	abstract protected function start(int $port, ?string $liveReload): Process|string|null;
 
 	protected function missing(): ?string
 	{
@@ -172,7 +175,7 @@ abstract class Runtime
 		return $started;
 	}
 
-	private function reloadPort(): int|string
+	protected function reloadPort(): int|string
 	{
 		$port = $this->options->reloadPort ?? Ports::liveReloadPort($this->options->host, $this->options->port);
 
@@ -194,12 +197,16 @@ abstract class Runtime
 		);
 	}
 
-	private function serving(): void
+	protected function serving(?LiveReload $liveReload): void
 	{
 		$url = Address::url($this->options->host, $this->options->port);
 		$details = $this->details();
 		$details = $details === '' ? '' : ' <dim>(' . $this->io->escape($details) . ')</dim>';
 		$this->io->echoln("Serving {$url}{$details}");
+
+		if ($liveReload !== null) {
+			$this->io->echoln("Live reload script: {$liveReload->script}");
+		}
 	}
 
 	private static function normalizeExitCode(int $exitCode): int

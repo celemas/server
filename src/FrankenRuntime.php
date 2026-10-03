@@ -53,22 +53,7 @@ final class FrankenRuntime extends Runtime
 			return null;
 		}
 
-		return WorkerRestart::send($this->adminPort, $this->restarted(...));
-	}
-
-	private function restarted(?string $error): void
-	{
-		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
-
-		if ($error !== null) {
-			$this->io->echoln("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
-
-			return;
-		}
-
-		if (!$this->options->quiet) {
-			$this->io->echoln("{$timestamp} <cyan>restart</cyan> worker");
-		}
+		return WorkerRestart::send('127.0.0.1', $this->adminPort, $this->log->restarted(...));
 	}
 
 	#[Override]

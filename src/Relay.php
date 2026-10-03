@@ -15,7 +15,8 @@ final class Relay
 	/**
 	 * Relays the output of the processes until one of them stops or the
 	 * command is interrupted. Companions only have their output relayed;
-	 * when one exits, the others keep running.
+	 * when one exits, the others keep running. Without processes, only
+	 * an interrupt ends the relay.
 	 *
 	 * @param list<Binding> $bindings
 	 * @param list<Companion> $companions
@@ -31,7 +32,9 @@ final class Relay
 			...array_map(static fn(Companion $companion): array => $companion->binding(), $companions),
 		]);
 
-		while ($watchers !== []) {
+		$backend = $bindings !== [];
+
+		while (!$backend || $watchers !== []) {
 			// A signal also interrupts the select call, which then fails.
 			if (self::consume($watchers, 200_000, $liveReload) === false || $interrupt?->received()) {
 				break;
@@ -43,7 +46,7 @@ final class Relay
 				$companion->check();
 			}
 
-			if (self::stopped($bindings)) {
+			if ($backend && self::stopped($bindings)) {
 				self::drain($watchers);
 
 				break;
@@ -78,6 +81,12 @@ final class Relay
 		// removed from the list when its stream gets closed.
 		/** @var list<resource> $read */
 		$read = [...array_column($watchers, 'stream'), ...($liveReload?->streams() ?? [])];
+
+		if ($read === []) {
+			usleep($microseconds);
+
+			return 0;
+		}
 		$write = null;
 		$except = null;
 		$changed = ErrorTrap::run(

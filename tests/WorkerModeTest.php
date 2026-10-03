@@ -257,6 +257,7 @@ final class WorkerModeTest extends TestCase
 			},
 			static function () use ($adminPort, &$events): Pending {
 				return WorkerRestart::send(
+					'127.0.0.1',
 					$adminPort,
 					static function (?string $error) use (&$events): void {
 						$events[] = $error ?? 'restarted';
@@ -397,6 +398,7 @@ final class WorkerModeTest extends TestCase
 	{
 		$outcome = 'unfinished';
 		$restart = WorkerRestart::send(
+			'127.0.0.1',
 			$port,
 			static function (?string $error) use (&$outcome): void {
 				$outcome = $error;

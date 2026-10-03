@@ -30,7 +30,6 @@ final class ReloadLog
 
 	public function announce(LiveReload $liveReload): void
 	{
-		$this->io->echoln("Live reload script: {$liveReload->script}");
 		$watched = $liveReload->watched();
 
 		if ($watched > 0) {
@@ -43,6 +42,22 @@ final class ReloadLog
 		$this->io->echoln(
 			'<yellow>No files match the watch patterns:</yellow> ' . $this->io->escape(implode(', ', $this->patterns)),
 		);
+	}
+
+	/** Reports a worker restart, or why it failed. */
+	public function restarted(?string $error): void
+	{
+		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
+
+		if ($error !== null) {
+			$this->io->echoln("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
+
+			return;
+		}
+
+		if (!$this->quiet) {
+			$this->io->echoln("{$timestamp} <cyan>restart</cyan> worker");
+		}
 	}
 
 	/** @param list<string> $files */
