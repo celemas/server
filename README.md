@@ -72,6 +72,7 @@ Both commands take the same arguments:
 | `--no-watch` | Disables file watching, live reload, and automatic worker restarts. |
 | `--watch-files=<glob>` | Replaces the `watch` argument's patterns; repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
+| `--processes=<count>` | `server` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
 | `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
 
 ## Routing

@@ -33,6 +33,12 @@ use InvalidArgumentException;
 	'Port for live reload. Defaults to ten times the port, or the next free port above.',
 	value: 'port',
 )]
+#[Opt(
+	'--processes',
+	'Serve requests concurrently with the given number of server processes.',
+	value: 'count',
+	default: '1',
+)]
 #[Opt('--no-watch', 'Disable file watching and live reload.')]
 #[Opt(
 	'--watch-files',

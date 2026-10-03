@@ -23,13 +23,25 @@ final readonly class Setup
 		return !$this->commandAvailable($this->frankenPhp);
 	}
 
-	/** @return array<string, string> */
-	public function phpEnvironment(bool $debug, ?string $liveReload = null): array
+	/**
+	 * The PHP server forks the given number of processes to serve
+	 * requests concurrently. One process is the server's default, which
+	 * also overrides an inherited setting; PHP rejects a count of one.
+	 *
+	 * @return array<string, string>
+	 */
+	public function phpEnvironment(bool $debug, ?string $liveReload = null, ?int $processes = null): array
 	{
 		$environment = $this->environment('1', $liveReload);
 
 		if ($debug) {
 			$environment['XDEBUG_SESSION'] = '1';
+		}
+
+		if ($processes === 1) {
+			unset($environment['PHP_CLI_SERVER_WORKERS']);
+		} elseif ($processes !== null) {
+			$environment['PHP_CLI_SERVER_WORKERS'] = (string) $processes;
 		}
 
 		return $environment;

@@ -7,7 +7,13 @@ namespace Celema\Server;
 use Celema\Console\Args;
 use InvalidArgumentException;
 
-/** @internal */
+/**
+ * The parsed command-line options, one property per option.
+ *
+ * @internal
+ */
+// One property per option; grouping them would only add indirection.
+// @mago-expect lint:too-many-properties
 final class Options
 {
 	public string $host = 'localhost';
@@ -17,6 +23,7 @@ final class Options
 	public bool $quiet = false;
 	public bool $watch = true;
 	public ?int $workers = null;
+	public ?int $processes = null;
 	public bool $open = false;
 	public ?int $reloadPort = null;
 	/** @var list<string> */
@@ -30,7 +37,8 @@ final class Options
 		$options->filter = self::filter($args->opt('-f', $args->opt('--filter', '')));
 		$options->debug = $args->has('-d') || $args->has('--debug');
 		$options->quiet = $args->has('-q') || $args->has('--quiet');
-		$options->workers = $args->has('--worker') ? self::workerCount($args->opt('--worker', '1')) : null;
+		$options->workers = $args->has('--worker') ? self::count($args->opt('--worker', '1'), 'Worker') : null;
+		$options->processes = $args->has('--processes') ? self::count($args->opt('--processes'), 'Process') : null;
 		$options->watch = !$args->has('--no-watch');
 		$options->open = $args->has('-o') || $args->has('--open');
 		$reloadPort = $args->opt('--reload-port', '');
@@ -40,12 +48,12 @@ final class Options
 		return $options;
 	}
 
-	private static function workerCount(string $value): int
+	private static function count(string $value, string $what): int
 	{
 		$count = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
 		if (!preg_match('/^[1-9][0-9]*$/D', $value) || $count === false) {
-			throw new InvalidArgumentException("Worker count '{$value}' must be a positive integer.");
+			throw new InvalidArgumentException("{$what} count '{$value}' must be a positive integer.");
 		}
 
 		return $count;

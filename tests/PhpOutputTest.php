@@ -90,6 +90,22 @@ final class PhpOutputTest extends TestCase
 		$this->assertSame('', $io->output());
 	}
 
+	public function testLinesOfMultipleProcessesRenderLikeOthers(): void
+	{
+		$io = new BufferedIo();
+		$output = new PhpOutput($io, '', 60);
+		$output->line('[18018] ' . self::TIMESTAMP . "127.0.0.1:60538 Accepted\n");
+		$output->line('[18018] ' . self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
+		$output->line('[18018] ' . self::TIMESTAMP . "127.0.0.1:60538 [200]: GET /foo\n");
+		$output->line('[18018] ' . self::TIMESTAMP . "127.0.0.1:60538 Closing\n");
+		$output->line('[18020] ' . self::TIMESTAMP . "Notice: something\n");
+
+		$this->assertMatchesRegularExpression(
+			'#^\d{2}:\d{2}:\d{2}\.\d{2} 200 GET /foo \.+ 0\.00016s\nNotice: something\n$#',
+			$io->output(),
+		);
+	}
+
 	public function testPassthroughTrimsTheTimestamp(): void
 	{
 		$io = new BufferedIo();

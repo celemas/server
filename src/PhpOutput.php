@@ -38,6 +38,9 @@ final readonly class PhpOutput
 	{
 		$line = rtrim($line, "\r\n");
 
+		// With multiple processes, PHP prefixes each line with the process ID.
+		$line = (string) preg_replace('/^\[\d+\] /', '', $line);
+
 		// The PHP server's own connection and request lines.
 		if (preg_match('/^\[[^\]]+\] (\[[0-9a-f:.]+\]|\d{1,3}(\.\d{1,3}){3}):\d{1,5}/i', $line)) {
 			return;

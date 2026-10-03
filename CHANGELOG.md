@@ -5,11 +5,16 @@
 ### Added
 
 - `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker.
+- `server --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
 
 ### Changed
 
 - **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
+
+### Fixed
+
+- The `server` request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)
 

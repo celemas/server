@@ -14,10 +14,21 @@ final class PhpRuntime extends Runtime
 	{
 		$php = Process::start(
 			$this->setup->phpCommand($this->options->host, $port, $this->options->quiet),
-			$this->setup->phpEnvironment($this->options->debug, $liveReload),
+			$this->setup->phpEnvironment($this->options->debug, $liveReload, $this->options->processes),
 		);
 
 		return $php ?? 'Failed to start the PHP server.';
+	}
+
+	#[Override]
+	protected function missing(): ?string
+	{
+		// The PHP server forks its processes, which Windows cannot do.
+		if (DIRECTORY_SEPARATOR === '\\' && ($this->options->processes ?? 1) > 1) {
+			return 'The PHP server cannot run multiple processes on Windows.';
+		}
+
+		return null;
 	}
 
 	#[Override]
