@@ -12,7 +12,7 @@ namespace Celema\Server;
 final class Http
 {
 	/** GitHub's API rejects requests without a user agent. */
-	public const string AGENT = 'User-Agent: celema-server';
+	public const string AGENT = 'User-Agent: cserve';
 
 	/**
 	 * The status of the last response; redirects add one per hop.

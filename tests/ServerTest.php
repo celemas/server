@@ -306,7 +306,7 @@ final class ServerTest extends TestCase
 			}
 
 			$this->assertIsString($response);
-			$this->assertStringContainsString('/src/ini/celema-server.ini', $response);
+			$this->assertStringContainsString('/src/ini/cserve.ini', $response);
 		} finally {
 			$server->close(terminate: true);
 			unlink("{$dir}/index.php");
