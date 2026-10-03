@@ -71,9 +71,23 @@ final class FrankenRuntime extends Runtime
 	}
 
 	#[Override]
-	protected function missing(): ?string
+	protected function details(): string
 	{
-		return $this->setup->missingFrankenPhp() ? 'FrankenPHP requires frankenphp in PATH.' : null;
+		$version = Process::output($this->setup->frankenPhpVersionCommand()) ?? '';
+
+		return preg_match('/^FrankenPHP v?(\S+) PHP (\S+)/', $version, $match) === 1
+			? "FrankenPHP {$match[1]}, PHP {$match[2]}"
+			: '';
+	}
+
+	#[Override]
+	protected function started(): void
+	{
+		$missing = FrankenProbe::missing($this->setup, (string) getcwd());
+
+		if ($missing !== []) {
+			$this->io->warn('FrankenPHP lacks extensions the project requires: ' . implode(', ', $missing) . '.');
+		}
 	}
 
 	#[Override]

@@ -5,6 +5,9 @@
 ### Added
 
 - `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker.
+- `frankenphp` downloads FrankenPHP into a cache that all projects share when it finds none, once the user agrees in a terminal. Builds are checked against their published checksum and run once before they are installed. The new `frankenphp:install [<version>]` command, `Celema\Server\FrankenInstall`, downloads a release without starting the server.
+- The new `version` argument of `FrankenPhp` pins the FrankenPHP version from the shared cache. Without a pin, `frankenphp` on `PATH` comes before the newest cached version.
+- `frankenphp` prints the FrankenPHP and PHP versions at startup, and warns about extensions the project's `composer.json` requires that FrankenPHP's embedded PHP lacks.
 - `server --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
 
 ### Changed
@@ -12,6 +15,7 @@
 - **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
 - `frankenphp` runs FrankenPHP with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.
+- The `executable` argument of `FrankenPhp` defaults to none, which looks up FrankenPHP as described above. A configured executable that does not exist is reported by its path.
 - Both commands start with a line that names the served address, with the PHP version for `server`. The startup messages of the PHP server and FrankenPHP are hidden instead, and `frankenphp --quiet` only reduces live reload output.
 
 ### Fixed

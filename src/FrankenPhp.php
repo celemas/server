@@ -47,20 +47,37 @@ use InvalidArgumentException;
 )]
 class FrankenPhp
 {
+	/**
+	 * Without an executable, the command runs the pinned `version` of
+	 * FrankenPHP from the shared cache, or else `frankenphp` on PATH or
+	 * the newest cached version. A missing FrankenPHP is downloaded once
+	 * the user agrees.
+	 */
+	// One parameter per setting keeps the run scripts' named arguments simple.
+	// @mago-expect lint:excessive-parameter-list
 	public function __construct(
 		protected readonly string $docroot,
 		protected readonly int $port = 1983,
 		protected readonly string $routePrefix = '',
 		protected readonly array|string $watch = Setup::DEFAULT_WATCH,
-		protected readonly string $executable = 'frankenphp',
+		protected readonly ?string $executable = null,
+		protected readonly ?string $version = null,
 	) {}
 
 	public function __invoke(Args $args, Io $io): int
 	{
 		try {
 			$options = Options::from($this->port, $this->watch, $args);
+			$binary = $this->binary($io);
+
+			if (is_string($binary)) {
+				$io->error($binary);
+
+				return 1;
+			}
+
 			$runtime = new FrankenRuntime(
-				new Setup($this->docroot, $this->routePrefix, $this->executable),
+				new Setup($this->docroot, $this->routePrefix, $binary->path),
 				$options,
 				$io,
 			);
@@ -83,6 +100,22 @@ class FrankenPhp
 			$io->error($e->getMessage());
 
 			return 1;
+		}
+	}
+
+	private function binary(Io $io): FrankenBinary|string
+	{
+		if ($this->executable !== null && $this->version !== null) {
+			return 'Configure either a FrankenPHP executable or a version, not both.';
+		}
+
+		// A download canceled with Ctrl+C leaves no partial file.
+		$interrupt = Interrupt::catch();
+
+		try {
+			return FrankenBinary::resolve($this->executable, $this->version, $io, Setup::interactive(), $interrupt);
+		} finally {
+			$interrupt->release();
 		}
 	}
 }

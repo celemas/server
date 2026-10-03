@@ -18,11 +18,6 @@ final readonly class Setup
 		private string $php = 'php',
 	) {}
 
-	public function missingFrankenPhp(): bool
-	{
-		return !$this->commandAvailable($this->frankenPhp);
-	}
-
 	/**
 	 * The PHP server forks the given number of processes to serve
 	 * requests concurrently. One process is the server's default, which
@@ -78,6 +73,22 @@ final readonly class Setup
 	public function frankenPhpCommand(string $config): array
 	{
 		return [$this->frankenPhp, 'run', '--config', $config, '--adapter', 'caddyfile'];
+	}
+
+	/** @return list<string> */
+	public function frankenPhpVersionCommand(): array
+	{
+		return [$this->frankenPhp, 'version'];
+	}
+
+	/**
+	 * Lists the extensions of FrankenPHP's embedded PHP, see FrankenProbe.
+	 *
+	 * @return list<string>
+	 */
+	public function frankenPhpProbeCommand(): array
+	{
+		return [$this->frankenPhp, 'php-cli', __DIR__ . DIRECTORY_SEPARATOR . 'probe.php'];
 	}
 
 	/**
@@ -159,6 +170,12 @@ final readonly class Setup
 		return $this->environment('frankenphp', $liveReload);
 	}
 
+	/** Whether a user can answer questions, as when the command runs in a terminal. */
+	public static function interactive(): bool
+	{
+		return stream_isatty(STDIN) && stream_isatty(STDOUT);
+	}
+
 	public static function terminalColumns(): int
 	{
 		// No stty on Windows; without a terminal it only prints an error.
@@ -219,17 +236,5 @@ final readonly class Setup
 	private static function caddyToken(string $value): string
 	{
 		return '"' . addcslashes($value, "\\\"\r\n\t") . '"';
-	}
-
-	private function commandAvailable(string $command): bool
-	{
-		$output = [];
-		$exitCode = 1;
-		$windows = DIRECTORY_SEPARATOR === '\\';
-		$finder = $windows ? 'where' : 'which';
-		$null = $windows ? 'NUL' : '/dev/null';
-		exec("{$finder} " . escapeshellarg($command) . " 2>{$null}", $output, $exitCode);
-
-		return $exitCode === 0;
 	}
 }

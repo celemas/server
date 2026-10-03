@@ -5,6 +5,11 @@
 	bootstrap="vendor/autoload.php"
 	colors="true"
 	cacheDirectory=".phpunit.cache">
+	<php>
+		<!-- Tests never download from GitHub or touch the shared FrankenPHP cache. -->
+		<env name="CELEMA_FRANKENPHP_RELEASES" value="http://127.0.0.1:9/releases" force="true"/>
+		<env name="CELEMA_FRANKENPHP_DIR" value="/nonexistent/celema-frankenphp" force="true"/>
+	</php>
 	<testsuites>
 		<testsuite name="Celema Server Test Suite">
 			<directory suffix="Test.php">tests</directory>

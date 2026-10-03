@@ -75,7 +75,7 @@ final class InterruptTest extends TestCase
 		$dir = $this->dir;
 		file_put_contents(
 			"{$dir}/frankenphp",
-			"#!/bin/sh\nprintf '%s' \"\$3\" > config-path\necho \$\$ > backend.pid\nexec sleep 30\n",
+			"#!/bin/sh\n[ \"\$1\" = run ] || exit 0\nprintf '%s' \"\$3\" > config-path\necho \$\$ > backend.pid\nexec sleep 30\n",
 		);
 		chmod("{$dir}/frankenphp", 0o755);
 		file_put_contents("{$dir}/index.php", '<?php');

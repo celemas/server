@@ -97,13 +97,6 @@ final class ServerTest extends TestCase
 		$this->assertSame('/prefix', $environment['CELEMA_ROUTE_PREFIX']);
 	}
 
-	public function testMissingFrankenPhpIsReported(): void
-	{
-		$setup = new Setup('/tmp/public', '', frankenPhp: '__missing_frankenphp_binary__');
-
-		$this->assertTrue($setup->missingFrankenPhp());
-	}
-
 	public function testFrankenPhpCommandReportsMissingExecutable(): void
 	{
 		$io = new BufferedIo();
@@ -115,7 +108,7 @@ final class ServerTest extends TestCase
 		$this->assertSame(1, $exit);
 		$this->assertSame('', $io->output());
 		$this->assertStringContainsString(
-			'FrankenPHP requires frankenphp in PATH.',
+			"The FrankenPHP executable '__missing_frankenphp_binary__' was not found.",
 			$io->errorOutput(),
 		);
 	}

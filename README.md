@@ -13,14 +13,15 @@ Development server commands for PHP applications, built on `celema/console`, wit
 composer require --dev celema/server
 ```
 
-It requires PHP 8.5. The FrankenPHP command additionally needs the `frankenphp` executable on `PATH`; FrankenPHP embeds its own PHP runtime, extensions, and configuration rather than using the PHP CLI that starts the command. Live reload needs no Node.js or other external tools.
+It requires PHP 8.5. The FrankenPHP command uses `frankenphp` from `PATH`, or downloads FrankenPHP once you agree; see [Installing FrankenPHP](#installing-frankenphp). FrankenPHP embeds its own PHP runtime, extensions, and configuration rather than using the PHP CLI that starts the command. Live reload needs no Node.js or other external tools.
 
 ## Usage
 
-The package provides two console commands:
+The package provides these console commands:
 
 - `Celema\Server\Server` (`server`) runs the application with the PHP CLI's built-in server.
 - `Celema\Server\FrankenPhp` (`frankenphp`) runs it with FrankenPHP, in classic mode or, with `--worker`, in [worker mode](#worker-mode).
+- `Celema\Server\FrankenInstall` (`frankenphp:install`) downloads FrankenPHP; see [Installing FrankenPHP](#installing-frankenphp).
 
 Register them with `celema/console`:
 
@@ -30,6 +31,7 @@ Register them with `celema/console`:
 
 use Celema\Console\Commands;
 use Celema\Console\Runner;
+use Celema\Server\FrankenInstall;
 use Celema\Server\FrankenPhp;
 use Celema\Server\Server;
 
@@ -40,6 +42,7 @@ $watch = ['src/**/*.{php,css,js}', 'views/**/*.php'];
 $commands = new Commands([
 	new Server($docroot, port: 1973, watch: $watch),
 	new FrankenPhp($docroot, port: 1973, watch: $watch),
+	new FrankenInstall(),
 ]);
 
 exit(new Runner($commands)->run());
@@ -49,7 +52,7 @@ Then start one of them, for example `php run server`. Both commands watch files 
 
 ### Constructor arguments
 
-Both commands take the same arguments:
+Both server commands take these arguments:
 
 | Argument | Default | Description |
 | --- | --- | --- |
@@ -57,7 +60,8 @@ Both commands take the same arguments:
 | `port` | `1983` | The default port. |
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
 | `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
-| `executable` | `'php'` or `'frankenphp'` | The executable to run the backend with. |
+| `executable` | `'php'`, or none for FrankenPHP | The executable to run the backend with. For FrankenPHP, it replaces the [lookup](#installing-frankenphp). |
+| `version` | none | `FrankenPhp` only: the FrankenPHP version to run from the shared cache, like `'1.12.7'`. See [Installing FrankenPHP](#installing-frankenphp). |
 
 ### Options
 
@@ -116,6 +120,31 @@ The URL uses the `--host` address, with `localhost` for wildcard addresses, whic
 Pass `--no-watch` to skip file polling and the live reload endpoint entirely. Omitting the script from a layout only disables automatic updates for those pages; file watching and worker restarts still run.
 
 Open pages also reload once when they reconnect after the command restarts. If a watched file changes while no page is connected, the command says so, which usually means the snippet is missing.
+
+## Installing FrankenPHP
+
+Without a configured `executable`, the `frankenphp` command runs, in this order:
+
+1. The pinned `version` from the shared cache.
+2. `frankenphp` on `PATH`.
+3. The newest FrankenPHP version in the shared cache.
+
+When none is found, or the pinned version is not installed, the command offers to download it into the cache, for the latest release or the pinned version. It only asks in a terminal, and downloads nothing without your consent. A pinned version always runs as pinned; another FrankenPHP never stands in for it. Pin a version for every developer of a project to run the same FrankenPHP:
+
+```php
+new FrankenPhp($docroot, version: '1.12.7'),
+```
+
+`frankenphp:install` downloads the latest release, or the given version, without starting the server: `php run frankenphp:install 1.12.7`. It reports when a `frankenphp` on `PATH` still takes precedence over the installed version.
+
+The builds come from the [FrankenPHP releases](https://github.com/php/frankenphp/releases) for macOS and Linux, on x86-64 and ARM. Each download is checked against its published checksum and run once before it is installed. A build takes about 180 MB, so all projects share one cache with a directory per version:
+
+- macOS: `~/Library/Caches/celema/frankenphp`
+- Linux: `$XDG_CACHE_HOME/celema/frankenphp`, by default `~/.cache/celema/frankenphp`
+
+`CELEMA_FRANKENPHP_DIR` sets another directory. To remove a version, delete its directory. The lookups use GitHub's API, which allows 60 an hour without a token; set `GITHUB_TOKEN` or `GH_TOKEN` to raise the limit.
+
+At startup, the command prints the FrankenPHP and PHP versions it runs. It warns about extensions the project's `composer.json` requires that the embedded PHP lacks: the downloaded builds include a broad, fixed set of extensions and cannot load others, Xdebug included. Use the `server` command for step debugging.
 
 ## Worker mode
 
