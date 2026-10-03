@@ -9,7 +9,7 @@ use Celema\Console\Io;
 use Celema\Console\Runner;
 
 /**
- * The `celema-server` command line: the commands of this package without
+ * The `cserve` command line: the commands of this package without
  * a run script of one's own, for any PHP application with a public
  * directory. Without a command, it runs the built-in server.
  *
@@ -51,7 +51,7 @@ final class Standalone
 	 */
 	public static function argv(array $argv): array
 	{
-		$script = $argv[0] ?? 'celema-server';
+		$script = $argv[0] ?? 'cserve';
 		$first = $argv[1] ?? null;
 
 		return array_values(match (true) {

@@ -53,15 +53,15 @@ Then start one of them, for example `php run server`. Both commands watch files 
 
 ### Without a run script
 
-The package also installs `vendor/bin/celema-server`, which runs these commands for any PHP application, without a run script of its own:
+The package also installs `vendor/bin/cserve`, which runs these commands for any PHP application, without a run script of its own:
 
 ```bash
-vendor/bin/celema-server
-vendor/bin/celema-server frankenphp --worker
-vendor/bin/celema-server reload
+vendor/bin/cserve
+vendor/bin/cserve frankenphp --worker
+vendor/bin/cserve reload
 ```
 
-It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.php`, or else, with a warning, the whole working directory. Without a command, or with only options, it runs `server`; `vendor/bin/celema-server --help` lists the commands. The commands use their default arguments; a run script remains the way to set watch patterns, a route prefix, a FrankenPHP version, or companion processes.
+It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.php`, or else, with a warning, the whole working directory. Without a command, or with only options, it runs `server`; `vendor/bin/cserve --help` lists the commands. The commands use their default arguments; a run script remains the way to set watch patterns, a route prefix, a FrankenPHP version, or companion processes.
 
 ### Constructor arguments
 

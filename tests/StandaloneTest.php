@@ -39,11 +39,11 @@ final class StandaloneTest extends TestCase
 	public static function arguments(): array
 	{
 		return [
-			'nothing' => [['celema-server'], ['celema-server', 'server']],
-			'options' => [['celema-server', '--port=8000', '-o'], ['celema-server', 'server', '--port=8000', '-o']],
-			'command' => [['celema-server', 'frankenphp', '--worker'], ['celema-server', 'frankenphp', '--worker']],
-			'help' => [['celema-server', '--help'], ['celema-server', 'help']],
-			'short help' => [['celema-server', '-h', 'reload'], ['celema-server', 'help', 'reload']],
+			'nothing' => [['cserve'], ['cserve', 'server']],
+			'options' => [['cserve', '--port=8000', '-o'], ['cserve', 'server', '--port=8000', '-o']],
+			'command' => [['cserve', 'frankenphp', '--worker'], ['cserve', 'frankenphp', '--worker']],
+			'help' => [['cserve', '--help'], ['cserve', 'help']],
+			'short help' => [['cserve', '-h', 'reload'], ['cserve', 'help', 'reload']],
 		];
 	}
 
@@ -130,7 +130,7 @@ final class StandaloneTest extends TestCase
 		$output = "{$this->dir}/output";
 		$stream = fopen($output, 'w');
 		$process = proc_open(
-			[PHP_BINARY, dirname(__DIR__) . '/bin/celema-server', ...$args],
+			[PHP_BINARY, dirname(__DIR__) . '/bin/cserve', ...$args],
 			[0 => ['file', '/dev/null', 'r'], 1 => $stream, 2 => $stream],
 			$pipes,
 			$this->dir,

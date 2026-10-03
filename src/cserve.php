@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Celema\Server;
 
 // Runs the commands of celema/server without a run script, see Standalone;
-// required by bin/celema-server, whose Composer proxy names the project's
+// required by bin/cserve, whose Composer proxy names the project's
 // autoloader.
 /** @var list<string|null> $autoloads */
 $autoloads = [
@@ -25,6 +25,6 @@ foreach ($autoloads as $autoload) {
 	}
 }
 
-fwrite(STDERR, "celema-server: Composer's autoloader was not found; install the package with Composer.\n");
+fwrite(STDERR, "cserve: Composer's autoloader was not found; install the package with Composer.\n");
 
 exit(1);
