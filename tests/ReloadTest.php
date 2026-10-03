@@ -49,7 +49,7 @@ final class ReloadTest extends TestCase
 		$port = Ports::ephemeral();
 		$this->assertIsInt($port);
 		[$command, $pid] = $this->start(["--port={$port}", "--admin=http://127.0.0.1:{$admin}"]);
-		$this->waitFor(fn(): bool => Ports::unavailableMessage('127.0.0.1', $port) !== null);
+		$this->waitFor(static fn(): bool => Ports::unavailableMessage('127.0.0.1', $port) !== null);
 
 		$script = file_get_contents("http://127.0.0.1:{$port}/celema-live-reload.js");
 		$this->assertIsString($script);
