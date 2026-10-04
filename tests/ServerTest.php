@@ -486,6 +486,39 @@ final class ServerTest extends TestCase
 		}
 	}
 
+	public function testBusyReloadPortIsAnErrorBeforeTheBackendStarts(): void
+	{
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = (string) stream_socket_get_name($socket, false);
+		$reloadPort = (int) substr($address, (int) strrpos($address, ':') + 1);
+		$started = sys_get_temp_dir() . '/celema-backend-started-' . uniqid();
+		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
+		$this->assertIsString($executable);
+		file_put_contents($executable, "#!/bin/sh\ntouch '{$started}'\n");
+		chmod($executable, 0o755);
+
+		try {
+			$io = new BufferedIo();
+			$exit = (new Server('/tmp/public', executable: $executable))(
+				new Args(['--host=127.0.0.1', "--port={$this->freePort()}", "--reload-port={$reloadPort}"]),
+				$io,
+			);
+
+			$this->assertSame(1, $exit);
+			$this->assertStringContainsString("Port 127.0.0.1:{$reloadPort} is not available", $io->errorOutput());
+			$this->assertStringContainsString('--reload-port=<port>', $io->errorOutput());
+			$this->assertFileDoesNotExist($started);
+		} finally {
+			fclose($socket);
+			unlink($executable);
+
+			if (is_file($started)) {
+				unlink($started);
+			}
+		}
+	}
+
 	public function testOpenFlagIsParsed(): void
 	{
 		$this->assertTrue(Options::from(1983, ['**/*.php'], new Args(['--open']))->open);

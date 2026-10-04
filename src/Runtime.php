@@ -195,13 +195,22 @@ abstract class Runtime
 
 	protected function reloadPort(): int|string
 	{
-		$port = $this->options->reloadPort ?? Ports::liveReloadPort($this->options->host, $this->options->port);
+		$explicit = $this->options->reloadPort;
+		$port = $explicit ?? Ports::liveReloadPort($this->options->host, $this->options->port);
 
 		if ($port === $this->options->port) {
 			return 'The live reload port must differ from the server port.';
 		}
 
-		return $port;
+		// An explicit port is checked before the backend starts, as the
+		// endpoint only listens after it.
+		return $explicit === null
+			? $port
+			: Ports::unavailableMessage(
+				$this->options->host,
+				$explicit,
+				'Choose another port with --reload-port=<port>, or leave the option out to use a free one.',
+			) ?? $explicit;
 	}
 
 	private function listen(int $port): LiveReload|string

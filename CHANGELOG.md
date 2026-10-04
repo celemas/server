@@ -22,6 +22,7 @@
 - `frankenphp` runs FrankenPHP with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.
 - The `executable` argument of `FrankenPhp` defaults to none, which looks up FrankenPHP as described above. A configured executable that does not exist is reported by its path.
 - A busy application port is reported with a hint that another server may still be running on it, and to choose another port with `--port`.
+- A busy `--reload-port` is reported before the server starts, instead of after it started.
 - Both commands start with a line that names the served address, with the PHP version for `server`. The startup messages of the PHP server and FrankenPHP are hidden instead, and `frankenphp --quiet` only reduces live reload output.
 
 ### Fixed
