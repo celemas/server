@@ -7,7 +7,8 @@ namespace Celema\Server;
 /** @internal */
 final class Ports
 {
-	public static function unavailableMessage(string $host, int $port): ?string
+	/** @param string $hint Appended to the message, like what to do about it. */
+	public static function unavailableMessage(string $host, int $port, string $hint = ''): ?string
 	{
 		$errorCode = 0;
 		$errorMessage = '';
@@ -28,7 +29,7 @@ final class Ports
 				$message .= ": {$detail}";
 			}
 
-			return $message . '.';
+			return $hint === '' ? "{$message}." : "{$message}. {$hint}";
 		}
 
 		fclose($server);

@@ -129,6 +129,7 @@ final class ReloadTest extends TestCase
 
 		$this->assertSame(1, $exit);
 		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $io->errorOutput());
+		$this->assertStringContainsString('choose another port with --port=<port>', $io->errorOutput());
 	}
 
 	#[DataProvider('invalidAdminAddresses')]

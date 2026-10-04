@@ -94,7 +94,7 @@ Both server commands take these arguments:
 | `--processes=<count>` | `server` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
 | `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
 
-Both commands check whether the application port is available before starting. A busy port is an error; they do not switch to another application port. The automatically selected live reload port tries its initial candidate and up to 100 higher ports, stopping at 65535. An explicit `--reload-port` must be available.
+Both commands check whether the application port is available before starting. A busy port is an error that suggests stopping another running server or choosing a different `--port`; they do not switch to another application port. The automatically selected live reload port tries its initial candidate and up to 100 higher ports, stopping at 65535. An explicit `--reload-port` must be available.
 
 ## Routing
 

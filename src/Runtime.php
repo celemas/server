@@ -37,9 +37,11 @@ abstract class Runtime
 	 */
 	public function run(callable $output): string|int
 	{
+		// A busy port is most often taken by an instance still running elsewhere.
 		$message = $this->missing() ?? Ports::unavailableMessage(
 			$this->options->host,
 			$this->options->port,
+			'Another server may still be running on it. Stop it, or choose another port with --port=<port>.',
 		);
 
 		if ($message !== null) {

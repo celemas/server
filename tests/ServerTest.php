@@ -236,6 +236,30 @@ final class ServerTest extends TestCase
 		}
 	}
 
+	#[DataProvider('serverCommands')]
+	public function testBusyPortSuggestsAnotherPort(string $command): void
+	{
+		$socket = stream_socket_server('tcp://127.0.0.1:0');
+		$this->assertIsResource($socket);
+		$address = (string) stream_socket_get_name($socket, false);
+		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
+
+		try {
+			$io = new BufferedIo();
+			$backend = $command === 'server'
+				? new Server('/tmp/public', executable: PHP_BINARY)
+				: new FrankenPhp('/tmp/public', executable: PHP_BINARY);
+			$exit = $backend(new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']), $io);
+		} finally {
+			fclose($socket);
+		}
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $io->errorOutput());
+		$this->assertStringContainsString('Another server may still be running on it.', $io->errorOutput());
+		$this->assertSame('', $io->output());
+	}
+
 	public function testServerAnnouncesItsAddressAndPhpVersion(): void
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
