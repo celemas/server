@@ -40,6 +40,33 @@ final class ProjectConfigTest extends TestCase
 		$this->assertSame('frankenphp', $config->server);
 	}
 
+	public function testLocalConfigOverridesTheProjectConfig(): void
+	{
+		file_put_contents("{$this->dir}/.cserve/config.ini", "server = server\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "server = frankenphp\n");
+		$config = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $config);
+		$this->assertSame('frankenphp', $config->server);
+	}
+
+	public function testLocalConfigAloneSetsTheServer(): void
+	{
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "server = frankenphp\n");
+		$config = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $config);
+		$this->assertSame('frankenphp', $config->server);
+	}
+
+	public function testInvalidLocalConfigIsAnError(): void
+	{
+		file_put_contents("{$this->dir}/.cserve/config.ini", "server = frankenphp\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "sever = server\n");
+
+		$this->assertSame("Unknown setting 'sever' in .cserve/config.local.ini.", ProjectConfig::load($this->dir));
+	}
+
 	#[DataProvider('invalidConfigs')]
 	public function testInvalidConfigIsAnError(string $contents, string $expected): void
 	{

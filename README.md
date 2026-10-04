@@ -46,6 +46,13 @@ server = frankenphp
 
 `cserve` then runs `frankenphp` without a command, or with only options. The setting takes `server` or `frankenphp`, and an explicit command still runs as given, like `vendor/bin/cserve server` for step debugging with Xdebug. Unknown settings and invalid values are errors. [Run scripts](#run-scripts-with-celemaconsole) do not read the file.
 
+A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
+
+```gitignore
+/.cserve/config.local.ini
+/.cserve/php/local.ini
+```
+
 ### Options
 
 The `server` and `frankenphp` commands take these options:
