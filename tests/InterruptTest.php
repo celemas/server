@@ -71,7 +71,7 @@ final class InterruptTest extends TestCase
 		file_put_contents("{$this->dir}/index.php", '<?php echo "served";');
 		$port = Ports::ephemeral();
 		$this->assertIsInt($port);
-		[$command, $pid] = $this->start(['--processes=2', '--no-watch'], 'server', $port);
+		[$command, $pid] = $this->start(['--processes=2', '--no-watch'], 'builtin', $port);
 
 		for ($i = 0; $i < 100 && Ports::unavailableMessage('127.0.0.1', $port) === null; $i++) {
 			usleep(50_000);
@@ -109,15 +109,14 @@ final class InterruptTest extends TestCase
 			require '{$autoload}';
 			posix_setsid();
 			\$commands = [
-				new Celema\\Server\\FrankenPhp('{$dir}', watch: '*.php', executable: '{$dir}/frankenphp'),
-				new Celema\\Server\\Server('{$dir}', watch: '*.php', executable: '{$php}'),
+				new Celema\\Server\\Server('{$dir}', watch: '*.php', php: '{$php}', frankenphp: '{$dir}/frankenphp'),
 			];
 			exit(new Celema\\Console\\Runner(new Celema\\Console\\Commands(\$commands))->run());
 			PHP);
 		$port ??= Ports::ephemeral();
 		$this->assertIsInt($port);
 		$command = proc_open(
-			[PHP_BINARY, "{$dir}/run", $name, '--host=127.0.0.1', "--port={$port}", ...$args],
+			[PHP_BINARY, "{$dir}/run", 'server', $name, '--host=127.0.0.1', "--port={$port}", ...$args],
 			[1 => ['file', '/dev/null', 'w'], 2 => ['file', "{$dir}/stderr", 'w']],
 			$pipes,
 			$dir,

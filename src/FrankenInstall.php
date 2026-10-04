@@ -90,8 +90,8 @@ final class FrankenInstall
 		// Without a pinned version, a FrankenPHP on PATH takes precedence.
 		if ($path !== null) {
 			$io->info(
-				"The frankenphp command uses {$path} from PATH, unless it pins this version: "
-					. "new FrankenPhp(\$docroot, version: '{$release->version}')",
+				"FrankenPHP runs {$path} from PATH, unless a run script pins this version: "
+					. "new Server(\$docroot, version: '{$release->version}')",
 			);
 		}
 

@@ -4,33 +4,35 @@
 
 ### Added
 
-- `frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker.
-- `frankenphp` downloads FrankenPHP into a cache that all projects share when it finds none, once the user agrees in a terminal. Builds are checked against their published checksum and run once before they are installed. The new `frankenphp:install [<version>]` command, `Celema\Server\FrankenInstall`, downloads a release without starting the server.
-- The new `version` argument of `FrankenPhp` pins the FrankenPHP version from the shared cache. Without a pin, `frankenphp` on `PATH` comes before the newest cached version.
-- `frankenphp` prints the FrankenPHP and PHP versions at startup, and warns about extensions the project's `composer.json` requires that FrankenPHP's embedded PHP lacks.
-- Both commands run companion processes alongside the server, like asset watchers, configured with the new `companions` argument. Their output appears with their names; when one exits, the server keeps running, and they stop with the server, together with the processes they start. `--no-companions` skips them.
+- `server frankenphp --worker=<count>` runs the requested number of workers for concurrent PHP requests. The count must be a positive integer; bare `--worker` still starts one worker.
+- The server downloads FrankenPHP into a cache that all projects share when it finds none, once the user agrees in a terminal. Builds are checked against their published checksum and run once before they are installed. The new `frankenphp:install [<version>]` command, `Celema\Server\FrankenInstall`, downloads a release without starting the server.
+- The new `version` argument of `Server` pins the FrankenPHP version from the shared cache. Without a pin, `frankenphp` on `PATH` comes before the newest cached version.
+- `server frankenphp` prints the FrankenPHP and PHP versions at startup, and warns about extensions the project's `composer.json` requires that FrankenPHP's embedded PHP lacks.
+- The server runs companion processes alongside it, like asset watchers, configured with the new `companions` argument. Their output appears with their names; when one exits, the server keeps running, and they stop with the server, together with the processes they start. `--no-companions` skips them.
 - The new `reload` command, `Celema\Server\Reload`, watches files and serves live reload without serving the application, for applications that run elsewhere, like in a container. Its endpoint listens on a fixed port, and with `--admin=<url>`, changes restart the workers of a FrankenPHP served elsewhere through its admin API.
-- `vendor/bin/cserve` runs the commands for any PHP application without a run script of its own. It serves the first of `public/`, `web/`, or `htdocs/` with an `index.php`, and runs `server` without a command, or the server a project sets in `.cserve/config.ini`, like `server = frankenphp`. A developer's own `.cserve/config.local.ini` overrides it.
-- Both commands read the project's own PHP settings from the `*.ini` files in `.cserve/php/` of the working directory, after the system's settings and the package's.
-- `server --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
+- `vendor/bin/cserve` runs the commands for any PHP application without a run script of its own. It serves the first of `public/`, `web/`, or `htdocs/` with an `index.php`, and runs `server` without a command; a server name as the command, like `cserve frankenphp`, runs that server.
+- A project sets its default server in `.cserve/config.ini`, like `server = frankenphp`, and a developer's own `.cserve/config.local.ini` overrides it. Both override a run script's `server` argument.
+- Both servers read the project's own PHP settings from the `*.ini` files in `.cserve/php/` of the working directory, after the system's settings and the package's.
+- `server builtin --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
 
 ### Changed
 
-- **Breaking:** The default application port for `server` and `frankenphp` is now `2130` instead of `1983`. The derived live reload port and the standalone `reload` command's default are now `21300` instead of `19830`. Explicitly configured ports are unchanged; update fixed URLs that relied on the old defaults, or set `--port` to retain them.
-- **Breaking:** `server` and `frankenphp` now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
+- **Breaking:** One `server` command serves with the built-in server or FrankenPHP, chosen by its new argument, `builtin` or `frankenphp`, the [project's settings](README.md#default-server), or the new `server` constructor argument, which defaults to `'builtin'`. `Celema\Server\FrankenPhp` and the `frankenphp` command are removed: run `server frankenphp` instead of `frankenphp`, and register `new Server($docroot, server: 'frankenphp')` instead of `new FrankenPhp($docroot)`, or only `Server` to choose the server on the command line. The `executable` argument is replaced by `php` for the built-in server and `frankenphp` for FrankenPHP. Options of the other server, like `--worker` with the built-in server, are errors instead of being ignored.
+- **Breaking:** The default application port of both servers is now `2130` instead of `1983`. The derived live reload port and the standalone `reload` command's default are now `21300` instead of `19830`. Explicitly configured ports are unchanged; update fixed URLs that relied on the old defaults, or set `--port` to retain them.
+- **Breaking:** Both servers now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.
-- `frankenphp` runs FrankenPHP with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.
-- The `executable` argument of `FrankenPhp` defaults to none, which looks up FrankenPHP as described above. A configured executable that does not exist is reported by its path.
+- FrankenPHP runs with a generated configuration in classic mode too, instead of its `php-server` command. Responses are compressed with Zstandard or gzip as before, but no longer with Brotli, which not every FrankenPHP build includes.
+- Without a `frankenphp` executable, the server looks up FrankenPHP as described above. A configured executable that does not exist is reported by its path.
 - A busy application port is reported with a hint that another server may still be running on it, and to choose another port with `--port`.
 - A busy `--reload-port` is reported before the server starts, instead of after it started.
-- Both commands start with a line that names the served address, with the PHP version for `server`. The startup messages of the PHP server and FrankenPHP are hidden instead, and `frankenphp --quiet` only reduces live reload output.
+- The server starts with a line that names the served address, with the PHP version for the built-in server. The startup messages of the PHP server and FrankenPHP are hidden instead, and `--quiet` with FrankenPHP only reduces live reload output.
 
 ### Fixed
 
 - Ctrl+C, or a SIGTERM sent to the command, stops the backend and removes the temporary FrankenPHP configuration, given the `pcntl` extension. The configuration was left in the temporary directory, and a SIGTERM sent to the command alone left the backend running. The command exits with 130 or 143, as shells report a stopped process.
 - Stopping the command stops every process of the server, like the forked processes of a PHP server with multiple processes, which kept the port taken. The server runs in its own process group, given the `pcntl` and `posix` extensions.
 - The server process no longer inherits the live reload endpoint's listening socket, which kept the live reload port taken when the server outlived the command.
-- The `server` request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
+- The built-in server's request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
 
 ## [0.2.0](https://codefloe.com/celema/server/src/tag/0.2.0) (2026-10-02)
 

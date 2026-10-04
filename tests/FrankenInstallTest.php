@@ -9,9 +9,9 @@ use Celema\Console\BufferedIo;
 use Celema\Server\FrankenBinary;
 use Celema\Server\FrankenCache;
 use Celema\Server\FrankenInstall;
-use Celema\Server\FrankenPhp;
 use Celema\Server\FrankenReleases;
 use Celema\Server\Ports;
+use Celema\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -162,7 +162,7 @@ final class FrankenInstallTest extends TestCase
 		[$exit, $io] = $this->install();
 
 		$this->assertSame(0, $exit, $io->errorOutput());
-		$this->assertStringContainsString("uses {$this->dir}/bin/frankenphp from PATH", $io->output());
+		$this->assertStringContainsString("runs {$this->dir}/bin/frankenphp from PATH", $io->output());
 		$this->assertStringContainsString("version: '9.9.9'", $io->output());
 	}
 
@@ -257,7 +257,7 @@ final class FrankenInstallTest extends TestCase
 	public function testCommandRejectsAnExecutableWithAVersion(): void
 	{
 		$io = new BufferedIo();
-		$command = new FrankenPhp('/tmp/public', executable: 'frankenphp', version: '9.9.9');
+		$command = new Server('/tmp/public', server: 'frankenphp', frankenphp: 'frankenphp', version: '9.9.9');
 
 		$this->assertSame(1, $command(new Args([]), $io));
 		$this->assertStringContainsString('either a FrankenPHP executable or a version', $io->errorOutput());
@@ -287,7 +287,7 @@ final class FrankenInstallTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new FrankenPhp($project, executable: $executable))(
+			$exit = (new Server($project, server: 'frankenphp', frankenphp: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']),
 				$io,
 			);

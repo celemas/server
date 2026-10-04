@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace Celema\Server;
 
 /**
- * The project's settings for `cserve` in `.cserve/config.ini` of the
- * working directory, overridden by a developer's own, usually ignored by
- * Git, in `.cserve/config.local.ini`. Run scripts configure their
- * commands themselves and do not read them.
+ * The project's settings in `.cserve/config.ini` of the working
+ * directory, overridden by a developer's own, usually ignored by Git, in
+ * `.cserve/config.local.ini`. Both override a run script's arguments.
  *
  * @internal
  */
@@ -16,15 +15,15 @@ final readonly class ProjectConfig
 {
 	public const string FILE = '.cserve/config.ini';
 	public const string LOCAL_FILE = '.cserve/config.local.ini';
-	/** The commands that can serve the application. */
-	public const array SERVERS = ['server', 'frankenphp'];
+	/** The servers that can serve the application. */
+	public const array SERVERS = ['builtin', 'frankenphp'];
 
 	private function __construct(
-		/** The command `cserve` runs without one. */
-		public string $server = 'server',
+		/** The server to run without a `server` argument; null when unset. */
+		public ?string $server = null,
 	) {}
 
-	/** The settings, defaults without files, or an error message. */
+	/** The settings, unset without files, or an error message. */
 	public static function load(string $cwd): self|string
 	{
 		$settings = [];

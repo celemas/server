@@ -23,12 +23,12 @@ final class ProjectConfigTest extends TestCase
 		exec('rm -rf ' . escapeshellarg($this->dir));
 	}
 
-	public function testProjectWithoutConfigUsesTheBuiltinServer(): void
+	public function testProjectWithoutConfigSetsNothing(): void
 	{
 		$config = ProjectConfig::load($this->dir);
 
 		$this->assertInstanceOf(ProjectConfig::class, $config);
-		$this->assertSame('server', $config->server);
+		$this->assertNull($config->server);
 	}
 
 	public function testConfigSetsTheServer(): void
@@ -42,7 +42,7 @@ final class ProjectConfigTest extends TestCase
 
 	public function testLocalConfigOverridesTheProjectConfig(): void
 	{
-		file_put_contents("{$this->dir}/.cserve/config.ini", "server = server\n");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "server = builtin\n");
 		file_put_contents("{$this->dir}/.cserve/config.local.ini", "server = frankenphp\n");
 		$config = ProjectConfig::load($this->dir);
 
@@ -62,7 +62,7 @@ final class ProjectConfigTest extends TestCase
 	public function testInvalidLocalConfigIsAnError(): void
 	{
 		file_put_contents("{$this->dir}/.cserve/config.ini", "server = frankenphp\n");
-		file_put_contents("{$this->dir}/.cserve/config.local.ini", "sever = server\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "sever = builtin\n");
 
 		$this->assertSame("Unknown setting 'sever' in .cserve/config.local.ini.", ProjectConfig::load($this->dir));
 	}
@@ -80,7 +80,7 @@ final class ProjectConfigTest extends TestCase
 		return [
 			'unknown server' => [
 				"server = caddy\n",
-				"Invalid server 'caddy' in .cserve/config.ini: use server or frankenphp.",
+				"Invalid server 'caddy' in .cserve/config.ini: use builtin or frankenphp.",
 			],
 			'list' => ["server[] = frankenphp\n", 'Invalid server in .cserve/config.ini'],
 			'boolean' => ["server = on\n", 'Invalid server in .cserve/config.ini'],

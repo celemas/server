@@ -7,7 +7,6 @@ namespace Celema\Server\Tests;
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Server\ErrorTrap;
-use Celema\Server\FrankenPhp;
 use Celema\Server\Ports;
 use Celema\Server\Process;
 use Celema\Server\ProjectIni;
@@ -130,9 +129,9 @@ final class ProjectIniTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$backend = $command === 'server'
-				? new Server('/tmp/public', executable: $executable)
-				: new FrankenPhp('/tmp/public', executable: $executable);
+			$backend = $command === 'builtin'
+				? new Server('/tmp/public', php: $executable)
+				: new Server('/tmp/public', server: 'frankenphp', frankenphp: $executable);
 			$exit = $backend(new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']), $io);
 		} finally {
 			chdir($cwd);
@@ -165,7 +164,7 @@ final class ProjectIniTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new FrankenPhp($this->dir, executable: $executable))(
+			$exit = (new Server($this->dir, server: 'frankenphp', frankenphp: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']),
 				$io,
 			);
@@ -182,6 +181,6 @@ final class ProjectIniTest extends TestCase
 
 	public static function commands(): array
 	{
-		return [['server'], ['frankenphp']];
+		return [['builtin'], ['frankenphp']];
 	}
 }

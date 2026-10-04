@@ -34,7 +34,7 @@ use InvalidArgumentException;
 class Reload
 {
 	/**
-	 * The default port matches the one the server commands use for live
+	 * The default port matches the one the server command uses for live
 	 * reload by default, so pages keep loading the script when switching.
 	 */
 	public function __construct(

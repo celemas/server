@@ -8,13 +8,13 @@ use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Console\Commands;
 use Celema\Console\Runner;
-use Celema\Server\FrankenPhp;
 use Celema\Server\LiveReload;
 use Celema\Server\Options;
 use Celema\Server\Pending;
 use Celema\Server\Ports;
 use Celema\Server\Process;
 use Celema\Server\Relay;
+use Celema\Server\Server;
 use Celema\Server\Setup;
 use Celema\Server\WorkerRestart;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -78,7 +78,7 @@ final class WorkerModeTest extends TestCase
 	public function testInvalidWorkerCountFailsBeforeStartup(string $count): void
 	{
 		$io = new BufferedIo();
-		$exit = (new FrankenPhp('/tmp/public', executable: '__missing_frankenphp_binary__'))(
+		$exit = (new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'))(
 			new Args(["--worker={$count}"]),
 			$io,
 		);
@@ -118,14 +118,20 @@ final class WorkerModeTest extends TestCase
 		try {
 			$port = Ports::ephemeral();
 			$this->assertIsInt($port);
-			$_SERVER['argv'] = ['run', 'frankenphp', $option, '--host=127.0.0.1', "--port={$port}"];
+			$_SERVER['argv'] = ['run', 'server', 'frankenphp', $option, '--host=127.0.0.1', "--port={$port}"];
 
 			if (!$watch) {
 				$_SERVER['argv'][] = '--no-watch';
 			}
 
 			$io = new BufferedIo();
-			$command = new FrankenPhp($dir, routePrefix: $prefix, watch: [$executable], executable: $executable);
+			$command = new Server(
+				$dir,
+				server: 'frankenphp',
+				routePrefix: $prefix,
+				watch: [$executable],
+				frankenphp: $executable,
+			);
 
 			$this->assertSame(0, new Runner(new Commands([$command]), $io)->run(), $io->errorOutput());
 			$contents = file_get_contents($config);

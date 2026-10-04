@@ -7,7 +7,6 @@ namespace Celema\Server\Tests;
 use Celema\Console\BufferedIo;
 use Celema\Console\Commands;
 use Celema\Console\Runner;
-use Celema\Server\FrankenPhp;
 use Celema\Server\Ports;
 use Celema\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -24,7 +23,7 @@ final class ProcessesTest extends TestCase
 		putenv($inherited === null ? 'PHP_CLI_SERVER_WORKERS' : "PHP_CLI_SERVER_WORKERS={$inherited}");
 
 		try {
-			[$exit, $io] = $this->command('server', $args);
+			[$exit, $io] = $this->command('builtin', $args);
 
 			$this->assertSame(0, $exit, $io->errorOutput());
 			$this->assertStringContainsString("workers={$expected}\n", $io->output());
@@ -48,7 +47,7 @@ final class ProcessesTest extends TestCase
 	#[DataProviderExternal(WorkerModeTest::class, 'invalidWorkerCounts')]
 	public function testInvalidProcessCountFailsBeforeStartup(string $count): void
 	{
-		[$exit, $io] = $this->command('server', ["--processes={$count}"]);
+		[$exit, $io] = $this->command('builtin', ["--processes={$count}"]);
 
 		$this->assertSame(1, $exit);
 		$this->assertStringContainsString('must be a positive integer', $io->errorOutput());
@@ -64,12 +63,12 @@ final class ProcessesTest extends TestCase
 	}
 
 	/**
-	 * Runs a command against a backend that prints its process count and exits.
+	 * Runs a server against a backend that prints its process count and exits.
 	 *
 	 * @param list<string> $args
 	 * @return array{int, BufferedIo}
 	 */
-	private function command(string $command, array $args): array
+	private function command(string $server, array $args): array
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-backend-');
 		$this->assertIsString($executable);
@@ -78,14 +77,11 @@ final class ProcessesTest extends TestCase
 		$port = Ports::ephemeral();
 		$this->assertIsInt($port);
 		$argv = $_SERVER['argv'];
-		$_SERVER['argv'] = ['run', $command, '--host=127.0.0.1', "--port={$port}", '--no-watch', ...$args];
+		$_SERVER['argv'] = ['run', 'server', $server, '--host=127.0.0.1', "--port={$port}", '--no-watch', ...$args];
 
 		try {
 			$io = new BufferedIo();
-			$commands = new Commands([
-				new Server('/tmp/public', executable: $executable),
-				new FrankenPhp('/tmp/public', executable: $executable),
-			]);
+			$commands = new Commands([new Server('/tmp/public', php: $executable, frankenphp: $executable)]);
 
 			return [new Runner($commands, $io)->run(), $io];
 		} finally {

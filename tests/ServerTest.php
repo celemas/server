@@ -12,7 +12,6 @@ use Celema\Server\Address;
 use Celema\Server\Browser;
 use Celema\Server\Console;
 use Celema\Server\ErrorTrap;
-use Celema\Server\FrankenPhp;
 use Celema\Server\Options;
 use Celema\Server\Ports;
 use Celema\Server\Process;
@@ -100,7 +99,7 @@ final class ServerTest extends TestCase
 	public function testFrankenPhpCommandReportsMissingExecutable(): void
 	{
 		$io = new BufferedIo();
-		$exit = (new FrankenPhp('/tmp/public', executable: '__missing_frankenphp_binary__'))(
+		$exit = (new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'))(
 			new Args([]),
 			$io,
 		);
@@ -116,7 +115,7 @@ final class ServerTest extends TestCase
 	public function testFrankenPhpCommandRejectsInvalidOptions(): void
 	{
 		$io = new BufferedIo();
-		$exit = (new FrankenPhp('/tmp/public'))(new Args(['--port=foo']), $io);
+		$exit = (new Server('/tmp/public', server: 'frankenphp'))(new Args(['--port=foo']), $io);
 
 		$this->assertSame(1, $exit);
 		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
@@ -153,7 +152,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new FrankenPhp('/tmp/public', routePrefix: '/prefix', executable: $executable))(
+			$exit = (new Server('/tmp/public', server: 'frankenphp', routePrefix: '/prefix', frankenphp: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}"]),
 				$io,
 			);
@@ -193,7 +192,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', executable: $executable))(
+			$exit = (new Server('/tmp/public', php: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}"]),
 				$io,
 			);
@@ -221,9 +220,9 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$backend = $command === 'server'
-				? new Server('/tmp/public', executable: $executable)
-				: new FrankenPhp('/tmp/public', executable: $executable);
+			$backend = $command === 'builtin'
+				? new Server('/tmp/public', php: $executable)
+				: new Server('/tmp/public', server: 'frankenphp', frankenphp: $executable);
 			$exit = $backend(
 				new Args(['--host=127.0.0.1', '--no-watch']),
 				$io,
@@ -246,9 +245,9 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$backend = $command === 'server'
-				? new Server('/tmp/public', executable: PHP_BINARY)
-				: new FrankenPhp('/tmp/public', executable: PHP_BINARY);
+			$backend = $command === 'builtin'
+				? new Server('/tmp/public', php: PHP_BINARY)
+				: new Server('/tmp/public', server: 'frankenphp', frankenphp: PHP_BINARY);
 			$exit = $backend(new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']), $io);
 		} finally {
 			fclose($socket);
@@ -271,7 +270,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', executable: $executable))(
+			$exit = (new Server('/tmp/public', php: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']),
 				$io,
 			);
@@ -397,7 +396,7 @@ final class ServerTest extends TestCase
 
 	public static function serverCommands(): array
 	{
-		return [['server'], ['frankenphp']];
+		return [['builtin'], ['frankenphp']];
 	}
 
 	#[DataProvider('serverCommands')]
@@ -442,11 +441,11 @@ final class ServerTest extends TestCase
 	public function testWatchFilesRequiresAValue(string $command): void
 	{
 		$argv = $_SERVER['argv'];
-		$_SERVER['argv'] = ['run', $command, '--watch-files'];
+		$_SERVER['argv'] = ['run', 'server', $command, '--watch-files'];
 
 		try {
 			$io = new BufferedIo();
-			$commands = new Commands([new Server('/tmp/public'), new FrankenPhp('/tmp/public')]);
+			$commands = new Commands([new Server('/tmp/public')]);
 
 			$this->assertSame(1, new Runner($commands, $io)->run());
 			$this->assertStringContainsString("Option '--watch-files' requires a value", $io->errorOutput());
@@ -471,7 +470,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', executable: $executable))(
+			$exit = (new Server('/tmp/public', php: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$port}", "--reload-port={$port}"]),
 				$io,
 			);
@@ -500,7 +499,7 @@ final class ServerTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', executable: $executable))(
+			$exit = (new Server('/tmp/public', php: $executable))(
 				new Args(['--host=127.0.0.1', "--port={$this->freePort()}", "--reload-port={$reloadPort}"]),
 				$io,
 			);
@@ -819,7 +818,7 @@ final class ServerTest extends TestCase
 	 *
 	 * @param list<string> $args
 	 */
-	private function watch(string $pattern, array $args = [], string $command = 'server'): string
+	private function watch(string $pattern, array $args = [], string $command = 'builtin'): string
 	{
 		$executable = tempnam(sys_get_temp_dir(), 'fake-php-');
 
@@ -831,13 +830,12 @@ final class ServerTest extends TestCase
 		chmod($executable, 0o755);
 		$port = $this->freePort();
 		$argv = $_SERVER['argv'];
-		$_SERVER['argv'] = ['run', $command, '--host=127.0.0.1', "--port={$port}", ...$args];
+		$_SERVER['argv'] = ['run', 'server', $command, '--host=127.0.0.1', "--port={$port}", ...$args];
 
 		try {
 			$io = new BufferedIo();
 			$commands = new Commands([
-				new Server('/tmp/public', watch: $pattern, executable: $executable),
-				new FrankenPhp('/tmp/public', watch: $pattern, executable: $executable),
+				new Server('/tmp/public', watch: $pattern, php: $executable, frankenphp: $executable),
 			]);
 			$exit = new Runner($commands, $io)->run();
 

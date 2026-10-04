@@ -134,7 +134,7 @@ final class CompanionTest extends TestCase
 
 		try {
 			$io = new BufferedIo();
-			$exit = (new Server($this->dir, executable: $backend, companions: $companions))(
+			$exit = (new Server($this->dir, php: $backend, companions: $companions))(
 				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', ...$args]),
 				$io,
 			);

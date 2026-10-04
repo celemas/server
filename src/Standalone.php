@@ -11,8 +11,8 @@ use Celema\Console\Runner;
 /**
  * The `cserve` command line: the commands of this package without
  * a run script of one's own, for any PHP application with a public
- * directory. Without a command, it runs the server the project's
- * `.cserve/config.ini` sets, by default the built-in server.
+ * directory. Without a command, it runs the `server` command, and a
+ * server name as the command, like `cserve frankenphp`, runs that one.
  *
  * @internal
  */
@@ -24,25 +24,16 @@ final class Standalone
 	public static function run(array $argv, string $cwd, ?Io $io = null): int
 	{
 		$io ??= new Io();
-		$config = ProjectConfig::load($cwd);
-
-		if (is_string($config)) {
-			$io->error($config);
-
-			return 1;
-		}
-
-		$argv = self::argv($argv, $config->server);
+		$argv = self::argv($argv);
 		$docroot = self::docroot($cwd);
 
-		if (in_array($argv[1] ?? '', ProjectConfig::SERVERS, true)) {
+		if (($argv[1] ?? '') === 'server') {
 			self::announce($docroot, $cwd, $io);
 		}
 
 		$_SERVER['argv'] = $argv;
 		$commands = new Commands([
 			new Server($docroot),
-			new FrankenPhp($docroot),
 			new FrankenInstall(),
 			new Reload(),
 		]);
@@ -51,21 +42,25 @@ final class Standalone
 	}
 
 	/**
-	 * Runs the given server command without a command or with only
-	 * options. `-h` means `--host` there, so a leading one asks for help
-	 * instead.
+	 * Runs the server command without a command, with only options, or
+	 * with a server name. `-h` means `--host` there, so a leading one asks
+	 * for help instead.
 	 *
 	 * @param list<string> $argv
 	 * @return list<string>
 	 */
-	public static function argv(array $argv, string $server = 'server'): array
+	public static function argv(array $argv): array
 	{
 		$script = $argv[0] ?? 'cserve';
 		$first = $argv[1] ?? null;
 
 		return array_values(match (true) {
 			$first === '--help' || $first === '-h' => [$script, 'help', ...array_slice($argv, 2)],
-			$first === null || str_starts_with($first, '-') => [$script, $server, ...array_slice($argv, 1)],
+			$first === null || str_starts_with($first, '-') || in_array($first, ProjectConfig::SERVERS, true) => [
+				$script,
+				'server',
+				...array_slice($argv, 1),
+			],
 			default => $argv,
 		});
 	}

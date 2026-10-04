@@ -36,19 +36,15 @@ final class StandaloneTest extends TestCase
 		$this->assertSame($expected, Standalone::argv($argv));
 	}
 
-	public function testConfiguredServerIsTheDefaultCommand(): void
-	{
-		$this->assertSame(['cserve', 'frankenphp'], Standalone::argv(['cserve'], 'frankenphp'));
-		$this->assertSame(['cserve', 'frankenphp', '-o'], Standalone::argv(['cserve', '-o'], 'frankenphp'));
-		$this->assertSame(['cserve', 'server', '-o'], Standalone::argv(['cserve', 'server', '-o'], 'frankenphp'));
-	}
-
 	public static function arguments(): array
 	{
 		return [
 			'nothing' => [['cserve'], ['cserve', 'server']],
 			'options' => [['cserve', '--port=8000', '-o'], ['cserve', 'server', '--port=8000', '-o']],
-			'command' => [['cserve', 'frankenphp', '--worker'], ['cserve', 'frankenphp', '--worker']],
+			'server' => [['cserve', 'frankenphp', '--worker'], ['cserve', 'server', 'frankenphp', '--worker']],
+			'builtin' => [['cserve', 'builtin', '-o'], ['cserve', 'server', 'builtin', '-o']],
+			'command' => [['cserve', 'reload', '-q'], ['cserve', 'reload', '-q']],
+			'explicit server' => [['cserve', 'server', 'frankenphp'], ['cserve', 'server', 'frankenphp']],
 			'help' => [['cserve', '--help'], ['cserve', 'help']],
 			'short help' => [['cserve', '-h', 'reload'], ['cserve', 'help', 'reload']],
 		];
@@ -84,7 +80,7 @@ final class StandaloneTest extends TestCase
 		[$exit, $output] = $this->runBinary(['commands']);
 
 		$this->assertSame(0, $exit);
-		$this->assertSame("frankenphp\nfrankenphp:install\ninstall\nreload\nserver\n", $output);
+		$this->assertSame("frankenphp:install\ninstall\nreload\nserver\n", $output);
 	}
 
 	public function testOptionsGoToTheServerCommand(): void
