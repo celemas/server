@@ -35,18 +35,26 @@ final class ProjectIniTest extends TestCase
 	public function testProjectWithoutSettingsLoadsNothing(): void
 	{
 		$this->assertNull(ProjectIni::load($this->dir));
+
+		// Only ini files count, like PHP only reads those.
+		mkdir("{$this->dir}/.cserve/php", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/php/README.md", "Settings\n");
+
+		$this->assertNull(ProjectIni::load($this->dir));
 	}
 
-	public function testUnreadableSettingsFail(): void
+	public function testSettingsAreTheIniFilesOfTheProjectDirectory(): void
 	{
-		if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
-			$this->markTestSkipped('Root reads every file.');
-		}
+		mkdir("{$this->dir}/.cserve/php", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/php/xdebug.ini", "xdebug.mode=debug\n");
+		file_put_contents("{$this->dir}/.cserve/php/local.ini", "memory_limit=321M\n");
+		file_put_contents("{$this->dir}/.cserve/php/notes.txt", "Settings\n");
 
-		file_put_contents("{$this->dir}/cserve.ini", "memory_limit=256M\n");
-		chmod("{$this->dir}/cserve.ini", 0o000);
+		$ini = ProjectIni::load($this->dir);
 
-		$this->assertStringStartsWith('Failed to load cserve.ini', (string) ProjectIni::load($this->dir));
+		$this->assertInstanceOf(ProjectIni::class, $ini);
+		$this->assertSame("{$this->dir}/.cserve/php", $ini->dir);
+		$this->assertSame(['local.ini', 'xdebug.ini'], $ini->files);
 	}
 
 	public function testEnvironmentScansTheProjectSettingsLast(): void
@@ -68,8 +76,10 @@ final class ProjectIniTest extends TestCase
 
 	public function testProjectSettingsOverrideThePackageSettings(): void
 	{
-		// The package's settings revalidate on every request.
-		file_put_contents("{$this->dir}/cserve.ini", "opcache.revalidate_freq=7\nmemory_limit=321M\n");
+		// The package's settings revalidate on every request; later files win.
+		mkdir("{$this->dir}/.cserve/php", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/php/a.ini", "opcache.revalidate_freq=7\nmemory_limit=123M\n");
+		file_put_contents("{$this->dir}/.cserve/php/b.ini", "memory_limit=321M\n");
 		file_put_contents(
 			"{$this->dir}/index.php",
 			"<?php echo ini_get('opcache.revalidate_freq'), ' ', ini_get('memory_limit');",
@@ -96,24 +106,21 @@ final class ProjectIniTest extends TestCase
 			$this->assertSame('7 321M', $response);
 		} finally {
 			$server->close(terminate: true);
-			$ini->remove();
 		}
-
-		$this->assertDirectoryDoesNotExist($ini->dir);
 	}
 
 	#[DataProvider('commands')]
 	public function testCommandsServeWithTheProjectSettings(string $command): void
 	{
-		file_put_contents("{$this->dir}/cserve.ini", "memory_limit=321M\n");
+		mkdir("{$this->dir}/.cserve/php", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/php/local.ini", "memory_limit=321M\n");
 		$executable = "{$this->dir}/backend";
 		// Answers the version queries, and records the settings it was started with.
 		file_put_contents(
 			$executable,
 			"#!/bin/sh\n"
 				. "case \"\$1\" in -n|version|php-cli) exit 0;; esac\n"
-				. "printf '%s' \"\$PHP_INI_SCAN_DIR\" > {$this->dir}/scan\n"
-				. "cat \"\${PHP_INI_SCAN_DIR##*:}/cserve.ini\" > {$this->dir}/copy\n",
+				. "printf '%s' \"\$PHP_INI_SCAN_DIR\" > {$this->dir}/scan\n",
 		);
 		chmod($executable, 0o755);
 		$port = Ports::ephemeral();
@@ -132,16 +139,15 @@ final class ProjectIniTest extends TestCase
 		}
 
 		$this->assertSame(0, $exit, $io->errorOutput());
-		$this->assertStringContainsString("\nPHP settings: cserve.ini\n", $io->output());
-		$this->assertSame("memory_limit=321M\n", file_get_contents("{$this->dir}/copy"));
+		$this->assertStringContainsString("\nPHP settings: .cserve/php/local.ini\n", $io->output());
 		$scan = explode(PATH_SEPARATOR, (string) file_get_contents("{$this->dir}/scan"));
-		$this->assertSame(dirname(__DIR__) . '/src/ini', $scan[count($scan) - 2]);
-		$this->assertDirectoryDoesNotExist($scan[count($scan) - 1]);
+		$this->assertSame([dirname(__DIR__) . '/src/ini', "{$this->dir}/.cserve/php"], array_slice($scan, -2));
 	}
 
 	public function testFrankenPhpProbesExtensionsWithProjectSettings(): void
 	{
-		file_put_contents("{$this->dir}/cserve.ini", "user_agent=project-extension\n");
+		mkdir("{$this->dir}/.cserve/php", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/php/extensions.ini", "user_agent=project-extension\n");
 		file_put_contents("{$this->dir}/composer.json", json_encode([
 			'require' => ['ext-project-extension' => '*', 'ext-missing' => '*'],
 		]));

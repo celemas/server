@@ -15,11 +15,7 @@ final class FrankenRuntime extends Runtime
 	#[Override]
 	protected function start(int $port, ?string $liveReload): Process|string
 	{
-		$error = $this->loadIni();
-
-		if ($error !== null) {
-			return $error;
-		}
+		$this->loadIni();
 
 		if ($this->options->workers !== null && $this->options->watch) {
 			$adminPort = Ports::ephemeral();

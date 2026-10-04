@@ -67,14 +67,13 @@ Both commands start by printing the address they serve, with the PHP version for
 
 Both commands make OPcache check for changed files on every request, so a request right after saving a file never runs its previous version. They add the `src/ini` directory of this package to `PHP_INI_SCAN_DIR` for that, after the directories PHP scans anyway.
 
-For settings of its own, a project puts a `cserve.ini` into the working directory the command starts in, like the project root:
+For settings of its own, a project puts ini files into `.cserve/php/` of the working directory the command starts in, like the project root. For example, `.cserve/php/settings.ini`:
 
 ```ini
 memory_limit = 512M
-xdebug.mode = debug
 ```
 
-Both commands read it after the system's settings and those of this package, so its values win, and announce it at startup. Other ini files in the directory are not read. PHP reads the settings once, so changes take effect when the command restarts.
+Both commands add the directory to `PHP_INI_SCAN_DIR` after the system's and this package's directories, so its values win, and announce its files at startup. PHP reads every `*.ini` file in it in alphabetical order, so a later file overrides an earlier one. Settings for a single developer, like `xdebug.mode = debug`, go into a file of their own that the project's `.gitignore` excludes, like `.cserve/php/local.ini`. PHP reads the settings once, so changes take effect when the command restarts.
 
 ## Live reload
 
