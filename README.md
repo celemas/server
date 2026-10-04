@@ -29,12 +29,22 @@ It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.p
 
 The commands:
 
-- `server` runs the application with the PHP CLI's built-in server. It is the default: `cserve` without a command, or with only options, runs it.
+- `server` runs the application with the PHP CLI's built-in server. It is the default: `cserve` without a command, or with only options, runs it, unless the project [sets another server](#default-server).
 - `frankenphp` runs it with FrankenPHP, in classic mode or, with `--worker`, in [worker mode](#worker-mode).
 - `frankenphp:install` downloads FrankenPHP; see [Installing FrankenPHP](#installing-frankenphp).
 - `reload` serves live reload for an application that runs elsewhere, like in a container; see [Live reload for other servers](#live-reload-for-other-servers).
 
 `vendor/bin/cserve --help`, or `-h` before any command, lists the commands, and `vendor/bin/cserve help <command>` describes one. After a command, `-h` sets the host.
+
+### Default server
+
+A project that serves with FrankenPHP sets it as the default in `.cserve/config.ini`:
+
+```ini
+server = frankenphp
+```
+
+`cserve` then runs `frankenphp` without a command, or with only options. The setting takes `server` or `frankenphp`, and an explicit command still runs as given, like `vendor/bin/cserve server` for step debugging with Xdebug. Unknown settings and invalid values are errors. [Run scripts](#run-scripts-with-celemaconsole) do not read the file.
 
 ### Options
 

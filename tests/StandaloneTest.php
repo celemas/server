@@ -36,6 +36,13 @@ final class StandaloneTest extends TestCase
 		$this->assertSame($expected, Standalone::argv($argv));
 	}
 
+	public function testConfiguredServerIsTheDefaultCommand(): void
+	{
+		$this->assertSame(['cserve', 'frankenphp'], Standalone::argv(['cserve'], 'frankenphp'));
+		$this->assertSame(['cserve', 'frankenphp', '-o'], Standalone::argv(['cserve', '-o'], 'frankenphp'));
+		$this->assertSame(['cserve', 'server', '-o'], Standalone::argv(['cserve', 'server', '-o'], 'frankenphp'));
+	}
+
 	public static function arguments(): array
 	{
 		return [
@@ -104,6 +111,37 @@ final class StandaloneTest extends TestCase
 		$this->assertSame(0, $exit, $output);
 		$this->assertStringContainsString("Public directory: public\n", $output);
 		$this->assertStringContainsString("php -S 127.0.0.1:{$port} -t {$this->dir}/public ", $output);
+	}
+
+	public function testServesWithTheConfiguredServer(): void
+	{
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "server = frankenphp\n");
+		mkdir("{$this->dir}/bin");
+		// Reports how FrankenPHP would run, and answers its other queries.
+		file_put_contents(
+			"{$this->dir}/bin/frankenphp",
+			"#!/bin/sh\n[ \"\$1\" = run ] && echo \"frankenphp \$1\" >&2\nexit 0\n",
+		);
+		chmod("{$this->dir}/bin/frankenphp", 0o755);
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+
+		[$exit, $output] = $this->runBinary(['--host=127.0.0.1', "--port={$port}", '--no-watch'], "{$this->dir}/bin");
+
+		$this->assertSame(0, $exit, $output);
+		$this->assertStringContainsString("frankenphp run\n", $output);
+	}
+
+	public function testInvalidConfigIsAnError(): void
+	{
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "server = caddy\n");
+
+		[$exit, $output] = $this->runBinary([]);
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString("Invalid server 'caddy' in .cserve/config.ini", $output);
 	}
 
 	public function testWarnsWhenServingTheWholeDirectory(): void

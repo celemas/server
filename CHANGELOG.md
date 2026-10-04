@@ -10,7 +10,7 @@
 - `frankenphp` prints the FrankenPHP and PHP versions at startup, and warns about extensions the project's `composer.json` requires that FrankenPHP's embedded PHP lacks.
 - Both commands run companion processes alongside the server, like asset watchers, configured with the new `companions` argument. Their output appears with their names; when one exits, the server keeps running, and they stop with the server, together with the processes they start. `--no-companions` skips them.
 - The new `reload` command, `Celema\Server\Reload`, watches files and serves live reload without serving the application, for applications that run elsewhere, like in a container. Its endpoint listens on a fixed port, and with `--admin=<url>`, changes restart the workers of a FrankenPHP served elsewhere through its admin API.
-- `vendor/bin/cserve` runs the commands for any PHP application without a run script of its own. It serves the first of `public/`, `web/`, or `htdocs/` with an `index.php`, and runs `server` without a command.
+- `vendor/bin/cserve` runs the commands for any PHP application without a run script of its own. It serves the first of `public/`, `web/`, or `htdocs/` with an `index.php`, and runs `server` without a command, or the server a project sets in `.cserve/config.ini`, like `server = frankenphp`.
 - Both commands read the project's own PHP settings from the `*.ini` files in `.cserve/php/` of the working directory, after the system's settings and the package's.
 - `server --processes=<count>` serves requests concurrently with the given number of PHP server processes through `PHP_CLI_SERVER_WORKERS`. The count must be a positive integer; `--processes=1` also overrides an inherited setting.
 

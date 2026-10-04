@@ -11,23 +11,31 @@ use Celema\Console\Runner;
 /**
  * The `cserve` command line: the commands of this package without
  * a run script of one's own, for any PHP application with a public
- * directory. Without a command, it runs the built-in server.
+ * directory. Without a command, it runs the server the project's
+ * `.cserve/config.ini` sets, by default the built-in server.
  *
  * @internal
  */
 final class Standalone
 {
 	private const array DOCROOTS = ['public', 'web', 'htdocs'];
-	private const array SERVERS = ['server', 'frankenphp'];
 
 	/** @param list<string> $argv */
 	public static function run(array $argv, string $cwd, ?Io $io = null): int
 	{
 		$io ??= new Io();
-		$argv = self::argv($argv);
+		$config = ProjectConfig::load($cwd);
+
+		if (is_string($config)) {
+			$io->error($config);
+
+			return 1;
+		}
+
+		$argv = self::argv($argv, $config->server);
 		$docroot = self::docroot($cwd);
 
-		if (in_array($argv[1] ?? '', self::SERVERS, true)) {
+		if (in_array($argv[1] ?? '', ProjectConfig::SERVERS, true)) {
 			self::announce($docroot, $cwd, $io);
 		}
 
@@ -43,20 +51,21 @@ final class Standalone
 	}
 
 	/**
-	 * Runs the server command without a command or with only options.
-	 * `-h` means `--host` there, so a leading one asks for help instead.
+	 * Runs the given server command without a command or with only
+	 * options. `-h` means `--host` there, so a leading one asks for help
+	 * instead.
 	 *
 	 * @param list<string> $argv
 	 * @return list<string>
 	 */
-	public static function argv(array $argv): array
+	public static function argv(array $argv, string $server = 'server'): array
 	{
 		$script = $argv[0] ?? 'cserve';
 		$first = $argv[1] ?? null;
 
 		return array_values(match (true) {
 			$first === '--help' || $first === '-h' => [$script, 'help', ...array_slice($argv, 2)],
-			$first === null || str_starts_with($first, '-') => [$script, 'server', ...array_slice($argv, 1)],
+			$first === null || str_starts_with($first, '-') => [$script, $server, ...array_slice($argv, 1)],
 			default => $argv,
 		});
 	}
