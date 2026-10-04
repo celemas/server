@@ -7,6 +7,7 @@ namespace Celema\Server\Tests;
 use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Server\Companion;
+use Celema\Server\ErrorTrap;
 use Celema\Server\Ports;
 use Celema\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -148,10 +149,27 @@ final class CompanionTest extends TestCase
 	private function assertStopped(int $pid): void
 	{
 		// A killed process may take a moment to be reaped.
-		for ($i = 0; $i < 50 && posix_kill($pid, 0); $i++) {
+		for ($i = 0; $i < 50 && self::running($pid); $i++) {
 			usleep(20_000);
 		}
 
-		$this->assertFalse(posix_kill($pid, 0), "Process {$pid} still runs.");
+		$this->assertFalse(self::running($pid), "Process {$pid} still runs.");
+	}
+
+	/**
+	 * Whether the process runs. A zombie has stopped, but stays until its
+	 * parent reaps it: an orphan's new parent may never do so, like the
+	 * `tail` that runs as the init process of a CI container.
+	 */
+	private static function running(int $pid): bool
+	{
+		if (!posix_kill($pid, 0)) {
+			return false;
+		}
+
+		// The state follows the command name, which may contain spaces.
+		$stat = ErrorTrap::run(static fn(): string|false => file_get_contents("/proc/{$pid}/stat"));
+
+		return !is_string($stat) || preg_match('/\) Z /', $stat) !== 1;
 	}
 }
