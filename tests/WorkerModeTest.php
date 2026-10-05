@@ -8,6 +8,7 @@ use Celema\Console\Args;
 use Celema\Console\BufferedIo;
 use Celema\Console\Commands;
 use Celema\Console\Runner;
+use Celema\Server\ErrorTrap;
 use Celema\Server\LiveReload;
 use Celema\Server\Options;
 use Celema\Server\Pending;
@@ -225,17 +226,20 @@ final class WorkerModeTest extends TestCase
 	 */
 	public function testBackendOutputIsRelayedWhileTheRestartIsPending(): void
 	{
-		$adminPort = Ports::ephemeral();
 		$reloadPort = Ports::ephemeral();
-		$this->assertIsInt($adminPort);
 		$this->assertIsInt($reloadPort);
 		$dir = sys_get_temp_dir() . '/celema-relay-' . bin2hex(random_bytes(4));
 		mkdir($dir);
 		$page = "{$dir}/page.php";
 		file_put_contents($page, 'content');
+		// The admin API stand-in picks its own port and reports it once it
+		// listens, so no other process can take the port in between.
 		file_put_contents("{$dir}/backend.php", <<<'PHP'
 			<?php
-			$server = stream_socket_server('tcp://127.0.0.1:' . $argv[1]);
+			$server = stream_socket_server('tcp://127.0.0.1:0');
+			$name = (string) stream_socket_get_name($server, false);
+			file_put_contents("{$argv[1]}.tmp", substr($name, strrpos($name, ':') + 1));
+			rename("{$argv[1]}.tmp", $argv[1]);
 			$client = stream_socket_accept($server, 10);
 			$request = '';
 
@@ -253,32 +257,33 @@ final class WorkerModeTest extends TestCase
 			// Keeps running until the relay read the answer.
 			usleep(500_000);
 			PHP);
-		$events = [];
-		$liveReload = LiveReload::listen(
-			'127.0.0.1',
-			$reloadPort,
-			[$page],
-			static function (string $event) use (&$events): void {
-				$events[] = "reload {$event}";
-			},
-			static function () use ($adminPort, &$events): Pending {
-				return WorkerRestart::send(
-					'127.0.0.1',
-					$adminPort,
-					static function (?string $error) use (&$events): void {
-						$events[] = $error ?? 'restarted';
-					},
-					5,
-				);
-			},
-		);
-		$this->assertInstanceOf(LiveReload::class, $liveReload);
-		$backend = Process::start([PHP_BINARY, "{$dir}/backend.php", (string) $adminPort]);
+		$backend = Process::start([PHP_BINARY, "{$dir}/backend.php", "{$dir}/port"]);
 		$this->assertInstanceOf(Process::class, $backend);
+		$events = [];
 		$lines = 0;
+		$liveReload = null;
 
 		try {
-			$this->waitForPort($adminPort);
+			$adminPort = $this->reportedPort("{$dir}/port");
+			$liveReload = LiveReload::listen(
+				'127.0.0.1',
+				$reloadPort,
+				[$page],
+				static function (string $event) use (&$events): void {
+					$events[] = "reload {$event}";
+				},
+				static function () use ($adminPort, &$events): Pending {
+					return WorkerRestart::send(
+						'127.0.0.1',
+						$adminPort,
+						static function (?string $error) use (&$events): void {
+							$events[] = $error ?? 'restarted';
+						},
+						5,
+					);
+				},
+			);
+			$this->assertInstanceOf(LiveReload::class, $liveReload);
 			file_put_contents($page, 'changed content');
 			Relay::run([$backend->binding([2 => static function () use (&$lines): void {
 				$lines++;
@@ -288,7 +293,11 @@ final class WorkerModeTest extends TestCase
 			$this->assertSame(20_000, $lines);
 		} finally {
 			$backend->close(terminate: true);
-			$liveReload->close();
+
+			if ($liveReload instanceof LiveReload) {
+				$liveReload->close();
+			}
+
 			array_map(unlink(...), glob("{$dir}/*") ?: []);
 			rmdir($dir);
 		}
@@ -464,8 +473,16 @@ final class WorkerModeTest extends TestCase
 
 	private function waitForPort(int $port): void
 	{
-		for ($i = 0; $i < 100; $i++) {
-			if (Ports::unavailableMessage('127.0.0.1', $port) !== null) {
+		for ($i = 0; $i < 250; $i++) {
+			// Unlike binding the port, connecting cannot keep the server from binding it.
+			$client = ErrorTrap::run(static fn(): mixed => stream_socket_client(
+				"tcp://127.0.0.1:{$port}",
+				timeout: 0.1,
+			));
+
+			if (is_resource($client)) {
+				fclose($client);
+
 				return;
 			}
 
@@ -473,5 +490,17 @@ final class WorkerModeTest extends TestCase
 		}
 
 		$this->fail("The admin API stand-in did not listen on port {$port}");
+	}
+
+	/** Waits for the port a stand-in reports in the given file once it listens. */
+	private function reportedPort(string $file): int
+	{
+		for ($i = 0; $i < 250 && !is_file($file); $i++) {
+			usleep(20_000);
+		}
+
+		$this->assertFileExists($file, 'The admin API stand-in did not report its port.');
+
+		return (int) file_get_contents($file);
 	}
 }
