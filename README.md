@@ -183,11 +183,7 @@ For uninterrupted load or memory-leak testing, use `cserve frankenphp --worker=8
 
 ## Run scripts with celema/console
 
-`cserve` covers most projects. Projects with a [`celema/console`](https://codefloe.com/celema/console) run script of their own can register the commands there instead, which also configures what `cserve` leaves at its defaults: the public directory, the default port and watch patterns, a route prefix, a pinned FrankenPHP version, and companion processes. Require `celema/console` in the project for that rather than relying on this package to bring it along:
-
-```bash
-composer require --dev celema/console
-```
+`cserve` covers most projects. Projects with a [`celema/console`](https://codefloe.com/celema/console) run script of their own can register the commands there instead, which also configures what `cserve` leaves at its defaults: the public directory, the default port and watch patterns, a route prefix, a pinned FrankenPHP version, and companion processes. This package installs `celema/console` along with it:
 
 ```php
 #!/usr/bin/env php
