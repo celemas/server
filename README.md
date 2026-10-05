@@ -243,7 +243,7 @@ new Server($docroot, companions: [
 
 Their output appears after their name, without colors and with only the last state of lines that redraw themselves, like progress bars. When a companion exits by itself, the command reports its exit code and keeps serving. Companions stop together with the server, including the processes they start, like the one `npx` runs. Their input stays open while the server runs, as watchers like esbuild's stop when it closes. Pass `--no-companions` to start the server without them, for example when the watchers already run elsewhere.
 
-Each companion and the server run in their own process group, given the `pcntl` and `posix` extensions, so stopping the command stops every process they started, like the processes of `server builtin --processes`.
+Each companion and the server run in their own process group, given the `pcntl` and `posix` extensions, including shared modules like Debian's `posix`, so stopping the command stops every process they started, like the processes of `server builtin --processes`.
 
 ## Request log protocol
 

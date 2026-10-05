@@ -30,7 +30,7 @@
 ### Fixed
 
 - Ctrl+C, or a SIGTERM sent to the command, stops the backend and removes the temporary FrankenPHP configuration, given the `pcntl` extension. The configuration was left in the temporary directory, and a SIGTERM sent to the command alone left the backend running. The command exits with 130 or 143, as shells report a stopped process.
-- Stopping the command stops every process of the server, like the forked processes of a PHP server with multiple processes, which kept the port taken. The server runs in its own process group, given the `pcntl` and `posix` extensions.
+- Stopping the command stops every process of the server, like the forked processes of a PHP server with multiple processes, which kept the port taken. The server runs in its own process group, given the `pcntl` and `posix` extensions, also where they are shared modules, as on Debian.
 - The server process no longer inherits the live reload endpoint's listening socket, which kept the live reload port taken when the server outlived the command.
 - The built-in server's request log renders the lines of a PHP server that runs multiple processes, for example through an inherited `PHP_CLI_SERVER_WORKERS`. The process ID prefix of these lines left request lines unrendered and connection lines visible.
 

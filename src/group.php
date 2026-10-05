@@ -5,9 +5,15 @@ declare(strict_types=1);
 // Runs a command as the leader of a new process group, so the dev server
 // can stop it together with every process it starts, like the forked
 // processes of the PHP server; see ProcessGroup. Runs without ini files, and
-// `--check` reports whether this PHP can do it.
+// `--check` reports whether this PHP can do it: `ok`, or else the missing
+// extensions, like `posix`, which some distributions build as shared
+// modules that only ini files load.
 if (($argv[1] ?? '') === '--check') {
-	echo function_exists('pcntl_exec') && function_exists('posix_setpgid') ? 'ok' : 'no';
+	$missing = array_keys(array_filter(
+		['pcntl' => function_exists('pcntl_exec'), 'posix' => function_exists('posix_setpgid')],
+		static fn(bool $available): bool => !$available,
+	));
+	echo $missing === [] ? 'ok' : implode(' ', $missing);
 
 	exit(0);
 }
