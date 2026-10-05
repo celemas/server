@@ -40,8 +40,9 @@ final class ProcessGroupTest extends TestCase
 
 	public static function missingExtensions(): array
 	{
+		// Without ini files, whether anything is missing depends on how PHP
+		// was built; disabled functions are missing everywhere.
 		return [
-			'none' => [[], 'ok'],
 			'posix' => [['posix_setpgid'], 'posix'],
 			'both' => [['pcntl_exec', 'posix_setpgid'], 'pcntl posix'],
 		];
