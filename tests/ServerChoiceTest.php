@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Server\Ports;
 use Celema\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -54,9 +54,9 @@ final class ServerChoiceTest extends TestCase
 			file_put_contents("{$this->dir}/.cserve/config.local.ini", "server = {$local}\n");
 		}
 
-		[$exit, $io] = $this->serve($args, $default);
+		[$exit, $buffer] = $this->serve($args, $default);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertFileExists("{$this->dir}/served-{$expected}");
 		$this->assertFileDoesNotExist("{$this->dir}/served-" . ($expected === 'php' ? 'frankenphp' : 'php'));
 	}
@@ -75,30 +75,30 @@ final class ServerChoiceTest extends TestCase
 
 	public function testUnknownServerIsAnError(): void
 	{
-		[$exit, $io] = $this->serve(['caddy']);
+		[$exit, $buffer] = $this->serve(['caddy']);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Unknown server 'caddy': use builtin or frankenphp.", $io->errorOutput());
+		$this->assertStringContainsString("Unknown server 'caddy': use builtin or frankenphp.", $buffer->errorOutput());
 	}
 
 	public function testInvalidProjectSettingIsAnError(): void
 	{
 		file_put_contents("{$this->dir}/.cserve/config.ini", "server = caddy\n");
 
-		[$exit, $io] = $this->serve([]);
+		[$exit, $buffer] = $this->serve([]);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid server 'caddy' in .cserve/config.ini", $io->errorOutput());
+		$this->assertStringContainsString("Invalid server 'caddy' in .cserve/config.ini", $buffer->errorOutput());
 	}
 
 	/** @param list<string> $args */
 	#[DataProvider('foreignOptions')]
 	public function testOptionsOfTheOtherServerAreErrors(array $args, string $expected): void
 	{
-		[$exit, $io] = $this->serve($args);
+		[$exit, $buffer] = $this->serve($args);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString($expected, $io->errorOutput());
+		$this->assertStringContainsString($expected, $buffer->errorOutput());
 		$this->assertFileDoesNotExist("{$this->dir}/served-php");
 		$this->assertFileDoesNotExist("{$this->dir}/served-frankenphp");
 	}
@@ -121,7 +121,7 @@ final class ServerChoiceTest extends TestCase
 	 * Runs the command in the project directory.
 	 *
 	 * @param list<string> $args
-	 * @return array{int, BufferedIo}
+	 * @return array{int, Buffer}
 	 */
 	private function serve(array $args, string $default = 'builtin'): array
 	{
@@ -137,12 +137,13 @@ final class ServerChoiceTest extends TestCase
 		chdir($this->dir);
 
 		try {
-			$io = new BufferedIo();
-			$exit = $command(new Args([...$args, '--host=127.0.0.1', "--port={$port}", '--no-watch']), $io);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run($command, $io, [...$args, '--host=127.0.0.1', "--port={$port}", '--no-watch']);
 		} finally {
 			chdir($cwd);
 		}
 
-		return [$exit, $io];
+		return [$exit, $buffer];
 	}
 }

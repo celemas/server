@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Celema\Server;
 
 use Celema\Console\Arg;
-use Celema\Console\Args;
 use Celema\Console\Command;
 use Celema\Console\Io;
 
 /** @api */
 #[Command('frankenphp:install', 'Download FrankenPHP into the cache all projects share', group: 'FrankenPHP')]
-#[Arg('version', 'The version to install, like 1.12.7. Defaults to the latest release.', optional: true)]
 final class FrankenInstall
 {
-	public function __invoke(Args $args, Io $io): int
-	{
-		$argument = $args->positional(0);
+	public function __invoke(
+		Io $io,
+		#[Arg('The version to install, like 1.12.7. Defaults to the latest release.')]
+		?string $version = null,
+	): int {
+		$argument = $version;
 		$version = $argument === null ? null : FrankenCache::version($argument);
 
 		if ($argument !== null && $version === null) {
@@ -55,14 +56,14 @@ final class FrankenInstall
 
 	private static function installed(FrankenCache $cache, string $version, Io $io): int
 	{
-		$io->info("FrankenPHP {$version} is already installed: {$cache->binary($version)}");
+		$io->line('FrankenPHP %s is already installed: %s', $version, $cache->binary($version));
 
 		return 0;
 	}
 
 	private static function fail(Io $io, string $message): int
 	{
-		$io->error($message);
+		$io->error('%s', $message);
 
 		return 1;
 	}
@@ -79,19 +80,20 @@ final class FrankenInstall
 		}
 
 		if ($error !== null) {
-			$io->error($error);
+			$io->error('%s', $error);
 
 			return 1;
 		}
 
-		$io->success("Installed FrankenPHP {$release->version}: {$cache->binary($release->version)}");
+		$io->success('Installed FrankenPHP %s: %s', $release->version, $cache->binary($release->version));
 		$path = Executable::find('frankenphp');
 
 		// Without a pinned version, a FrankenPHP on PATH takes precedence.
 		if ($path !== null) {
-			$io->info(
-				"FrankenPHP runs {$path} from PATH, unless a run script pins this version: "
-					. "new Server(\$docroot, version: '{$release->version}')",
+			$io->line(
+				"FrankenPHP runs %s from PATH, unless a run script pins this version: new Server(\$docroot, version: '%s')",
+				$path,
+				$release->version,
 			);
 		}
 

@@ -51,7 +51,7 @@ final class PhpRuntime extends Runtime
 	protected function started(): void
 	{
 		if ($this->options->debug) {
-			$this->io->echoln('<red>Xdebug session enabled</red>');
+			$this->io->line('<red>Xdebug session enabled</red>');
 		}
 	}
 }

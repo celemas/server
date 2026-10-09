@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
-use Celema\Console\Commands;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Console\Runner;
 use Celema\Server\Address;
 use Celema\Server\Browser;
@@ -98,27 +97,29 @@ final class ServerTest extends TestCase
 
 	public function testFrankenPhpCommandReportsMissingExecutable(): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'))(
-			new Args([]),
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(
+			new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'),
 			$io,
 		);
 
 		$this->assertSame(1, $exit);
-		$this->assertSame('', $io->output());
+		$this->assertSame('', $buffer->output());
 		$this->assertStringContainsString(
 			"The FrankenPHP executable '__missing_frankenphp_binary__' was not found.",
-			$io->errorOutput(),
+			$buffer->errorOutput(),
 		);
 	}
 
 	public function testFrankenPhpCommandRejectsInvalidOptions(): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Server('/tmp/public', server: 'frankenphp'))(new Args(['--port=foo']), $io);
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(new Server('/tmp/public', server: 'frankenphp'), $io, ['--port=70000']);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
+		$this->assertStringContainsString("Port '70000' must be between 1 and 65535.", $buffer->errorOutput());
 	}
 
 	public function testFrankenPhpCommandRunsConfiguredExecutable(): void
@@ -151,14 +152,16 @@ final class ServerTest extends TestCase
 		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', server: 'frankenphp', routePrefix: '/prefix', frankenphp: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}"]),
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(
+				new Server('/tmp/public', server: 'frankenphp', routePrefix: '/prefix', frankenphp: $executable),
 				$io,
+				['--host=127.0.0.1', "--port={$port}"],
 			);
 
 			$this->assertSame(0, $exit);
-			$output = $io->output();
+			$output = $buffer->output();
 			$request = strpos($output, '200 GET /test');
 			$exception = strpos($output, 'RuntimeException: Boom');
 			$this->assertIsInt($request);
@@ -191,14 +194,12 @@ final class ServerTest extends TestCase
 		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', php: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}"]),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server('/tmp/public', php: $executable), $io, ['--host=127.0.0.1', "--port={$port}"]);
 
 			$this->assertSame(0, $exit);
-			$this->assertStringContainsString('200 GET /test', $io->output());
+			$this->assertStringContainsString('200 GET /test', $buffer->output());
 		} finally {
 			unlink($executable);
 		}
@@ -219,17 +220,15 @@ final class ServerTest extends TestCase
 		chmod($executable, 0o755);
 
 		try {
-			$io = new BufferedIo();
+			$buffer = new Buffer();
+			$io = new Io($buffer);
 			$backend = $command === 'builtin'
 				? new Server('/tmp/public', php: $executable)
 				: new Server('/tmp/public', server: 'frankenphp', frankenphp: $executable);
-			$exit = $backend(
-				new Args(['--host=127.0.0.1', '--no-watch']),
-				$io,
-			);
+			$exit = Cli::run($backend, $io, ['--host=127.0.0.1', '--no-watch']);
 
-			$this->assertSame(0, $exit, $io->errorOutput());
-			$this->assertSame("Serving http://127.0.0.1:2130\n", $io->output());
+			$this->assertSame(0, $exit, $buffer->errorOutput());
+			$this->assertSame("Serving http://127.0.0.1:2130\n", $buffer->output());
 		} finally {
 			unlink($executable);
 		}
@@ -244,19 +243,20 @@ final class ServerTest extends TestCase
 		$port = (int) substr($address, (int) strrpos($address, ':') + 1);
 
 		try {
-			$io = new BufferedIo();
+			$buffer = new Buffer();
+			$io = new Io($buffer);
 			$backend = $command === 'builtin'
 				? new Server('/tmp/public', php: PHP_BINARY)
 				: new Server('/tmp/public', server: 'frankenphp', frankenphp: PHP_BINARY);
-			$exit = $backend(new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']), $io);
+			$exit = Cli::run($backend, $io, ['--host=127.0.0.1', "--port={$port}", '--no-watch']);
 		} finally {
 			fclose($socket);
 		}
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $io->errorOutput());
-		$this->assertStringContainsString('Another server may still be running on it.', $io->errorOutput());
-		$this->assertSame('', $io->output());
+		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $buffer->errorOutput());
+		$this->assertStringContainsString('Another server may still be running on it.', $buffer->errorOutput());
+		$this->assertSame('', $buffer->output());
 	}
 
 	public function testServerAnnouncesItsAddressAndPhpVersion(): void
@@ -269,32 +269,32 @@ final class ServerTest extends TestCase
 		$port = $this->freePort();
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', php: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server('/tmp/public', php: $executable), $io, [
+				'--host=127.0.0.1',
+				"--port={$port}",
+				'--no-watch',
+				'--quiet',
+			]);
 
 			$this->assertSame(0, $exit);
-			$this->assertSame("Serving http://127.0.0.1:{$port} (PHP 8.5.0)\n", $io->output());
+			$this->assertSame("Serving http://127.0.0.1:{$port} (PHP 8.5.0)\n", $buffer->output());
 		} finally {
 			unlink($executable);
 		}
 	}
 
-	public function testOptionsUseCommandArguments(): void
+	public function testOptionsKeepTheGivenSettings(): void
 	{
-		$options = Options::from(
-			1983,
-			['**/*.php'],
-			new Args([
-				'--host=127.0.0.1',
-				'--port=8080',
-				'--filter=#health#',
-				'--debug',
-				'--quiet',
-				'--watch-files=**/*.twig',
-			]),
+		$options = new Options(
+			host: '127.0.0.1',
+			port: 8080,
+			filter: '#health#',
+			debug: true,
+			quiet: true,
+			watchFiles: ['**/*.twig'],
+			defaultWatch: ['**/*.php'],
 		);
 
 		$this->assertSame('127.0.0.1', $options->host);
@@ -444,11 +444,12 @@ final class ServerTest extends TestCase
 		$_SERVER['argv'] = ['run', 'server', $command, '--watch-files'];
 
 		try {
-			$io = new BufferedIo();
-			$commands = new Commands([new Server('/tmp/public')]);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$commands = [new Server('/tmp/public')];
 
-			$this->assertSame(1, new Runner($commands, $io)->run());
-			$this->assertStringContainsString("Option '--watch-files' requires a value", $io->errorOutput());
+			$this->assertSame(2, new Runner($commands, $io)->run());
+			$this->assertStringContainsString("Option '--watch-files' requires a value", $buffer->errorOutput());
 		} finally {
 			$_SERVER['argv'] = $argv;
 		}
@@ -469,16 +470,18 @@ final class ServerTest extends TestCase
 		$this->assertIsString($executable);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', php: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", "--reload-port={$port}"]),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server('/tmp/public', php: $executable), $io, [
+				'--host=127.0.0.1',
+				"--port={$port}",
+				"--reload-port={$port}",
+			]);
 
 			$this->assertSame(1, $exit);
 			$this->assertStringContainsString(
 				'The live reload port must differ from the server port.',
-				$io->errorOutput(),
+				$buffer->errorOutput(),
 			);
 		} finally {
 			unlink($executable);
@@ -498,15 +501,17 @@ final class ServerTest extends TestCase
 		chmod($executable, 0o755);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server('/tmp/public', php: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$this->freePort()}", "--reload-port={$reloadPort}"]),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server('/tmp/public', php: $executable), $io, [
+				'--host=127.0.0.1',
+				"--port={$this->freePort()}",
+				"--reload-port={$reloadPort}",
+			]);
 
 			$this->assertSame(1, $exit);
-			$this->assertStringContainsString("Port 127.0.0.1:{$reloadPort} is not available", $io->errorOutput());
-			$this->assertStringContainsString('--reload-port=<port>', $io->errorOutput());
+			$this->assertStringContainsString("Port 127.0.0.1:{$reloadPort} is not available", $buffer->errorOutput());
+			$this->assertStringContainsString('--reload-port=<port>', $buffer->errorOutput());
 			$this->assertFileDoesNotExist($started);
 		} finally {
 			fclose($socket);
@@ -516,13 +521,6 @@ final class ServerTest extends TestCase
 				unlink($started);
 			}
 		}
-	}
-
-	public function testOpenFlagIsParsed(): void
-	{
-		$this->assertTrue(Options::from(1983, ['**/*.php'], new Args(['--open']))->open);
-		$this->assertTrue(Options::from(1983, ['**/*.php'], new Args(['-o']))->open);
-		$this->assertFalse(Options::from(1983, ['**/*.php'], new Args([]))->open);
 	}
 
 	public function testBrowserCommandMatchesTheOperatingSystem(): void
@@ -544,9 +542,9 @@ final class ServerTest extends TestCase
 	public function testReloadPortMustBeValid(): void
 	{
 		$this->expectException(InvalidArgumentException::class);
-		$this->expectExceptionMessage("Invalid port 'abc'.");
+		$this->expectExceptionMessage("Port '0' must be between 1 and 65535.");
 
-		Options::from(1983, ['**/*.php'], new Args(['--reload-port=abc']));
+		new Options(reloadPort: 0);
 	}
 
 	public function testWatchWarnsWhenNoFilesMatch(): void
@@ -558,12 +556,13 @@ final class ServerTest extends TestCase
 
 	public function testInvalidOptionsReportToStderrAndFail(): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Server('/tmp/public'))(new Args(['--port=foo']), $io);
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(new Server('/tmp/public'), $io, ['--port=0']);
 
 		$this->assertSame(1, $exit);
-		$this->assertSame('', $io->output());
-		$this->assertStringContainsString("Invalid port 'foo'.", $io->errorOutput());
+		$this->assertSame('', $buffer->output());
+		$this->assertStringContainsString("Port '0' must be between 1 and 65535.", $buffer->errorOutput());
 	}
 
 	public function testFilterRejectsInvalidRegex(): void
@@ -571,16 +570,17 @@ final class ServerTest extends TestCase
 		$this->expectException(InvalidArgumentException::class);
 		$this->expectExceptionMessage("Invalid filter regex '#oops'.");
 
-		Options::filter('#oops');
+		new Options(filter: '#oops');
 	}
 
 	public function testInvalidFilterReportsToStderrAndFails(): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Server('/tmp/public'))(new Args(['--filter=#oops']), $io);
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(new Server('/tmp/public'), $io, ['--filter=#oops']);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid filter regex '#oops'.", $io->errorOutput());
+		$this->assertStringContainsString("Invalid filter regex '#oops'.", $buffer->errorOutput());
 	}
 
 	public function testPortUnavailableMessageUsesNativeError(): void
@@ -604,12 +604,29 @@ final class ServerTest extends TestCase
 		$this->assertNull(Ports::unavailableMessage('127.0.0.1', $port));
 	}
 
-	public function testPortRejectsInvalidValue(): void
+	public function testNonNumericPortIsAUsageError(): void
 	{
-		$this->expectException(InvalidArgumentException::class);
-		$this->expectExceptionMessage("Invalid port 'foo'.");
+		$buffer = new Buffer();
+		$exit = Cli::run(new Server('/tmp/public'), new Io($buffer), ['--port=foo']);
 
-		Options::port('foo');
+		$this->assertSame(2, $exit);
+		$this->assertStringContainsString("Option '--port' expects an integer, got 'foo'", $buffer->errorOutput());
+	}
+
+	public function testCommandLineDeclaresTheServerOptions(): void
+	{
+		$buffer = new Buffer();
+
+		$this->assertSame(
+			0,
+			new Runner([new Server('/tmp/public')], new Io($buffer))->run(['cserve', 'help', 'server']),
+		);
+		$help = $buffer->output();
+		$this->assertStringContainsString('-o, --open', $help);
+		$this->assertStringContainsString('--worker[=<count>]', $help);
+		$this->assertStringContainsString('-p=<port>, --port=<port>', $help);
+		$this->assertStringContainsString('--no-watch', $help);
+		$this->assertStringContainsString('--watch-files=<glob>', $help);
 	}
 
 	public function testLiveReloadPortScalesThePublicPortTimesTen(): void
@@ -681,7 +698,7 @@ final class ServerTest extends TestCase
 
 	public function testWatchingUsesConfiguredPatternsByDefault(): void
 	{
-		$options = Options::from(1983, ['**/*.php', '**/*.css'], new Args([]));
+		$options = new Options(defaultWatch: ['**/*.php', '**/*.css']);
 
 		$this->assertTrue($options->watch);
 		$this->assertSame(['**/*.php', '**/*.css'], $options->watchFiles);
@@ -689,11 +706,7 @@ final class ServerTest extends TestCase
 
 	public function testWatchFilesValueOverridesConfiguredPattern(): void
 	{
-		$options = Options::from(
-			1983,
-			['**/*.php', '**/*.css'],
-			new Args(['--watch-files=**/*.twig']),
-		);
+		$options = new Options(watchFiles: ['**/*.twig'], defaultWatch: ['**/*.php', '**/*.css']);
 
 		$this->assertTrue($options->watch);
 		$this->assertSame(['**/*.twig'], $options->watchFiles);
@@ -701,14 +714,7 @@ final class ServerTest extends TestCase
 
 	public function testWatchFilesSupportsMultipleValues(): void
 	{
-		$options = Options::from(
-			1983,
-			Setup::DEFAULT_WATCH,
-			new Args([
-				'--watch-files=app/**/*.php',
-				'--watch-files=vendor/celema/cms/**/*.{js,css,php}',
-			]),
-		);
+		$options = new Options(watchFiles: ['app/**/*.php', 'vendor/celema/cms/**/*.{js,css,php}']);
 
 		$this->assertTrue($options->watch);
 		$this->assertSame(
@@ -724,10 +730,8 @@ final class ServerTest extends TestCase
 
 	public function testWatchPatternParsesBraceCommasCorrectly(): void
 	{
-		$options = Options::from(
-			1983,
-			'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celema/cms/**/*.{js,css,php}',
-			new Args([]),
+		$options = new Options(
+			defaultWatch: 'app/**/*.php, public/**/*.{js,php,css,jpg,png}, vendor/celema/cms/**/*.{js,css,php}',
 		);
 
 		$this->assertSame(
@@ -833,15 +837,16 @@ final class ServerTest extends TestCase
 		$_SERVER['argv'] = ['run', 'server', $command, '--host=127.0.0.1', "--port={$port}", ...$args];
 
 		try {
-			$io = new BufferedIo();
-			$commands = new Commands([
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$commands = [
 				new Server('/tmp/public', watch: $pattern, php: $executable, frankenphp: $executable),
-			]);
+			];
 			$exit = new Runner($commands, $io)->run();
 
-			$this->assertSame(0, $exit, $io->errorOutput());
+			$this->assertSame(0, $exit, $buffer->errorOutput());
 
-			return $io->output();
+			return $buffer->output();
 		} finally {
 			$_SERVER['argv'] = $argv;
 			unlink($executable);

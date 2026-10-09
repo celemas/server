@@ -62,7 +62,7 @@ final readonly class PhpOutput
 			return;
 		}
 
-		$this->io->echoln($this->io->escape($line));
+		$this->io->line('%s', $line);
 	}
 
 	private function request(string $line): void
@@ -75,7 +75,7 @@ final readonly class PhpOutput
 			|| preg_match('/^[\d.]+$/', $fields[3]) !== 1
 			|| preg_match('/^[ex-]{2}$/', $fields[4]) !== 1
 		) {
-			$this->io->echoln($this->io->escape($line));
+			$this->io->line('%s', $line);
 
 			return;
 		}

@@ -37,6 +37,6 @@ final readonly class ProjectIni
 	public function announce(Io $io): void
 	{
 		$files = implode(', ', array_map(static fn(string $file): string => self::DIR . "/{$file}", $this->files));
-		$io->echoln('<dim>PHP settings: ' . $io->escape($files) . '</dim>');
+		$io->line('<dim>PHP settings: ' . $io->escape($files) . '</dim>');
 	}
 }

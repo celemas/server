@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Server\ErrorTrap;
 use Celema\Server\Ports;
 use Celema\Server\Process;
@@ -128,17 +128,18 @@ final class ProjectIniTest extends TestCase
 		chdir($this->dir);
 
 		try {
-			$io = new BufferedIo();
+			$buffer = new Buffer();
+			$io = new Io($buffer);
 			$backend = $command === 'builtin'
 				? new Server('/tmp/public', php: $executable)
 				: new Server('/tmp/public', server: 'frankenphp', frankenphp: $executable);
-			$exit = $backend(new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']), $io);
+			$exit = Cli::run($backend, $io, ['--host=127.0.0.1', "--port={$port}", '--no-watch', '--quiet']);
 		} finally {
 			chdir($cwd);
 		}
 
-		$this->assertSame(0, $exit, $io->errorOutput());
-		$this->assertStringContainsString("\nPHP settings: .cserve/php/local.ini\n", $io->output());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString("\nPHP settings: .cserve/php/local.ini\n", $buffer->output());
 		$scan = explode(PATH_SEPARATOR, (string) file_get_contents("{$this->dir}/scan"));
 		$this->assertSame([dirname(__DIR__) . '/src/ini', "{$this->dir}/.cserve/php"], array_slice($scan, -2));
 	}
@@ -163,19 +164,21 @@ final class ProjectIniTest extends TestCase
 		chdir($this->dir);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server($this->dir, server: 'frankenphp', frankenphp: $executable))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch']),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server($this->dir, server: 'frankenphp', frankenphp: $executable), $io, [
+				'--host=127.0.0.1',
+				"--port={$port}",
+				'--no-watch',
+			]);
 		} finally {
 			chdir($cwd);
 		}
 
-		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString(
 			'FrankenPHP lacks extensions the project requires: ext-missing.',
-			$io->errorOutput(),
+			$buffer->errorOutput(),
 		);
 	}
 

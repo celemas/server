@@ -111,7 +111,7 @@ final class InterruptTest extends TestCase
 			\$commands = [
 				new Celema\\Server\\Server('{$dir}', watch: '*.php', php: '{$php}', frankenphp: '{$dir}/frankenphp'),
 			];
-			exit(new Celema\\Console\\Runner(new Celema\\Console\\Commands(\$commands))->run());
+			exit(new Celema\\Console\\Runner(\$commands)->run());
 			PHP);
 		$port ??= Ports::ephemeral();
 		$this->assertIsInt($port);

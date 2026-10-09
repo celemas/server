@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-use Celema\Console\Args;
 use Celema\Console\Command;
 use Celema\Console\Io;
 use Celema\Console\Opt;
@@ -12,25 +11,6 @@ use InvalidArgumentException;
 
 /** @api */
 #[Command('reload', 'Watch files and serve live reload for an application served elsewhere')]
-#[Opt(
-	'--host',
-	'Host to bind the live reload endpoint to. Defaults to localhost.',
-	short: '-h',
-	value: 'host',
-)]
-#[Opt('--port', 'Port of the live reload endpoint.', short: '-p', value: 'port')]
-#[Opt(
-	'--admin',
-	"Address of FrankenPHP's admin API, like http://localhost:2019; watched changes to files other than CSS or JS restart its workers.",
-	value: 'url',
-)]
-#[Opt('--quiet', 'Reduce live reload output.', short: '-q')]
-#[Opt('--no-companions', 'Do not start the configured companion processes.')]
-#[Opt(
-	'--watch-files',
-	'Override the configured watch patterns. Repeat the option or separate patterns with commas.',
-	value: 'glob',
-)]
 class Reload
 {
 	/**
@@ -44,11 +24,40 @@ class Reload
 		protected readonly array $companions = [],
 	) {}
 
-	public function __invoke(Args $args, Io $io): int
-	{
+	/** @param list<string> $watchFiles */
+	// The parameters are the command line's options.
+	// @mago-expect lint:excessive-parameter-list
+	public function __invoke(
+		Io $io,
+		#[Opt('Host to bind the live reload endpoint to.', short: '-h')]
+		string $host = 'localhost',
+		#[Opt('Port of the live reload endpoint.', short: '-p')]
+		?int $port = null,
+		#[Opt(
+			"Address of FrankenPHP's admin API, like http://localhost:2019; watched changes to files other than CSS or JS restart its workers.",
+			value: 'url',
+		)]
+		?string $admin = null,
+		#[Opt('Reduce live reload output.', short: '-q')]
+		bool $quiet = false,
+		#[Opt('Do not start the configured companion processes.')]
+		bool $noCompanions = false,
+		#[Opt(
+			'Override the configured watch patterns. Repeat the option or separate patterns with commas.',
+			value: 'glob',
+		)]
+		array $watchFiles = [],
+	): int {
 		try {
-			$options = Options::from($this->port, $this->watch, $args);
-			$admin = $args->opt('--admin', $this->admin ?? '');
+			$options = new Options(
+				host: $host,
+				port: $port ?? $this->port,
+				quiet: $quiet,
+				companions: !$noCompanions,
+				watchFiles: $watchFiles,
+				defaultWatch: $this->watch,
+			);
+			$admin ??= $this->admin ?? '';
 			$runtime = new ReloadRuntime(
 				$options,
 				$io,
@@ -59,14 +68,14 @@ class Reload
 			$result = $runtime->run(static function (string $_): void {});
 
 			if (is_string($result)) {
-				$io->error($result);
+				$io->error('%s', $result);
 
 				return 1;
 			}
 
 			return $result;
 		} catch (InvalidArgumentException $e) {
-			$io->error($e->getMessage());
+			$io->error('%s', $e->getMessage());
 
 			return 1;
 		}

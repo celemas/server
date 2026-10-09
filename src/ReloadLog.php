@@ -33,13 +33,13 @@ final class ReloadLog
 		$watched = $liveReload->watched();
 
 		if ($watched > 0) {
-			$this->io->echoln('<dim>Watching ' . ($watched === 1 ? '1 file' : "{$watched} files") . '</dim>');
+			$this->io->line('<dim>Watching ' . ($watched === 1 ? '1 file' : "{$watched} files") . '</dim>');
 
 			return;
 		}
 
 		// A typo in a pattern would otherwise go unnoticed.
-		$this->io->echoln(
+		$this->io->line(
 			'<yellow>No files match the watch patterns:</yellow> ' . $this->io->escape(implode(', ', $this->patterns)),
 		);
 	}
@@ -50,13 +50,13 @@ final class ReloadLog
 		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
 
 		if ($error !== null) {
-			$this->io->echoln("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
+			$this->io->line("{$timestamp} <red>" . $this->io->escape($error) . '</red>');
 
 			return;
 		}
 
 		if (!$this->quiet) {
-			$this->io->echoln("{$timestamp} <cyan>restart</cyan> worker");
+			$this->io->line("{$timestamp} <cyan>restart</cyan> worker");
 		}
 	}
 
@@ -76,7 +76,7 @@ final class ReloadLog
 				return;
 			}
 
-			$this->io->echoln(
+			$this->io->line(
 				"{$timestamp} <yellow>changed</yellow> {$file} "
 					. '<dim>· no page connected, include the live reload script</dim>',
 			);
@@ -86,6 +86,6 @@ final class ReloadLog
 
 		$action = $event === 'css' ? 'restyle' : $event;
 		$pages = $clients === 1 ? '1 page' : "{$clients} pages";
-		$this->io->echoln("{$timestamp} <magenta>{$action}</magenta> {$file} <dim>· {$pages}</dim>");
+		$this->io->line("{$timestamp} <magenta>{$action}</magenta> {$file} <dim>· {$pages}</dim>");
 	}
 }

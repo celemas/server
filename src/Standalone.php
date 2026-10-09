@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-use Celema\Console\Commands;
 use Celema\Console\Io;
 use Celema\Console\Runner;
 
@@ -27,18 +26,11 @@ final class Standalone
 		$argv = self::argv($argv);
 		$docroot = self::docroot($cwd);
 
-		if (($argv[1] ?? '') === 'server') {
+		if (array_slice($argv, offset: 1, length: 1) === ['server']) {
 			self::announce($docroot, $cwd, $io);
 		}
 
-		$_SERVER['argv'] = $argv;
-		$commands = new Commands([
-			new Server($docroot),
-			new FrankenInstall(),
-			new Reload(),
-		]);
-
-		return new Runner($commands, $io)->run();
+		return new Runner([new Server($docroot), new FrankenInstall(), new Reload()], $io)->run($argv);
 	}
 
 	/**
@@ -85,7 +77,7 @@ final class Standalone
 	private static function announce(string $docroot, string $cwd, Io $io): void
 	{
 		if ($docroot !== $cwd) {
-			$io->echoln('<dim>Public directory: ' . $io->escape(basename($docroot)) . '</dim>');
+			$io->line('<dim>Public directory: ' . $io->escape(basename($docroot)) . '</dim>');
 
 			return;
 		}

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Server\Ports;
 use Celema\Server\Reload;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -121,25 +121,27 @@ final class ReloadTest extends TestCase
 		$port = (int) substr(strrchr((string) stream_socket_get_name($server, false), ':') ?: '', 1);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Reload(watch: 'views/*.php'))(new Args(['--host=127.0.0.1', "--port={$port}"]), $io);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Reload(watch: 'views/*.php'), $io, ['--host=127.0.0.1', "--port={$port}"]);
 		} finally {
 			fclose($server);
 		}
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $io->errorOutput());
-		$this->assertStringContainsString('choose another port with --port=<port>', $io->errorOutput());
+		$this->assertStringContainsString("Port 127.0.0.1:{$port} is not available", $buffer->errorOutput());
+		$this->assertStringContainsString('choose another port with --port=<port>', $buffer->errorOutput());
 	}
 
 	#[DataProvider('invalidAdminAddresses')]
 	public function testInvalidAdminAddressIsRejected(string $address): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Reload())(new Args(["--admin={$address}"]), $io);
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(new Reload(), $io, ["--admin={$address}"]);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid admin API address '{$address}'", $io->errorOutput());
+		$this->assertStringContainsString("Invalid admin API address '{$address}'", $buffer->errorOutput());
 	}
 
 	public static function invalidAdminAddresses(): array
@@ -163,7 +165,7 @@ final class ReloadTest extends TestCase
 			require '{$autoload}';
 			posix_setsid();
 			\$command = new Celema\\Server\\Reload(watch: 'views/*.php');
-			exit(new Celema\\Console\\Runner(new Celema\\Console\\Commands([\$command]))->run());
+			exit(new Celema\\Console\\Runner([\$command])->run());
 			PHP);
 		$output = fopen("{$this->dir}/output", 'w');
 		$command = proc_open(

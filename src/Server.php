@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Celema\Server;
 
 use Celema\Console\Arg;
-use Celema\Console\Args;
 use Celema\Console\Command;
 use Celema\Console\Io;
 use Celema\Console\Opt;
@@ -13,51 +12,6 @@ use InvalidArgumentException;
 
 /** @api */
 #[Command('server', 'Serve the application with the built-in PHP server or FrankenPHP')]
-#[Arg(
-	'server',
-	'builtin or frankenphp. Defaults to the project\'s configured server.',
-	optional: true,
-)]
-#[Opt(
-	'--host',
-	'Host to bind the server to. Defaults to localhost.',
-	short: '-h',
-	value: 'host',
-)]
-#[Opt(
-	'--port',
-	'Port to listen on.',
-	short: '-p',
-	value: 'port',
-)]
-#[Opt('--filter', 'Hide matching request log lines.', short: '-f', value: 'regex')]
-#[Opt('--debug', 'builtin: enable an Xdebug session. frankenphp: enable verbose Caddy logs.', short: '-d')]
-#[Opt('--quiet', 'Reduce verbose output where supported.', short: '-q')]
-#[Opt('--open', 'Open the application in the default browser once it responds.', short: '-o')]
-#[Opt(
-	'--reload-port',
-	'Port for live reload. Defaults to ten times the port, or the next free port above.',
-	value: 'port',
-)]
-#[Opt(
-	'--processes',
-	'builtin only: serve requests concurrently with the given number of server processes.',
-	value: 'count',
-	default: '1',
-)]
-#[Opt(
-	'--worker',
-	'frankenphp only: keep the application in memory with FrankenPHP workers (default: 1). Watched changes to files other than CSS or JS restart the workers.',
-	value: 'count',
-	optionalValue: true,
-)]
-#[Opt('--no-watch', 'Disable file watching, live reload, and automatic worker restarts.')]
-#[Opt('--no-companions', 'Do not start the configured companion processes.')]
-#[Opt(
-	'--watch-files',
-	'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
-	value: 'glob',
-)]
 class Server
 {
 	/**
@@ -87,11 +41,65 @@ class Server
 		protected readonly ?string $version = null,
 	) {}
 
-	public function __invoke(Args $args, Io $io): int
-	{
+	/** @param list<string> $watchFiles */
+	// The parameters are the command line's options.
+	// @mago-expect lint:excessive-parameter-list
+	public function __invoke(
+		Io $io,
+		#[Arg("builtin or frankenphp. Defaults to the project's configured server.")]
+		?string $server = null,
+		#[Opt('Host to bind the server to.', short: '-h')]
+		string $host = 'localhost',
+		#[Opt('Port to listen on.', short: '-p')]
+		?int $port = null,
+		#[Opt('Hide matching request log lines.', short: '-f', value: 'regex')]
+		string $filter = '',
+		#[Opt('builtin: enable an Xdebug session. frankenphp: enable verbose Caddy logs.', short: '-d')]
+		bool $debug = false,
+		#[Opt('Reduce verbose output where supported.', short: '-q')]
+		bool $quiet = false,
+		#[Opt('Open the application in the default browser once it responds.', short: '-o')]
+		bool $open = false,
+		#[Opt('Port for live reload. Defaults to ten times the port, or the next free port above.', value: 'port')]
+		?int $reloadPort = null,
+		#[Opt(
+			'builtin only: serve requests concurrently with the given number of server processes (default: 1).',
+			value: 'count',
+		)]
+		?int $processes = null,
+		#[Opt(
+			'frankenphp only: keep the application in memory with FrankenPHP workers (default: 1). Watched changes to files other than CSS or JS restart the workers.',
+			value: 'count',
+			bare: '1',
+		)]
+		?int $worker = null,
+		#[Opt('Disable file watching, live reload, and automatic worker restarts.')]
+		bool $noWatch = false,
+		#[Opt('Do not start the configured companion processes.')]
+		bool $noCompanions = false,
+		#[Opt(
+			'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
+			value: 'glob',
+		)]
+		array $watchFiles = [],
+	): int {
 		try {
-			$server = $this->server($args);
-			$options = Options::from($this->port, $this->watch, $args);
+			$server = $this->server($server, $processes, $worker);
+			$options = new Options(
+				host: $host,
+				port: $port ?? $this->port,
+				filter: $filter,
+				debug: $debug,
+				quiet: $quiet,
+				watch: !$noWatch,
+				workers: $worker,
+				processes: $processes,
+				open: $open,
+				reloadPort: $reloadPort,
+				companions: !$noCompanions,
+				watchFiles: $watchFiles,
+				defaultWatch: $this->watch,
+			);
 			$companions = Companion::validate($this->companions);
 			$result = $server === 'frankenphp'
 				? $this->frankenPhp($options, $companions, $io)
@@ -102,7 +110,7 @@ class Server
 
 		// Runtime reports failures as a message string.
 		if (is_string($result)) {
-			$io->error($result);
+			$io->error('%s', $result);
 
 			return 1;
 		}
@@ -115,7 +123,7 @@ class Server
 	 * configured default. Options of the other server are rejected
 	 * rather than ignored.
 	 */
-	private function server(Args $args): string
+	private function server(?string $server, ?int $processes, ?int $worker): string
 	{
 		$config = ProjectConfig::load((string) getcwd());
 
@@ -123,7 +131,7 @@ class Server
 			throw new InvalidArgumentException($config);
 		}
 
-		$server = $args->positional(0) ?? $config->server ?? $this->server;
+		$server ??= $config->server ?? $this->server;
 
 		if (!in_array($server, ProjectConfig::SERVERS, true)) {
 			throw new InvalidArgumentException(
@@ -131,9 +139,13 @@ class Server
 			);
 		}
 
-		$foreign = $server === 'frankenphp' ? '--processes' : '--worker';
+		$foreign = match (true) {
+			$server === 'frankenphp' && $processes !== null => '--processes',
+			$server === 'builtin' && $worker !== null => '--worker',
+			default => null,
+		};
 
-		if ($args->has($foreign)) {
+		if ($foreign !== null) {
 			$needed = $server === 'frankenphp' ? 'builtin' : 'frankenphp';
 
 			throw new InvalidArgumentException(
@@ -153,7 +165,7 @@ class Server
 			$io,
 			$companions,
 		);
-		$output = new PhpOutput($io, $options->filter, Setup::terminalColumns());
+		$output = new PhpOutput($io, $options->filter, $io->width());
 
 		return $runtime->run($output->line(...));
 	}
@@ -173,7 +185,7 @@ class Server
 			$io,
 			$companions,
 		);
-		$output = new FrankenOutput($io, $options->filter, Setup::terminalColumns(), $options->debug);
+		$output = new FrankenOutput($io, $options->filter, $io->width(), $options->debug);
 
 		return $runtime->run($output->line(...));
 	}
@@ -188,7 +200,7 @@ class Server
 		$interrupt = Interrupt::catch();
 
 		try {
-			return FrankenBinary::resolve($this->frankenphp, $this->version, $io, Setup::interactive(), $interrupt);
+			return FrankenBinary::resolve($this->frankenphp, $this->version, $io, $io->interactive(), $interrupt);
 		} finally {
 			$interrupt->release();
 		}

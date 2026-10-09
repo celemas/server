@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Celema\Server;
 
-use Throwable;
-
 /** @internal */
 final readonly class Setup
 {
@@ -177,30 +175,6 @@ final readonly class Setup
 	public function frankenPhpEnvironment(?string $liveReload = null, ?string $iniDir = null): array
 	{
 		return $this->environment('frankenphp', $liveReload, $iniDir);
-	}
-
-	/** Whether a user can answer questions, as when the command runs in a terminal. */
-	public static function interactive(): bool
-	{
-		return stream_isatty(STDIN) && stream_isatty(STDOUT);
-	}
-
-	public static function terminalColumns(): int
-	{
-		// No stty on Windows; without a terminal it only prints an error.
-		if (DIRECTORY_SEPARATOR === '\\' || !stream_isatty(STDIN)) {
-			return 80;
-		}
-
-		try {
-			$output = exec('stty size 2>/dev/null');
-			$size = trim($output === false ? '' : $output);
-			$columns = (int) (explode(' ', $size)[1] ?? 0);
-
-			return $columns > 0 ? $columns : 80;
-		} catch (Throwable) {
-			return 80;
-		}
 	}
 
 	/** @return array<string, string> */

@@ -26,7 +26,7 @@ final class FrankenOutput
 		$entry = json_decode($line, true);
 
 		if (!is_array($entry)) {
-			$this->io->echoln($this->io->escape($line));
+			$this->io->line('%s', $line);
 
 			return;
 		}
@@ -39,7 +39,7 @@ final class FrankenOutput
 			&& ($entry['msg'] ?? null) === 'handled request'
 		) {
 			if (!$this->requests->line($entry)) {
-				$this->io->echoln($this->io->escape($line));
+				$this->io->line('%s', $line);
 			}
 
 			return;
@@ -59,7 +59,7 @@ final class FrankenOutput
 				return;
 			}
 
-			$this->io->echoln($this->io->escape($message));
+			$this->io->line('%s', $message);
 
 			return;
 		}
@@ -77,13 +77,13 @@ final class FrankenOutput
 				$message .= ": {$error}";
 			}
 
-			$this->io->error($this->io->escape($message));
+			$this->io->error('%s', $message);
 
 			return;
 		}
 
 		if ($this->debug) {
-			$this->io->echoln($this->io->escape($line));
+			$this->io->line('%s', $line);
 		}
 	}
 

@@ -46,7 +46,7 @@ final readonly class RequestOutput
 			mb_strwidth("{$labels}{$separator}{$duration}s"),
 		);
 
-		$this->io->echoln(
+		$this->io->line(
 			"<dim>{$timestamp}</dim> "
 				. "<{$statusColor}>{$status}</{$statusColor}> "
 				. $this->io->escape($method)

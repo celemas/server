@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
 use Celema\Console\Io;
 use Celema\Server\PhpOutput;
 use PHPUnit\Framework\TestCase;
@@ -15,84 +15,84 @@ final class PhpOutputTest extends TestCase
 
 	public function testRequestLineRenders(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
 
 		$this->assertMatchesRegularExpression(
 			'#^\d{2}:\d{2}:\d{2}\.\d{2} 200 GET /foo \.+ 0\.00016s\n$#',
-			$io->output(),
+			$buffer->output(),
 		);
 	}
 
 	public function testRequestLineFillsTheTerminalWidth(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
 
-		$this->assertSame(60, mb_strwidth(rtrim($io->output())));
+		$this->assertSame(60, mb_strwidth(rtrim($buffer->output())));
 	}
 
 	public function testRequestTimeAndDurationAreDimmed(): void
 	{
-		$io = new class extends Io {
-			public string $markup = '';
-
-			public function echoln(string $text): void
-			{
-				$this->markup .= "{$text}\n";
-			}
-		};
-		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
+		$buffer = new Buffer(colors: true);
+		new PhpOutput(new Io($buffer), '', 60)->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
 
 		$this->assertMatchesRegularExpression(
-			'#^<dim>\d{2}:\d{2}:\d{2}\.\d{2}</dim> .+ <dim>0\.00016s</dim>\n$#',
-			$io->markup,
+			'#^\033\[2m\d{2}:\d{2}:\d{2}\.\d{2}\033\[0m .+ \033\[2m0\.00016s\033\[0m\n$#',
+			$buffer->output(),
 		);
 	}
 
 	public function testRequestLineShowsExceptionAndXhrFlags(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request 500 POST 0.20000 ex /api\n");
 
-		$this->assertStringContainsString('[EXC][XHR] 0.20000s', $io->output());
+		$this->assertStringContainsString('[EXC][XHR] 0.20000s', $buffer->output());
 	}
 
 	public function testRequestUrlIsDecodedAndPrintsMarkupLiterally(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP
 			. "celema-request 200 GET 0.00016 -- /%3Cred%3Etest\n");
 
-		$this->assertStringContainsString('/<red>test', $io->output());
+		$this->assertStringContainsString('/<red>test', $buffer->output());
 	}
 
 	public function testFilterHidesMatchingRequests(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new PhpOutput($io, '#^/health#', 60);
 		$output->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /health\n");
 		$output->line(self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /home\n");
 
-		$this->assertStringNotContainsString('/health', $io->output());
-		$this->assertStringContainsString('/home', $io->output());
+		$this->assertStringNotContainsString('/health', $buffer->output());
+		$this->assertStringContainsString('/home', $buffer->output());
 	}
 
 	public function testConnectionLinesAreHidden(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new PhpOutput($io, '', 60);
 		$output->line(self::TIMESTAMP . "127.0.0.1:54652 Accepted\n");
 		$output->line(self::TIMESTAMP . "127.0.0.1:54652 [200]: GET /favicon.ico\n");
 		$output->line(self::TIMESTAMP . "[::1]:54652 Accepted\n");
 		$output->line(self::TIMESTAMP . "[::1]:54652 Closing\n");
 
-		$this->assertSame('', $io->output());
+		$this->assertSame('', $buffer->output());
 	}
 
 	public function testLinesOfMultipleProcessesRenderLikeOthers(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new PhpOutput($io, '', 60);
 		$output->line('[18018] ' . self::TIMESTAMP . "127.0.0.1:60538 Accepted\n");
 		$output->line('[18018] ' . self::TIMESTAMP . "celema-request 200 GET 0.00016 -- /foo\n");
@@ -102,41 +102,45 @@ final class PhpOutputTest extends TestCase
 
 		$this->assertMatchesRegularExpression(
 			'#^\d{2}:\d{2}:\d{2}\.\d{2} 200 GET /foo \.+ 0\.00016s\nNotice: something\n$#',
-			$io->output(),
+			$buffer->output(),
 		);
 	}
 
 	public function testPassthroughTrimsTheTimestamp(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "PHP Warning:  Undefined variable \$x\n");
 
-		$this->assertSame("PHP Warning:  Undefined variable \$x\n", $io->output());
+		$this->assertSame("PHP Warning:  Undefined variable \$x\n", $buffer->output());
 	}
 
 	public function testStartupMessageIsLeftToTheCommand(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new PhpOutput($io, '', 60);
 		$output->line(self::TIMESTAMP . "PHP 8.5.8 Development Server (http://localhost:1983) started\n");
 		$output->line('[18020] ' . self::TIMESTAMP . "PHP 8.5.8 Development Server (http://localhost:1983) started\n");
 
-		$this->assertSame('', $io->output());
+		$this->assertSame('', $buffer->output());
 	}
 
 	public function testPassthroughIsEscaped(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line("Xdebug: \033[31mfailed\033[0m in <red>module</red>\n");
 
-		$this->assertSame("Xdebug: [31mfailed[0m in <red>module</red>\n", $io->output());
+		$this->assertSame("Xdebug: [31mfailed[0m in <red>module</red>\n", $buffer->output());
 	}
 
 	public function testMalformedRequestLinePrintsLiterally(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		new PhpOutput($io, '', 60)->line(self::TIMESTAMP . "celema-request oops\n");
 
-		$this->assertSame("celema-request oops\n", $io->output());
+		$this->assertSame("celema-request oops\n", $buffer->output());
 	}
 }

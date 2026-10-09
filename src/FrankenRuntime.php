@@ -78,7 +78,7 @@ final class FrankenRuntime extends Runtime
 		);
 
 		if ($missing !== []) {
-			$this->io->warn('FrankenPHP lacks extensions the project requires: ' . implode(', ', $missing) . '.');
+			$this->io->warn('FrankenPHP lacks extensions the project requires: %s.', implode(', ', $missing));
 		}
 	}
 

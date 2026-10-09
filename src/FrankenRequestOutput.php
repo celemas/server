@@ -113,7 +113,7 @@ final class FrankenRequestOutput
 	private function write(array $lines): void
 	{
 		foreach ($lines as $line) {
-			$this->io->echoln($this->io->escape($line));
+			$this->io->line('%s', $line);
 		}
 	}
 

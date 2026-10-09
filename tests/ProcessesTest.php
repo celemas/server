@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\BufferedIo;
-use Celema\Console\Commands;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Console\Runner;
 use Celema\Server\Ports;
 use Celema\Server\Server;
@@ -23,10 +23,10 @@ final class ProcessesTest extends TestCase
 		putenv($inherited === null ? 'PHP_CLI_SERVER_WORKERS' : "PHP_CLI_SERVER_WORKERS={$inherited}");
 
 		try {
-			[$exit, $io] = $this->command('builtin', $args);
+			[$exit, $buffer] = $this->command('builtin', $args);
 
-			$this->assertSame(0, $exit, $io->errorOutput());
-			$this->assertStringContainsString("workers={$expected}\n", $io->output());
+			$this->assertSame(0, $exit, $buffer->errorOutput());
+			$this->assertStringContainsString("workers={$expected}\n", $buffer->output());
 		} finally {
 			putenv($previous === false ? 'PHP_CLI_SERVER_WORKERS' : "PHP_CLI_SERVER_WORKERS={$previous}");
 		}
@@ -45,28 +45,28 @@ final class ProcessesTest extends TestCase
 	}
 
 	#[DataProviderExternal(WorkerModeTest::class, 'invalidWorkerCounts')]
-	public function testInvalidProcessCountFailsBeforeStartup(string $count): void
+	public function testInvalidProcessCountFailsBeforeStartup(string $count, int $code, string $message): void
 	{
-		[$exit, $io] = $this->command('builtin', ["--processes={$count}"]);
+		[$exit, $buffer] = $this->command('builtin', ["--processes={$count}"]);
 
-		$this->assertSame(1, $exit);
-		$this->assertStringContainsString('must be a positive integer', $io->errorOutput());
-		$this->assertStringNotContainsString('workers=', $io->output());
+		$this->assertSame($code, $exit);
+		$this->assertStringContainsString($message, $buffer->errorOutput());
+		$this->assertStringNotContainsString('workers=', $buffer->output());
 	}
 
 	public function testFrankenPhpHasNoProcessCount(): void
 	{
-		[$exit, $io] = $this->command('frankenphp', ['--processes=2']);
+		[$exit, $buffer] = $this->command('frankenphp', ['--processes=2']);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString('--processes', $io->errorOutput());
+		$this->assertStringContainsString('--processes', $buffer->errorOutput());
 	}
 
 	/**
 	 * Runs a server against a backend that prints its process count and exits.
 	 *
 	 * @param list<string> $args
-	 * @return array{int, BufferedIo}
+	 * @return array{int, Buffer}
 	 */
 	private function command(string $server, array $args): array
 	{
@@ -80,10 +80,11 @@ final class ProcessesTest extends TestCase
 		$_SERVER['argv'] = ['run', 'server', $server, '--host=127.0.0.1', "--port={$port}", '--no-watch', ...$args];
 
 		try {
-			$io = new BufferedIo();
-			$commands = new Commands([new Server('/tmp/public', php: $executable, frankenphp: $executable)]);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$commands = [new Server('/tmp/public', php: $executable, frankenphp: $executable)];
 
-			return [new Runner($commands, $io)->run(), $io];
+			return [new Runner($commands, $io)->run(), $buffer];
 		} finally {
 			$_SERVER['argv'] = $argv;
 			unlink($executable);

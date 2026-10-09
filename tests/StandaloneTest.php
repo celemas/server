@@ -87,8 +87,8 @@ final class StandaloneTest extends TestCase
 	{
 		[$exit, $output] = $this->runBinary(['--port=foo']);
 
-		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid port 'foo'", $output);
+		$this->assertSame(2, $exit);
+		$this->assertStringContainsString("Option '--port' expects an integer, got 'foo'", $output);
 	}
 
 	public function testServesTheDetectedPublicDirectory(): void

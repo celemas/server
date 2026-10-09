@@ -161,7 +161,7 @@ abstract class Runtime
 		$error = Browser::open($this->options->host, $this->options->port);
 
 		if ($error !== null) {
-			$this->io->warn($error);
+			$this->io->warn('%s', $error);
 		}
 	}
 
@@ -221,12 +221,12 @@ abstract class Runtime
 		$url = Address::url($this->options->host, $this->options->port);
 		$details = $this->details();
 		$details = $details === '' ? '' : ' <dim>(' . $this->io->escape($details) . ')</dim>';
-		$this->io->echoln("Serving {$url}{$details}");
+		$this->io->line("Serving {$url}{$details}");
 
 		$this->ini?->announce($this->io);
 
 		if ($liveReload !== null) {
-			$this->io->echoln("Live reload script: {$liveReload->script}");
+			$this->io->line("Live reload script: {$liveReload->script}");
 		}
 	}
 

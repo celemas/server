@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Server\Companion;
 use Celema\Server\ErrorTrap;
 use Celema\Server\Ports;
@@ -34,42 +34,42 @@ final class CompanionTest extends TestCase
 
 	public function testCompanionOutputShowsItsName(): void
 	{
-		[$exit, $io] = $this->serve(['css' => "printf '\\033[32mDone\\033[0m in 12ms\\n\\n'; sleep 30"]);
+		[$exit, $buffer] = $this->serve(['css' => "printf '\\033[32mDone\\033[0m in 12ms\\n\\n'; sleep 30"]);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
-		$this->assertStringContainsString("css Done in 12ms\n", $io->output());
-		$this->assertStringNotContainsString('exited', $io->output());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString("css Done in 12ms\n", $buffer->output());
+		$this->assertStringNotContainsString('exited', $buffer->output());
 	}
 
 	public function testRedrawnLinesShowTheirLastState(): void
 	{
-		$companion = Companion::start('build', ['true'], $io = new BufferedIo());
+		$companion = Companion::start('build', ['true'], new Io($buffer = new Buffer()));
 		$this->assertInstanceOf(Companion::class, $companion);
 		$companion->line("10%\r50%\r100%\r\n");
 		$companion->line("\n");
 		$companion->stop();
 
-		$this->assertSame("build 100%\n", $io->output());
+		$this->assertSame("build 100%\n", $buffer->output());
 	}
 
 	public function testServerKeepsRunningWhenACompanionExits(): void
 	{
-		[$exit, $io] = $this->serve(['css' => 'echo bye; exit 3']);
+		[$exit, $buffer] = $this->serve(['css' => 'echo bye; exit 3']);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertMatchesRegularExpression(
 			'#css bye\n.*css exited with code 3\n.*200 GET /after#s',
-			$io->output(),
+			$buffer->output(),
 		);
 	}
 
 	public function testCompanionsStopWithTheServerTogetherWithTheirChildren(): void
 	{
-		[$exit, $io] = $this->serve([
+		[$exit, $buffer] = $this->serve([
 			'watch' => 'sleep 30 & echo $! > child.pid; echo $$ > companion.pid; wait',
 		]);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
 
 		foreach (['companion.pid', 'child.pid'] as $file) {
 			$this->assertFileExists("{$this->dir}/{$file}");
@@ -80,27 +80,27 @@ final class CompanionTest extends TestCase
 	public function testCompanionInputStaysOpen(): void
 	{
 		// cat exits once its input closes.
-		[$exit, $io] = $this->serve(['input' => ['cat']]);
+		[$exit, $buffer] = $this->serve(['input' => ['cat']]);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
-		$this->assertStringNotContainsString('exited', $io->output());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringNotContainsString('exited', $buffer->output());
 	}
 
 	public function testCompanionsCanBeSkipped(): void
 	{
-		[$exit, $io] = $this->serve(['marker' => 'touch marker'], ['--no-companions']);
+		[$exit, $buffer] = $this->serve(['marker' => 'touch marker'], ['--no-companions']);
 
-		$this->assertSame(0, $exit, $io->errorOutput());
+		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertFileDoesNotExist("{$this->dir}/marker");
 	}
 
 	#[DataProvider('invalidCompanions')]
 	public function testInvalidCompanionsAreRejected(array $companions, string $message): void
 	{
-		[$exit, $io] = $this->serve($companions);
+		[$exit, $buffer] = $this->serve($companions);
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString($message, $io->errorOutput());
+		$this->assertStringContainsString($message, $buffer->errorOutput());
 	}
 
 	public static function invalidCompanions(): array
@@ -116,7 +116,7 @@ final class CompanionTest extends TestCase
 	/**
 	 * @param array<array-key, mixed> $companions
 	 * @param list<string> $args
-	 * @return array{int, BufferedIo}
+	 * @return array{int, Buffer}
 	 */
 	private function serve(array $companions, array $args = []): array
 	{
@@ -134,13 +134,16 @@ final class CompanionTest extends TestCase
 		chdir($this->dir);
 
 		try {
-			$io = new BufferedIo();
-			$exit = (new Server($this->dir, php: $backend, companions: $companions))(
-				new Args(['--host=127.0.0.1', "--port={$port}", '--no-watch', ...$args]),
-				$io,
-			);
+			$buffer = new Buffer();
+			$io = new Io($buffer);
+			$exit = Cli::run(new Server($this->dir, php: $backend, companions: $companions), $io, [
+				'--host=127.0.0.1',
+				"--port={$port}",
+				'--no-watch',
+				...$args,
+			]);
 
-			return [$exit, $io];
+			return [$exit, $buffer];
 		} finally {
 			chdir($cwd);
 		}

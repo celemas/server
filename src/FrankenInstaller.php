@@ -39,7 +39,7 @@ final readonly class FrankenInstaller
 			return "Could not create {$dir}.";
 		}
 
-		$this->io->echoln(
+		$this->io->line(
 			"Downloading FrankenPHP {$release->version} <dim>({$release->asset}, {$release->megabytes()})</dim>",
 		);
 		$part = "{$binary}." . (string) getmypid() . '.part';
@@ -66,7 +66,10 @@ final readonly class FrankenInstaller
 	private function verify(FrankenRelease $release, string $file): ?string
 	{
 		if ($release->sha256 === null) {
-			$this->io->warn("FrankenPHP {$release->version} has no published checksum; the download is not verified.");
+			$this->io->warn(
+				'FrankenPHP %s has no published checksum; the download is not verified.',
+				$release->version,
+			);
 		} elseif (hash_file('sha256', $file) !== $release->sha256) {
 			return "The download of FrankenPHP {$release->version} does not match its published checksum.";
 		}
@@ -93,7 +96,7 @@ final readonly class FrankenInstaller
 			if ($this->terminal && (($now - $shown) >= self::PROGRESS_INTERVAL || $bytes === $release->size)) {
 				$shown = $now;
 				$percent = $release->size > 0 ? (int) floor(($bytes * 100) / $release->size) : 0;
-				$this->io->echo(sprintf("\r%3d%% %7.1f MB", $percent, $bytes / 1_000_000));
+				$this->io->write("\r%3d%% %7.1f MB", $percent, $bytes / 1_000_000);
 			}
 
 			return !($this->interrupt?->received() ?? false);
@@ -103,7 +106,7 @@ final readonly class FrankenInstaller
 	private function done(): void
 	{
 		if ($this->terminal) {
-			$this->io->echoln('');
+			$this->io->line();
 		}
 	}
 }

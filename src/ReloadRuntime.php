@@ -46,8 +46,8 @@ final class ReloadRuntime extends Runtime
 	#[Override]
 	protected function serving(?LiveReload $liveReload): void
 	{
-		$this->io->echoln('Live reload for an application served elsewhere, which needs this environment variable:');
-		$this->io->echoln('CELEMA_LIVE_RELOAD=' . (string) $liveReload?->script);
+		$this->io->line('Live reload for an application served elsewhere, which needs this environment variable:');
+		$this->io->line('CELEMA_LIVE_RELOAD=' . (string) $liveReload?->script);
 	}
 
 	#[Override]
@@ -62,7 +62,7 @@ final class ReloadRuntime extends Runtime
 		$socket = ErrorTrap::run(static fn(): mixed => stream_socket_client($address, timeout: 1));
 
 		if ($socket === false) {
-			$this->io->warn("The FrankenPHP admin API at {$address} does not answer; workers will not restart.");
+			$this->io->warn('The FrankenPHP admin API at %s does not answer; workers will not restart.', $address);
 
 			return;
 		}

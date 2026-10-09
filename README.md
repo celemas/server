@@ -189,7 +189,6 @@ For uninterrupted load or memory-leak testing, use `cserve frankenphp --worker=8
 #!/usr/bin/env php
 <?php
 
-use Celema\Console\Commands;
 use Celema\Console\Runner;
 use Celema\Server\FrankenInstall;
 use Celema\Server\Server;
@@ -198,12 +197,12 @@ require __DIR__ . '/vendor/autoload.php';
 
 $docroot = __DIR__ . '/public';
 $watch = ['src/**/*.{php,css,js}', 'views/**/*.php'];
-$commands = new Commands([
+$runner = new Runner([
 	new Server($docroot, port: 1973, watch: $watch, server: 'frankenphp', version: '1.12.7'),
 	new FrankenInstall(),
 ]);
 
-exit(new Runner($commands)->run());
+exit($runner->run());
 ```
 
 Then start the server with `php run server`, or name the server, like `php run server builtin` or `php run server frankenphp --worker`. The commands take the same arguments and options as with `cserve`, and the [project's settings](#default-server) override the run script's. They are:

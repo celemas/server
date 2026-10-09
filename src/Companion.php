@@ -75,7 +75,7 @@ final class Companion
 		$process = Process::start($command, group: true, keepInput: true);
 
 		if ($process === null) {
-			$io->warn("Could not start the companion process '{$name}'.");
+			$io->warn("Could not start the companion process '%s'.", $name);
 
 			return null;
 		}
@@ -104,7 +104,7 @@ final class Companion
 			return;
 		}
 
-		$this->io->echoln('<cyan>' . $this->io->escape($this->name) . '</cyan> ' . $this->io->escape($text));
+		$this->io->line('<cyan>' . $this->io->escape($this->name) . '</cyan> ' . $this->io->escape($text));
 	}
 
 	/**
@@ -126,7 +126,7 @@ final class Companion
 		$this->reported = true;
 		$code = $this->process->close();
 		$timestamp = '<dim>' . RequestOutput::timestamp() . '</dim>';
-		$this->io->echoln(
+		$this->io->line(
 			"{$timestamp} <cyan>"
 				. $this->io->escape($this->name)
 				. "</cyan> <yellow>exited with code {$code}</yellow>",

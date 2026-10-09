@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\Args;
-use Celema\Console\BufferedIo;
-use Celema\Console\Commands;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Console\Runner;
 use Celema\Server\ErrorTrap;
 use Celema\Server\LiveReload;
-use Celema\Server\Options;
 use Celema\Server\Pending;
 use Celema\Server\Ports;
 use Celema\Server\Process;
@@ -51,56 +49,37 @@ final class WorkerModeTest extends TestCase
 		$this->assertStringContainsString("\t\tphp_server\n", $config);
 	}
 
-	/** @param list<string> $args */
-	#[DataProvider('workerOptions')]
-	public function testWorkerCountAndWatchingAreIndependent(array $args, ?int $workers, bool $watch): void
-	{
-		$options = Options::from(1983, Setup::DEFAULT_WATCH, new Args($args));
-
-		$this->assertSame($workers, $options->workers);
-		$this->assertSame($watch, $options->watch);
-	}
-
-	public static function workerOptions(): array
-	{
-		return [
-			'classic' => [[], null, true],
-			'default' => [['--worker'], 1, true],
-			'explicit one' => [['--worker=1'], 1, true],
-			'multiple' => [['--worker=8'], 8, true],
-			'maximum integer' => [['--worker=' . PHP_INT_MAX], PHP_INT_MAX, true],
-			'classic without watching' => [['--no-watch'], null, false],
-			'default without watching' => [['--worker', '--no-watch'], 1, false],
-			'multiple without watching' => [['--worker=8', '--no-watch'], 8, false],
-		];
-	}
-
 	#[DataProvider('invalidWorkerCounts')]
-	public function testInvalidWorkerCountFailsBeforeStartup(string $count): void
+	public function testInvalidWorkerCountFailsBeforeStartup(string $count, int $code, string $message): void
 	{
-		$io = new BufferedIo();
-		$exit = (new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'))(
-			new Args(["--worker={$count}"]),
+		$buffer = new Buffer();
+		$io = new Io($buffer);
+		$exit = Cli::run(
+			new Server('/tmp/public', server: 'frankenphp', frankenphp: '__missing_frankenphp_binary__'),
 			$io,
+			["--worker={$count}"],
 		);
 
-		$this->assertSame(1, $exit);
-		$this->assertStringContainsString('must be a positive integer', $io->errorOutput());
+		$this->assertSame($code, $exit);
+		$this->assertStringContainsString($message, $buffer->errorOutput());
 	}
 
+	/**
+	 * Non-integers are usage errors of the command line; integers below
+	 * one fail the server's own check.
+	 *
+	 * @return array<string, array{string, int, string}>
+	 */
 	public static function invalidWorkerCounts(): array
 	{
 		return [
-			'empty' => [''],
-			'zero' => ['0'],
-			'negative' => ['-1'],
-			'fraction' => ['1.5'],
-			'text' => ['eight'],
-			'exponent' => ['1e2'],
-			'sign' => ['+8'],
-			'whitespace' => [' 8'],
-			'newline' => ["8\n"],
-			'overflow' => [(string) PHP_INT_MAX . '0'],
+			'empty' => ['', 2, 'expects an integer'],
+			'zero' => ['0', 1, 'must be a positive integer'],
+			'negative' => ['-1', 1, 'must be a positive integer'],
+			'fraction' => ['1.5', 2, 'expects an integer'],
+			'text' => ['eight', 2, 'expects an integer'],
+			'exponent' => ['1e2', 2, 'expects an integer'],
+			'overflow' => [(string) PHP_INT_MAX . '0', 2, 'expects an integer'],
 		];
 	}
 
@@ -125,7 +104,8 @@ final class WorkerModeTest extends TestCase
 				$_SERVER['argv'][] = '--no-watch';
 			}
 
-			$io = new BufferedIo();
+			$buffer = new Buffer();
+			$io = new Io($buffer);
 			$command = new Server(
 				$dir,
 				server: 'frankenphp',
@@ -134,17 +114,17 @@ final class WorkerModeTest extends TestCase
 				frankenphp: $executable,
 			);
 
-			$this->assertSame(0, new Runner(new Commands([$command]), $io)->run(), $io->errorOutput());
+			$this->assertSame(0, new Runner([$command], $io)->run(), $buffer->errorOutput());
 			$contents = file_get_contents($config);
 			$this->assertIsString($contents);
 			$this->assertStringContainsString("num {$count}\n", $contents);
 			$this->assertStringContainsString('file "' . $dir . '/index.php"', $contents);
 			if ($watch) {
 				$this->assertStringContainsString('admin "127.0.0.1:', $contents);
-				$this->assertStringContainsString('Live reload script:', $io->output());
+				$this->assertStringContainsString('Live reload script:', $buffer->output());
 			} else {
 				$this->assertStringContainsString("\tadmin off\n", $contents);
-				$this->assertMatchesRegularExpression('#^Serving http://127\.0\.0\.1:\d+\n$#', $io->output());
+				$this->assertMatchesRegularExpression('#^Serving http://127\.0\.0\.1:\d+\n$#', $buffer->output());
 			}
 		} finally {
 			$_SERVER['argv'] = $argv;

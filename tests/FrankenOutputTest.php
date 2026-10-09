@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Celema\Server\Tests;
 
-use Celema\Console\BufferedIo;
+use Celema\Console\Buffer;
+use Celema\Console\Io;
 use Celema\Server\FrankenOutput;
 use PHPUnit\Framework\TestCase;
 
@@ -12,19 +13,21 @@ final class FrankenOutputTest extends TestCase
 {
 	public function testAccessLogRendersRequest(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->access('/foo'));
 
 		$this->assertMatchesRegularExpression(
 			'#^\d{2}:\d{2}:\d{2}\.\d{2} 200 GET /foo \.+ 0\.01235s\n$#',
-			$io->output(),
+			$buffer->output(),
 		);
 	}
 
 	public function testAccessLogUsesExceptionMarkerAndXhrHeader(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
@@ -34,7 +37,7 @@ final class FrankenOutputTest extends TestCase
 			'x-requested-with' => ['XMLHttpRequest'],
 		]));
 
-		$lines = explode("\n", trim($io->output()));
+		$lines = explode("\n", trim($buffer->output()));
 		$this->assertCount(3, $lines);
 		$this->assertStringContainsString('[EXC][XHR] 0.01235s', $lines[0]);
 		$this->assertSame('RuntimeException: Boom', $lines[1]);
@@ -43,7 +46,8 @@ final class FrankenOutputTest extends TestCase
 
 	public function testPendingExceptionMarkersAreBounded(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 
 		for ($i = 0; $i <= 100; $i++) {
@@ -56,7 +60,7 @@ final class FrankenOutputTest extends TestCase
 		$output->line($this->access('/page-0'));
 		$output->line($this->access('/page-100'));
 
-		$lines = explode("\n", trim($io->output()));
+		$lines = explode("\n", trim($buffer->output()));
 		$this->assertCount(2, $lines);
 		$this->assertStringNotContainsString('[EXC]', $lines[0]);
 		$this->assertStringContainsString('[EXC]', $lines[1]);
@@ -64,18 +68,20 @@ final class FrankenOutputTest extends TestCase
 
 	public function testAccessLogFilterAndStringXhrHeader(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '#health#', 60, debug: false);
 		$output->line($this->access('/health'));
 		$output->line($this->access('/home', headers: ['X-Requested-With' => 'xmlhttprequest']));
 
-		$this->assertStringNotContainsString('/health', $io->output());
-		$this->assertStringContainsString('[XHR]', $io->output());
+		$this->assertStringNotContainsString('/health', $buffer->output());
+		$this->assertStringContainsString('[XHR]', $buffer->output());
 	}
 
 	public function testStartupMessageIsLeftToTheCommand(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'logger' => 'frankenphp',
@@ -86,22 +92,24 @@ final class FrankenOutputTest extends TestCase
 			'msg' => 'PHP warning',
 		]));
 
-		$this->assertSame("PHP warning\n", $io->output());
+		$this->assertSame("PHP warning\n", $buffer->output());
 	}
 
 	public function testDebugOutputPassesOtherJsonThrough(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: true);
 		$line = $this->entry(['level' => 'debug', 'msg' => 'config']);
 		$output->line($line);
 
-		$this->assertSame($line . "\n", $io->output());
+		$this->assertSame($line . "\n", $buffer->output());
 	}
 
 	public function testErrorsGoToStderr(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line($this->entry([
 			'level' => 'error',
@@ -109,13 +117,14 @@ final class FrankenOutputTest extends TestCase
 			'error' => 'address in use',
 		]));
 
-		$this->assertSame('', $io->output());
-		$this->assertStringContainsString('startup failed: address in use', $io->errorOutput());
+		$this->assertSame('', $buffer->output());
+		$this->assertStringContainsString('startup failed: address in use', $buffer->errorOutput());
 	}
 
 	public function testMalformedOutputPassesThrough(): void
 	{
-		$io = new BufferedIo();
+		$buffer = new Buffer();
+		$io = new Io($buffer);
 		$output = new FrankenOutput($io, '', 60, debug: false);
 		$output->line("plain <output>\n");
 		$output->line($this->entry([
@@ -123,8 +132,8 @@ final class FrankenOutputTest extends TestCase
 			'msg' => 'handled request',
 		]));
 
-		$this->assertStringContainsString("plain <output>\n", $io->output());
-		$this->assertStringContainsString('http.log.access', $io->output());
+		$this->assertStringContainsString("plain <output>\n", $buffer->output());
+		$this->assertStringContainsString('http.log.access', $buffer->output());
 	}
 
 	/** @param array<string, mixed> $headers */
