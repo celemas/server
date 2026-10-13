@@ -80,7 +80,7 @@ final class StandaloneTest extends TestCase
 		[$exit, $output] = $this->runBinary(['commands']);
 
 		$this->assertSame(0, $exit);
-		$this->assertSame("frankenphp:install\ninstall\nreload\nserver\n", $output);
+		$this->assertSame("commands\nfrankenphp:install\nhelp\ninstall\nreload\nserver\n", $output);
 	}
 
 	public function testOptionsGoToTheServerCommand(): void
