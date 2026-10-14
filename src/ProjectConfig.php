@@ -55,7 +55,6 @@ final readonly class ProjectConfig
 			return [];
 		}
 
-		/** @var array<string, mixed>|false $values */
 		$values = ErrorTrap::run(static fn(): array|false => parse_ini_file($file, false, INI_SCANNER_TYPED), $error);
 
 		if ($values === false) {

@@ -22,7 +22,6 @@ final class FileStamp
 	 */
 	public static function of(string $path, int $now): ?array
 	{
-		/** @var array{mtime: int, size: int}|false $stat */
 		$stat = ErrorTrap::run(static fn(): mixed => stat($path));
 
 		if ($stat === false) {
@@ -32,7 +31,6 @@ final class FileStamp
 		$hash = null;
 
 		if ($stat['mtime'] >= ($now - 2)) {
-			/** @var string|false $hash */
 			$hash = ErrorTrap::run(static fn(): mixed => hash_file('xxh3', $path));
 			$hash = $hash === false ? null : $hash;
 		}

@@ -88,7 +88,6 @@ final readonly class FrankenReleases
 		}
 
 		$context = stream_context_create(['http' => ['header' => $headers, 'ignore_errors' => true, 'timeout' => 15]]);
-		/** @var string|false $body */
 		$body = ErrorTrap::run(static fn(): mixed => file_get_contents($url, false, $context), $error);
 
 		if ($body === false) {

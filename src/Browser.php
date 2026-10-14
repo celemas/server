@@ -49,7 +49,6 @@ final class Browser
 		$deadline = hrtime(true) + self::WAIT;
 
 		while (hrtime(true) < $deadline) {
-			/** @var resource|false $socket */
 			$socket = ErrorTrap::run(static fn(): mixed => stream_socket_client($address, timeout: 0.2));
 
 			if (is_resource($socket)) {

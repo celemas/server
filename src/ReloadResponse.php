@@ -56,7 +56,6 @@ final readonly class ReloadResponse
 		$bytes = $this->bytes;
 
 		while ($bytes !== '') {
-			/** @var int|false $written */
 			$written = ErrorTrap::run(static fn(): mixed => fwrite($stream, $bytes));
 
 			if ($written === false || $written === 0) {

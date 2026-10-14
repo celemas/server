@@ -74,7 +74,6 @@ final class FileScan
 	/** @return Listing|null */
 	private function listing(string $base, string $dir, int $now): ?array
 	{
-		/** @var int|false $mtime */
 		$mtime = ErrorTrap::run(static fn(): mixed => filemtime($dir));
 		$cached = $this->listings[$base][$dir] ?? null;
 
@@ -84,7 +83,6 @@ final class FileScan
 			return $cached;
 		}
 
-		/** @var list<string>|false $entries */
 		$entries = ErrorTrap::run(static fn(): mixed => scandir($dir));
 
 		if ($mtime === false || $entries === false) {

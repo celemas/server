@@ -59,7 +59,6 @@ final class WorkerRestart implements Pending
 	public static function send(string $host, int $port, Closure $done, int $timeout = 10): self
 	{
 		$address = "tcp://{$host}:{$port}";
-		/** @var resource|false $socket */
 		$socket = ErrorTrap::run(
 			static fn(): mixed => stream_socket_client($address, timeout: $timeout),
 			$error,

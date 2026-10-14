@@ -7,6 +7,14 @@ namespace Celema\Server;
 /** @internal */
 final class ErrorTrap
 {
+	/**
+	 * @template T
+	 *
+	 * @param callable(): T $callback
+	 * @param-out ?string $message
+	 *
+	 * @return T
+	 */
 	public static function run(callable $callback, ?string &$message = null): mixed
 	{
 		$message = null;

@@ -58,7 +58,6 @@ final class ReloadRuntime extends Runtime
 		}
 
 		$address = "tcp://{$this->admin['host']}:{$this->admin['port']}";
-		/** @var resource|false $socket */
 		$socket = ErrorTrap::run(static fn(): mixed => stream_socket_client($address, timeout: 1));
 
 		if ($socket === false) {

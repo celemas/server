@@ -29,7 +29,6 @@ final class FrankenDownload
 				'timeout' => 30,
 			],
 		]);
-		/** @var resource|false $in */
 		$in = ErrorTrap::run(static fn(): mixed => fopen($release->url, 'rb', false, $context), $error);
 
 		if ($in === false) {

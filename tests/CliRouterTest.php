@@ -84,7 +84,6 @@ final class CliRouterTest extends TestCase
 			for ($i = 0; $i < 50 && $body === false; $i++) {
 				usleep(100_000);
 				$context = stream_context_create(['http' => ['ignore_errors' => true]]);
-				/** @var string|false $body */
 				$body = ErrorTrap::run(static fn(): mixed => file_get_contents(
 					"http://{$address}{$path}",
 					context: $context,

@@ -41,7 +41,6 @@ final class ReloadSockets
 	{
 		$errorCode = 0;
 		$errorMessage = '';
-		/** @var resource|false $server */
 		$server = ErrorTrap::run(
 			static function () use ($address, $port, &$errorCode, &$errorMessage): mixed {
 				return stream_socket_server("tcp://{$address}:{$port}", $errorCode, $errorMessage);

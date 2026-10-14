@@ -67,7 +67,6 @@ final class ReloadEndpoint
 	public function broadcast(string $event, string $data = ''): int
 	{
 		foreach ($this->clients as $id => $client) {
-			/** @var int|false $written */
 			$written = ErrorTrap::run(static fn(): mixed => fwrite($client, "event: {$event}\ndata: {$data}\n\n"));
 
 			if ($written === false || $written === 0) {
@@ -130,7 +129,6 @@ final class ReloadEndpoint
 	/** @param resource $server */
 	private function accept(mixed $server): void
 	{
-		/** @var resource|false $stream */
 		$stream = ErrorTrap::run(static fn(): mixed => stream_socket_accept($server, 0));
 
 		if ($stream === false) {
