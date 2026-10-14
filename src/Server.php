@@ -26,6 +26,9 @@ class Server
 	 *
 	 * The `companions` run alongside the server, like asset watchers: each
 	 * name with a command line or a list of arguments.
+	 *
+	 * @param list<string>|string $watch
+	 * @param array<string, list<string>|string> $companions
 	 */
 	// One parameter per setting keeps the run scripts' named arguments simple.
 	// @mago-expect lint:excessive-parameter-list

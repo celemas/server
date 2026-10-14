@@ -16,6 +16,9 @@ class Reload
 	/**
 	 * The default port matches the one the server command uses for live
 	 * reload by default, so pages keep loading the script when switching.
+	 *
+	 * @param list<string>|string $watch
+	 * @param array<string, list<string>|string> $companions
 	 */
 	public function __construct(
 		protected readonly int $port = 21_300,

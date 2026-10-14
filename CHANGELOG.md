@@ -10,6 +10,7 @@
 ### Changed
 
 - The commands declare their arguments and options as typed parameters, and the terminal width and interactivity come from the console `Io`; `Setup::interactive()` and `Setup::terminalColumns()` are gone.
+- The `watch` and `companions` arguments of `Server` and `Reload` declare their types for static analysis, `list<string>|string` and `array<string, list<string>|string>`, so analyzers report invalid values in run scripts before the commands reject them at runtime.
 
 ## [0.3.0](https://codefloe.com/celema/server/src/tag/0.3.0) (2026-10-05)
 
