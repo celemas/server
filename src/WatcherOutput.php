@@ -19,6 +19,11 @@ final class WatcherOutput
 	{
 		foreach ($read as $stream) {
 			$id = (int) $stream;
+
+			if (!isset($watchers[$id])) {
+				continue;
+			}
+
 			$chunk = stream_get_contents($stream);
 
 			if ($chunk !== false && $chunk !== '') {
