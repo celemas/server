@@ -4,7 +4,7 @@
 
 ### Breaking Changes
 
-- Requires the next `celema/console` release, in development as `dev-main`. Run scripts register the commands on the `Runner` directly, `new Runner([new Server($docroot), new FrankenInstall()])`, since the console release removes its `Commands` collection.
+- Requires `celema/console` 0.6. Run scripts register the commands on the `Runner` directly, `new Runner([new Server($docroot), new FrankenInstall()])`, since the console release removes its `Commands` collection.
 - Command-line values that are no integer, like `--port=foo` or `--worker=eight`, are usage errors of the console runner now: they exit with code 2 and the runner's message instead of exit code 1. Ports out of range and counts below one still fail with code 1. Values with a leading sign or surrounding whitespace, like `--worker=+8`, are accepted.
 
 ### Changed
