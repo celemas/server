@@ -42,7 +42,7 @@ if (PHP_SAPI !== 'cli') {
 
 		$_SERVER['SCRIPT_NAME'] = 'index.php';
 
-		/** @psalm-suppress UnresolvableInclude, MixedAssignment */
+		/** @psalm-suppress UnresolvableInclude, MixedAssignment -- the application's front controller may return anything */
 		$response = require_once $publicDir . '/index.php';
 
 		// Front controllers may return their PSR-7 response; plain scripts

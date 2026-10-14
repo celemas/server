@@ -17,7 +17,7 @@ $autoloads = [
 
 foreach ($autoloads as $autoload) {
 	if ($autoload !== null && is_file($autoload)) {
-		/** @psalm-suppress UnresolvableInclude */
+		/** @psalm-suppress UnresolvableInclude -- the autoloader's location is only known at runtime */
 		require $autoload;
 
 		/** @var list<string> $argv */
