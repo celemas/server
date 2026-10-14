@@ -43,7 +43,7 @@ final class FrankenProbe
 
 		return array_values(array_map(
 			static fn(string $name): string => "ext-{$name}",
-			array_diff($required, $loaded),
+			array_diff($required, array_filter($loaded, is_string(...))),
 		));
 	}
 
