@@ -116,6 +116,47 @@ final class ProjectConfigTest extends TestCase
 		$this->assertSame(0, $config->worker);
 	}
 
+	public function testConfigSetsTheRunScriptArguments(): void
+	{
+		file_put_contents(
+			"{$this->dir}/.cserve/config.ini",
+			"route-prefix = /site\nphp = /opt/php/bin/php\nversion = v1.12.7\n",
+		);
+		$config = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $config);
+		$this->assertSame('/site', $config->routePrefix);
+		$this->assertSame('/opt/php/bin/php', $config->php);
+		$this->assertSame('1.12.7', $config->version);
+	}
+
+	public function testLocalExecutableReplacesTheProjectVersion(): void
+	{
+		file_put_contents("{$this->dir}/.cserve/config.ini", "version = 1.12.7\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "frankenphp = /opt/frankenphp\n");
+		$config = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $config);
+		$this->assertSame('/opt/frankenphp', $config->frankenphp);
+		$this->assertNull($config->version);
+	}
+
+	public function testCompanionsAreAddedReplacedAndRemovedByName(): void
+	{
+		file_put_contents(
+			"{$this->dir}/.cserve/config.ini",
+			"companion.css = 'npx @tailwindcss/cli --watch'\ncompanion.queue[] = php\ncompanion.queue[] = 'worker.php'\n",
+		);
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "companion.css = false\ncompanion.js = 'esbuild'\n");
+		$config = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $config);
+		$this->assertSame(
+			['mail' => 'mailpit', 'queue' => ['php', 'worker.php'], 'js' => 'esbuild'],
+			$config->commands(['css' => 'npx tailwindcss --watch', 'mail' => 'mailpit']),
+		);
+	}
+
 	public function testInvalidLocalConfigIsAnError(): void
 	{
 		file_put_contents("{$this->dir}/.cserve/config.ini", "server = frankenphp\n");
@@ -161,6 +202,23 @@ final class ProjectConfigTest extends TestCase
 			'watch files' => [
 				"watch-files[src] = 'src/**'\n",
 				'Invalid watch-files in .cserve/config.ini: use a string of glob patterns or a list of them.',
+			],
+			'executable' => ["php = ''\n", "Invalid php '' in .cserve/config.ini: use an executable."],
+			'version' => [
+				"version = latest\n",
+				"Invalid version 'latest' in .cserve/config.ini: use a version like 1.12.7.",
+			],
+			'executable and version' => [
+				"frankenphp = /opt/frankenphp\nversion = 1.12.7\n",
+				'Set either frankenphp or version in .cserve/config.ini, not both.',
+			],
+			'companion' => [
+				"companion.css = true\n",
+				'Invalid companion.css in .cserve/config.ini: use a command line, a list of arguments, or false.',
+			],
+			'unnamed companion' => [
+				"companion. = 'npx esbuild'\n",
+				"Unknown setting 'companion.' in .cserve/config.ini.",
 			],
 			'syntax' => ["[server\n", 'Failed to read .cserve/config.ini: syntax error'],
 		];

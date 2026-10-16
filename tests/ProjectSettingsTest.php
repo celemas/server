@@ -24,13 +24,13 @@ final class ProjectSettingsTest extends TestCase
 
 		// Both backends answer the version queries and report how they would
 		// serve; FrankenPHP keeps its configuration, which is removed after.
-		foreach (['php', 'frankenphp'] as $name) {
+		foreach (['php', 'frankenphp', 'other-php', 'other-frankenphp'] as $name) {
 			file_put_contents(
 				"{$this->dir}/{$name}",
 				"#!/bin/sh\ncase \"\$1\" in -n|version|php-cli) exit 0;; esac\n"
 					. "[ \"\$1\" = run ] && cp \"\$3\" {$this->dir}/Caddyfile\n"
 					. "echo \"{$name} \$* debug=\${XDEBUG_SESSION-unset} workers=\${PHP_CLI_SERVER_WORKERS-unset}"
-					. " script=\${CELEMA_LIVE_RELOAD-unset}\" >&2\n",
+					. " script=\${CELEMA_LIVE_RELOAD-unset} prefix=\${CELEMA_ROUTE_PREFIX-unset}\" >&2\n",
 			);
 			chmod("{$this->dir}/{$name}", 0o755);
 		}
@@ -124,6 +124,32 @@ final class ProjectSettingsTest extends TestCase
 		];
 	}
 
+	public function testSettingsReplaceTheRunScriptArguments(): void
+	{
+		$this->configure(
+			"host = 127.0.0.1\nport = {$this->port()}\nwatch = false\nphp = '{$this->dir}/other-php'\nroute-prefix = /site\n",
+		);
+
+		[$exit, $buffer] = $this->serve([]);
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString('other-php -S', $buffer->output());
+		$this->assertStringContainsString('prefix=/site', $buffer->output());
+	}
+
+	public function testExecutableSettingReplacesTheRunScriptVersion(): void
+	{
+		$this->configure(
+			"server = frankenphp\nhost = 127.0.0.1\nport = {$this->port()}\nwatch = false\n"
+				. "frankenphp = '{$this->dir}/other-frankenphp'\n",
+		);
+
+		[$exit, $buffer] = $this->serve([], new Server($this->dir, version: '9.9.9'));
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString('other-frankenphp run', $buffer->output());
+	}
+
 	public function testInvalidValueIsAnError(): void
 	{
 		$this->configure("port = 70000\n");
@@ -148,14 +174,15 @@ final class ProjectSettingsTest extends TestCase
 	}
 
 	/**
-	 * Runs the command in the project directory.
+	 * Runs the command in the project directory, by default with the stand-in
+	 * backends.
 	 *
 	 * @param list<string> $args
 	 * @return array{int, Buffer}
 	 */
-	private function serve(array $args): array
+	private function serve(array $args, ?Server $command = null): array
 	{
-		$command = new Server($this->dir, php: "{$this->dir}/php", frankenphp: "{$this->dir}/frankenphp");
+		$command ??= new Server($this->dir, php: "{$this->dir}/php", frankenphp: "{$this->dir}/frankenphp");
 		$cwd = (string) getcwd();
 		chdir($this->dir);
 

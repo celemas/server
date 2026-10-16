@@ -74,6 +74,15 @@ filter = '#^/assets/#'
 - `watch-files` takes one string of comma-separated patterns, or one `watch-files[] = '...'` line per pattern.
 - Strings with special characters belong in single quotes, like the regex of `filter`: outside quotes, INI reads characters like `|`, `!`, and parentheses as operators, and in double quotes, it replaces `${...}` with an environment variable.
 
+The settings also take the [run script's arguments](#run-scripts-with-celemaconsole) that have no option, in kebab-case:
+
+- `route-prefix`, like `route-prefix = /site`.
+- `php` and `frankenphp`, the executables, which a developer usually sets in `.cserve/config.local.ini`.
+- `version`, the [pinned FrankenPHP version](#installing-frankenphp), like `version = 1.12.7`.
+- `companion.<name>`, a [companion process](#companion-processes).
+
+A file sets either `frankenphp` or `version`. Either one replaces both of an earlier file or the run script, so a developer's own executable wins over the project's pinned version.
+
 The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command only.
 
 A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings and overrides them one by one. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
@@ -160,9 +169,9 @@ The command takes `--host`, `--port`, `--admin`, `--quiet`, `--watch-files`, and
 
 ## Installing FrankenPHP
 
-FrankenPHP runs, in this order, unless a run script configures a [`frankenphp` executable](#run-scripts-with-celemaconsole):
+FrankenPHP runs, in this order, unless the [project settings](#project-settings) or a [run script](#run-scripts-with-celemaconsole) configure a `frankenphp` executable:
 
-1. The pinned version from the shared cache, given a [run script](#run-scripts-with-celemaconsole) that pins one.
+1. The pinned version from the shared cache, given a `version` in the project settings or a run script.
 2. `frankenphp` on `PATH`.
 3. The newest FrankenPHP version in the shared cache.
 
@@ -191,7 +200,7 @@ For uninterrupted load or memory-leak testing, use `cserve frankenphp --worker=8
 
 ## Run scripts with celema/console
 
-`cserve` covers most projects. Projects with a [`celema/console`](https://codefloe.com/celema/console) run script of their own can register the commands there instead, which also configures what `cserve` leaves at its defaults: the public directory, the default port and watch patterns, a route prefix, a pinned FrankenPHP version, and companion processes. This package installs `celema/console` along with it:
+`cserve` covers most projects. Projects with a [`celema/console`](https://codefloe.com/celema/console) run script of their own can register the commands there instead, and configure them in PHP rather than in the [project settings](#project-settings). This package installs `celema/console` along with it:
 
 ```php
 #!/usr/bin/env php
@@ -228,14 +237,28 @@ Then start the server with `php run server`, or name the server, like `php run s
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
 | `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
 | `companions` | `[]` | Processes to run alongside the server, like asset watchers. See [Companion processes](#companion-processes). |
-| `server` | `'builtin'` | The server to run without a server argument, `'builtin'` or `'frankenphp'`. The [project's settings](#project-settings) override it. |
+| `server` | `'builtin'` | The server to run without a server argument, `'builtin'` or `'frankenphp'`. |
 | `php` | `'php'` | The PHP executable for the built-in server. |
 | `frankenphp` | none | The FrankenPHP executable. It replaces the [lookup](#installing-frankenphp). |
 | `version` | none | The FrankenPHP version to run from the shared cache, like `'1.12.7'`. Pin a version for every developer of a project to run the same FrankenPHP. See [Installing FrankenPHP](#installing-frankenphp). |
 
-### Companion processes
+The [project settings](#project-settings) override these arguments, except `docroot`, and add their companions to `companions`.
 
-Companion processes run alongside the server, like a CSS or JavaScript watcher or a queue worker. Name each one in the `companions` argument, with a command line for the shell or a list of arguments:
+## Companion processes
+
+Companion processes run alongside the server, like a CSS or JavaScript watcher or a queue worker. Name each one in a `companion.<name>` [project setting](#project-settings), with a command line for the shell or one `companion.<name>[]` line per argument:
+
+```ini
+companion.css = 'npx @tailwindcss/cli -i src/app.css -o public/app.css --watch'
+companion.js[] = 'npx'
+companion.js[] = 'esbuild'
+companion.js[] = 'src/app.js'
+companion.js[] = '--bundle'
+companion.js[] = '--outfile=public/app.js'
+companion.js[] = '--watch'
+```
+
+A run script names them in its `companions` argument instead:
 
 ```php
 new Server($docroot, companions: [
@@ -243,6 +266,8 @@ new Server($docroot, companions: [
 	'js' => ['npx', 'esbuild', 'src/app.js', '--bundle', '--outfile=public/app.js', '--watch'],
 ]),
 ```
+
+The project settings add companions to the run script's, or replace those of the same name. `companion.<name> = false` removes one, for example in a developer's `.cserve/config.local.ini`.
 
 Their output appears after their name, without colors and with only the last state of lines that redraw themselves, like progress bars. When a companion exits by itself, the command reports its exit code and keeps serving. Companions stop together with the server, including the processes they start, like the one `npx` runs. Their input stays open while the server runs, as watchers like esbuild's stop when it closes. Pass `--no-companions` to start the server without them, for example when the watchers already run elsewhere.
 

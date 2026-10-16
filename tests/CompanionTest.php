@@ -94,6 +94,31 @@ final class CompanionTest extends TestCase
 		$this->assertFileDoesNotExist("{$this->dir}/marker");
 	}
 
+	public function testProjectSettingsAddCompanions(): void
+	{
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents(
+			"{$this->dir}/.cserve/config.ini",
+			"companion.marker[] = touch\ncompanion.marker[] = marker\n",
+		);
+
+		[$exit, $buffer] = $this->serve([]);
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertFileExists("{$this->dir}/marker");
+	}
+
+	public function testProjectSettingsRemoveCompanions(): void
+	{
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "companion.marker = false\n");
+
+		[$exit, $buffer] = $this->serve(['marker' => 'touch marker']);
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertFileDoesNotExist("{$this->dir}/marker");
+	}
+
 	#[DataProvider('invalidCompanions')]
 	public function testInvalidCompanionsAreRejected(array $companions, string $message): void
 	{

@@ -16,9 +16,9 @@ class Server
 {
 	/**
 	 * The `server` is the one to run without a `server` argument. The
-	 * project's settings in `.cserve/config.ini` override it, the `port`,
-	 * and the `watch` patterns, and set the other options of the command
-	 * line, which overrides them in turn.
+	 * project's settings in `.cserve/config.ini` override these arguments,
+	 * except the `docroot`, add to the `companions` by name, and set the
+	 * options of the command line, which overrides them in turn.
 	 *
 	 * The built-in server runs with the `php` executable. FrankenPHP runs
 	 * with the `frankenphp` executable, or without one, the pinned
@@ -112,10 +112,10 @@ class Server
 				watchFiles: $watchFiles === [] ? $config->watchFiles ?? [] : $watchFiles,
 				defaultWatch: $this->watch,
 			);
-			$commands = Companion::validate($this->companions);
+			$commands = $config->commands(Companion::validate($this->companions));
 			$result = $server === 'frankenphp'
-				? $this->frankenPhp($options, $commands, $io)
-				: $this->builtin($options, $commands, $io);
+				? $this->frankenPhp($options, $commands, $config, $io)
+				: $this->builtin($options, $commands, $config, $io);
 		} catch (InvalidArgumentException $e) {
 			$result = $e->getMessage();
 		}
@@ -163,10 +163,10 @@ class Server
 	}
 
 	/** @param array<string, list<string>|string> $companions */
-	private function builtin(Options $options, array $companions, Io $io): int|string
+	private function builtin(Options $options, array $companions, ProjectConfig $config, Io $io): int|string
 	{
 		$runtime = new PhpRuntime(
-			new Setup($this->docroot, $this->routePrefix, php: $this->php),
+			new Setup($this->docroot, $config->routePrefix ?? $this->routePrefix, php: $config->php ?? $this->php),
 			$options,
 			$io,
 			$companions,
@@ -177,16 +177,16 @@ class Server
 	}
 
 	/** @param array<string, list<string>|string> $companions */
-	private function frankenPhp(Options $options, array $companions, Io $io): int|string
+	private function frankenPhp(Options $options, array $companions, ProjectConfig $config, Io $io): int|string
 	{
-		$binary = $this->binary($io);
+		$binary = $this->binary($config, $io);
 
 		if (is_string($binary)) {
 			return $binary;
 		}
 
 		$runtime = new FrankenRuntime(
-			new Setup($this->docroot, $this->routePrefix, $binary->path),
+			new Setup($this->docroot, $config->routePrefix ?? $this->routePrefix, $binary->path),
 			$options,
 			$io,
 			$companions,
@@ -196,9 +196,15 @@ class Server
 		return $runtime->run($output->line(...));
 	}
 
-	private function binary(Io $io): FrankenBinary|string
+	private function binary(ProjectConfig $config, Io $io): FrankenBinary|string
 	{
-		if ($this->frankenphp !== null && $this->version !== null) {
+		// The project's executable or version replaces both of the run script's.
+		[$executable, $version] =
+			$config->frankenphp !== null || $config->version !== null
+				? [$config->frankenphp, $config->version]
+				: [$this->frankenphp, $this->version];
+
+		if ($executable !== null && $version !== null) {
 			return 'Configure either a FrankenPHP executable or a version, not both.';
 		}
 
@@ -206,7 +212,7 @@ class Server
 		$interrupt = Interrupt::catch();
 
 		try {
-			return FrankenBinary::resolve($this->frankenphp, $this->version, $io, $io->interactive(), $interrupt);
+			return FrankenBinary::resolve($executable, $version, $io, $io->interactive(), $interrupt);
 		} finally {
 			$interrupt->release();
 		}

@@ -7,13 +7,15 @@ namespace Celema\Server;
 /**
  * The project's settings in `.cserve/config.ini` of the working
  * directory, overridden by a developer's own, usually ignored by Git, in
- * `.cserve/config.local.ini`: the server to run and the `server` command's
- * options, named like on the command line. Both override a run script's
- * arguments, and the command line overrides them.
+ * `.cserve/config.local.ini`: the `server` command's options, named like
+ * on the command line, and the run script's arguments that have no
+ * option, with a `companion.<name>` setting per companion process. Both
+ * override a run script's arguments, and the command line overrides them.
  *
  * The properties are null when unset. Values are checked for their type
  * here and for their range like the command line's.
  *
+ * @psalm-type Command = list<string>|string
  * @psalm-type Settings = array{
  *     server?: string,
  *     host?: string,
@@ -28,6 +30,11 @@ namespace Celema\Server;
  *     watch?: bool,
  *     companions?: bool,
  *     watchFiles?: list<string>,
+ *     routePrefix?: string,
+ *     php?: string,
+ *     frankenphp?: string,
+ *     version?: string,
+ *     commands?: array<string, Command|false>,
  * }
  *
  * @internal
@@ -38,6 +45,8 @@ final readonly class ProjectConfig
 	public const string LOCAL_FILE = '.cserve/config.local.ini';
 	/** The servers that can serve the application. */
 	public const array SERVERS = ['builtin', 'frankenphp'];
+
+	private const string COMPANION = 'companion.';
 
 	/** The properties by setting name, and the values that fit, for error messages. */
 	private const array SETTINGS = [
@@ -54,9 +63,16 @@ final readonly class ProjectConfig
 		'watch' => ['watch', 'true or false'],
 		'companions' => ['companions', 'true or false'],
 		'watch-files' => ['watchFiles', 'a string of glob patterns or a list of them'],
+		'route-prefix' => ['routePrefix', 'a path like /site'],
+		'php' => ['php', 'an executable'],
+		'frankenphp' => ['frankenphp', 'an executable'],
+		'version' => ['version', 'a version like 1.12.7'],
 	];
 
-	/** @param ?list<string> $watchFiles */
+	/**
+	 * @param ?list<string> $watchFiles
+	 * @param array<string, Command|false> $commands
+	 */
 	// One parameter per setting, like the command line's options.
 	// @mago-expect lint:excessive-parameter-list
 	private function __construct(
@@ -74,6 +90,13 @@ final readonly class ProjectConfig
 		public ?bool $watch = null,
 		public ?bool $companions = null,
 		public ?array $watchFiles = null,
+		public ?string $routePrefix = null,
+		public ?string $php = null,
+		public ?string $frankenphp = null,
+		/** The pinned FrankenPHP version, normalized. */
+		public ?string $version = null,
+		/** The companion commands by name; false removes one. */
+		private array $commands = [],
 	) {}
 
 	/** The settings, unset without files, or an error message. */
@@ -88,11 +111,40 @@ final readonly class ProjectConfig
 				return $values;
 			}
 
+			// One file's executable or version replaces both of an earlier one's.
+			if (isset($values['frankenphp']) || isset($values['version'])) {
+				unset($settings['frankenphp'], $settings['version']);
+			}
+
 			/** @var Settings $settings */
-			$settings = [...$settings, ...$values];
+			$settings = [
+				...$settings,
+				...$values,
+				'commands' => [...($settings['commands'] ?? []), ...($values['commands'] ?? [])],
+			];
 		}
 
 		return new self(...$settings);
+	}
+
+	/**
+	 * The companion commands: a run script's, with the project's added,
+	 * replaced, or removed by name.
+	 *
+	 * @param array<string, Command> $companions
+	 * @return array<string, Command>
+	 */
+	public function commands(array $companions): array
+	{
+		foreach ($this->commands as $name => $command) {
+			if ($command === false) {
+				unset($companions[$name]);
+			} else {
+				$companions[$name] = $command;
+			}
+		}
+
+		return $companions;
 	}
 
 	/**
@@ -116,7 +168,13 @@ final readonly class ProjectConfig
 		}
 
 		// Typos would otherwise go unnoticed.
-		$unknown = array_diff(array_keys($values), array_keys(self::SETTINGS));
+		$unknown = array_filter(
+			array_map(strval(...), array_keys($values)),
+			static fn(string $setting): bool => (
+				!array_key_exists($setting, self::SETTINGS)
+				&& self::companion($setting) === null
+			),
+		);
 
 		if ($unknown !== []) {
 			return "Unknown setting '" . implode("', '", $unknown) . "' in {$name}.";
@@ -126,8 +184,12 @@ final readonly class ProjectConfig
 
 		/** @var mixed $value */
 		foreach ($values as $setting => $value) {
-			[$property, $expected] = self::SETTINGS[$setting];
-			$converted = self::convert($property, $value);
+			$setting = (string) $setting;
+			$companion = self::companion($setting);
+			[$property, $expected] = $companion === null
+				? self::SETTINGS[$setting]
+				: ['companion', 'a command line, a list of arguments, or false'];
+			$converted = ProjectSetting::convert($property, $value);
 
 			if ($converted === null) {
 				$shown = is_string($value) || is_int($value) || is_float($value) ? " '{$value}'" : '';
@@ -135,63 +197,26 @@ final readonly class ProjectConfig
 				return "Invalid {$setting}{$shown} in {$name}: use {$expected}.";
 			}
 
-			$settings[$property] = $converted;
+			if ($companion === null) {
+				$settings[$property] = $converted;
+			} else {
+				$settings['commands'][$companion] = $converted;
+			}
+		}
+
+		if (isset($settings['frankenphp'], $settings['version'])) {
+			return "Set either frankenphp or version in {$name}, not both.";
 		}
 
 		/** @var Settings $settings Converted to the properties' types */
 		return $settings;
 	}
 
-	/**
-	 * The value converted to the property's type, or null if it does not
-	 * fit.
-	 *
-	 * @return string|int|bool|list<string>|null
-	 */
-	private static function convert(string $property, mixed $value): string|int|bool|array|null
+	/** The name of a companion setting, or null for another setting. */
+	private static function companion(string $setting): ?string
 	{
-		return match ($property) {
-			'server' => is_string($value) && in_array($value, self::SERVERS, true) ? $value : null,
-			'host', 'filter' => is_string($value) ? $value : null,
-			'port', 'reloadPort', 'processes' => self::integer($value),
-			// Like a bare `--worker` and `--worker=0`.
-			'worker' => is_bool($value) ? (int) $value : self::integer($value),
-			'watchFiles' => self::patterns($value),
-			default => is_bool($value) ? $value : null,
-		};
-	}
+		$name = str_starts_with($setting, self::COMPANION) ? substr($setting, strlen(self::COMPANION)) : '';
 
-	/** Integers, also quoted ones. */
-	private static function integer(mixed $value): ?int
-	{
-		if (is_string($value)) {
-			return filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-		}
-
-		return is_int($value) ? $value : null;
-	}
-
-	/**
-	 * One string of patterns, or a list of them, as `watch-files[]` lines
-	 * give it.
-	 *
-	 * @return ?list<string>
-	 */
-	private static function patterns(mixed $value): ?array
-	{
-		if (is_string($value)) {
-			return [$value];
-		}
-
-		if (
-			!is_array($value)
-			|| !array_is_list($value)
-			|| !array_all($value, static fn(mixed $pattern): bool => is_string($pattern))
-		) {
-			return null;
-		}
-
-		/** @var list<string> $value Checked by array_all() */
-		return $value;
+		return trim($name) === '' ? null : $name;
 	}
 }
