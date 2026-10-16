@@ -14,7 +14,9 @@ final class FrankenInstall
 {
 	public function __invoke(
 		Io $io,
-		#[Arg('The version to install, like 1.12.7. Defaults to the latest release.')]
+		#[Arg(
+			"The version to install, like 1.12.7. Defaults to the project's pinned version, or else the latest release.",
+		)]
 		?string $version = null,
 	): int {
 		$argument = $version;
@@ -24,6 +26,14 @@ final class FrankenInstall
 			return self::fail($io, "Invalid FrankenPHP version '{$argument}'; use a version like 1.12.7.");
 		}
 
+		$config = $argument === null ? ProjectConfig::load((string) getcwd()) : null;
+
+		if (is_string($config)) {
+			return self::fail($io, $config);
+		}
+
+		$pinned = $config?->version;
+		$version ??= $pinned;
 		$cache = FrankenCache::locate();
 
 		if (is_string($cache)) {
@@ -51,7 +61,7 @@ final class FrankenInstall
 			return self::installed($cache, $release->version, $io);
 		}
 
-		return $this->install($cache, $release, $io);
+		return $this->install($cache, $release, $io, pinned: $pinned !== null);
 	}
 
 	private static function installed(FrankenCache $cache, string $version, Io $io): int
@@ -68,7 +78,7 @@ final class FrankenInstall
 		return 1;
 	}
 
-	private function install(FrankenCache $cache, FrankenRelease $release, Io $io): int
+	private function install(FrankenCache $cache, FrankenRelease $release, Io $io, bool $pinned): int
 	{
 		$interrupt = Interrupt::catch();
 
@@ -86,14 +96,15 @@ final class FrankenInstall
 		}
 
 		$io->success('Installed FrankenPHP %s: %s', $release->version, $cache->binary($release->version));
-		$path = Executable::find('frankenphp');
+		$path = $pinned ? null : Executable::find('frankenphp');
 
 		// Without a pinned version, a FrankenPHP on PATH takes precedence.
 		if ($path !== null) {
 			$io->line(
-				"FrankenPHP runs %s from PATH, unless a run script pins this version: new Server(\$docroot, version: '%s')",
+				'FrankenPHP runs %s from PATH, unless the project pins this version, like version = %s in %s',
 				$path,
 				$release->version,
+				ProjectConfig::FILE,
 			);
 		}
 

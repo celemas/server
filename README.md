@@ -78,12 +78,12 @@ The settings also take the [run script's arguments](#run-scripts-with-celemacons
 
 - `route-prefix`, like `route-prefix = /site`.
 - `php` and `frankenphp`, the executables, which a developer usually sets in `.cserve/config.local.ini`.
-- `version`, the [pinned FrankenPHP version](#installing-frankenphp), like `version = 1.12.7`.
+- `version`, the [pinned FrankenPHP version](#installing-frankenphp), like `version = 1.12.7`, which `frankenphp:install` installs without an argument.
 - `companion.<name>`, a [companion process](#companion-processes).
 
 A file sets either `frankenphp` or `version`. Either one replaces both of an earlier file or the run script, so a developer's own executable wins over the project's pinned version.
 
-The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command, and the companion settings, `companion.<name>` and `companions`, to the `reload` command as well.
+The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command. The `reload` command reads the companion settings, `companion.<name>` and `companions`, and `frankenphp:install` reads `version`.
 
 A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings and overrides them one by one. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
 
@@ -177,7 +177,7 @@ FrankenPHP runs, in this order, unless the [project settings](#project-settings)
 
 When none is found, or the pinned version is not installed, the command offers to download it into the cache, for the latest release or the pinned version. It only asks in a terminal, and downloads nothing without your consent. A pinned version always runs as pinned; another FrankenPHP never stands in for it.
 
-`frankenphp:install` downloads the latest release, or the given version, without starting the server: `vendor/bin/cserve frankenphp:install 1.12.7`. It reports when a `frankenphp` on `PATH` still takes precedence over the installed version.
+`frankenphp:install` downloads the given version, or else the project's pinned version or the latest release, without starting the server: `vendor/bin/cserve frankenphp:install 1.12.7`. It reports when a `frankenphp` on `PATH` still takes precedence over the installed version.
 
 The builds come from the [FrankenPHP releases](https://github.com/php/frankenphp/releases) for macOS and Linux, on x86-64 and ARM. Each download is checked against its published checksum and run once before it is installed. A build takes about 180 MB, so all projects share one cache with a directory per version:
 

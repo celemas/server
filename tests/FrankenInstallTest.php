@@ -166,7 +166,38 @@ final class FrankenInstallTest extends TestCase
 
 		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString("runs {$this->dir}/bin/frankenphp from PATH", $buffer->output());
-		$this->assertStringContainsString("version: '9.9.9'", $buffer->output());
+		$this->assertStringContainsString('version = 9.9.9 in .cserve/config.ini', $buffer->output());
+	}
+
+	public function testInstallsThePinnedVersionWithoutArgument(): void
+	{
+		$this->fake("{$this->dir}/bin/frankenphp");
+		[$exit, $buffer] = $this->install(settings: "version = 9.9.7\n");
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString(
+			"Installed FrankenPHP 9.9.7: {$this->cache}/9.9.7/frankenphp",
+			$buffer->output(),
+		);
+		// The pinned version runs before the one on PATH.
+		$this->assertStringNotContainsString('from PATH', $buffer->output());
+	}
+
+	public function testArgumentComesBeforeThePinnedVersion(): void
+	{
+		[$exit, $buffer] = $this->install('9.9.9', "version = 9.9.7\n");
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString('Installed FrankenPHP 9.9.9', $buffer->output());
+	}
+
+	public function testInvalidProjectSettingsAreAnError(): void
+	{
+		[$exit, $buffer] = $this->install(settings: "version = latest\n");
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString("Invalid version 'latest' in .cserve/config.ini", $buffer->errorOutput());
+		$this->assertSame([], $this->requests());
 	}
 
 	public function testConfiguredExecutableComesFirst(): void
@@ -363,12 +394,28 @@ final class FrankenInstallTest extends TestCase
 		];
 	}
 
-	/** @return array{int, Buffer} */
-	private function install(?string $version = null): array
+	/**
+	 * Runs the command, with the given project settings in a project
+	 * directory of its own.
+	 *
+	 * @return array{int, Buffer}
+	 */
+	private function install(?string $version = null, ?string $settings = null): array
 	{
-		$buffer = new Buffer();
-		$io = new Io($buffer);
-		$exit = Cli::run(new FrankenInstall(), $io, $version === null ? [] : [$version]);
+		$cwd = (string) getcwd();
+
+		if ($settings !== null) {
+			mkdir("{$this->dir}/project/.cserve", recursive: true);
+			file_put_contents("{$this->dir}/project/.cserve/config.ini", $settings);
+			chdir("{$this->dir}/project");
+		}
+
+		try {
+			$buffer = new Buffer();
+			$exit = Cli::run(new FrankenInstall(), new Io($buffer), $version === null ? [] : [$version]);
+		} finally {
+			chdir($cwd);
+		}
 
 		return [$exit, $buffer];
 	}
