@@ -13,6 +13,7 @@
 - `--worker=0` serves FrankenPHP in classic mode, and so does `worker = false` or `worker = 0` in the project settings. A developer can so switch off the workers that a project's `worker` setting enables, for one run or in `.cserve/config.local.ini`. Negative counts remain errors.
 - The project settings also take the run script's arguments that have no option: `route-prefix`, `php`, `frankenphp`, and `version`, so projects without a run script can pin a FrankenPHP version. A file's `frankenphp` or `version` replaces both of an earlier file or the run script.
 - Companion processes in the project settings: `companion.css = 'npx @tailwindcss/cli --watch'`, or one `companion.<name>[]` line per argument. They add to a run script's companions or replace those of the same name, and `companion.<name> = false` removes one.
+- The `reload` command runs the companions of the project settings and follows `companions = false`, which `--companions` overrides. `--no-companions` works as before.
 
 ## [0.4.0](https://codefloe.com/celema/server/src/tag/0.4.0) (2026-10-14)
 

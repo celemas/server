@@ -83,7 +83,7 @@ The settings also take the [run script's arguments](#run-scripts-with-celemacons
 
 A file sets either `frankenphp` or `version`. Either one replaces both of an earlier file or the run script, so a developer's own executable wins over the project's pinned version.
 
-The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command only.
+The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command, and the companion settings, `companion.<name>` and `companions`, to the `reload` command as well.
 
 A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings and overrides them one by one. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
 
@@ -165,7 +165,7 @@ With `--admin=<url>`, changes to watched files other than stylesheets and script
 
 The application does not get this package's [PHP settings](#php-settings) there; set `opcache.validate_timestamps=1` and `opcache.revalidate_freq=0` yourself. Changes must also reach the application's file system before pages update; with slowly synchronized volumes, a page may update before the change arrives.
 
-The command takes `--host`, `--port`, `--admin`, `--quiet`, `--watch-files`, and `--no-companions`, and runs [companion processes](#companion-processes) like the `server` command.
+The command takes `--host`, `--port`, `--admin`, `--quiet`, `--watch-files`, and `--[no-]companions`, and runs [companion processes](#companion-processes) like the `server` command, including those of the project settings.
 
 ## Installing FrankenPHP
 

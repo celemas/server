@@ -16,6 +16,8 @@ class Reload
 	/**
 	 * The default port matches the one the server command uses for live
 	 * reload by default, so pages keep loading the script when switching.
+	 * Of the project's settings in `.cserve/config.ini`, only the
+	 * companions apply, as `companion.<name>` and `companions`.
 	 *
 	 * @param list<string>|string $watch
 	 * @param array<string, list<string>|string> $companions
@@ -43,8 +45,8 @@ class Reload
 		?string $admin = null,
 		#[Opt('Reduce live reload output.', short: '-q')]
 		bool $quiet = false,
-		#[Opt('Do not start the configured companion processes.')]
-		bool $noCompanions = false,
+		#[Opt('Start the configured companion processes. On by default.')]
+		?bool $companions = null,
 		#[Opt(
 			'Override the configured watch patterns. Repeat the option or separate patterns with commas.',
 			value: 'glob',
@@ -52,11 +54,17 @@ class Reload
 		array $watchFiles = [],
 	): int {
 		try {
+			$config = ProjectConfig::load((string) getcwd());
+
+			if (is_string($config)) {
+				throw new InvalidArgumentException($config);
+			}
+
 			$options = new Options(
 				host: $host,
 				port: $port ?? $this->port,
 				quiet: $quiet,
-				companions: !$noCompanions,
+				companions: $companions ?? $config->companions ?? true,
 				watchFiles: $watchFiles,
 				defaultWatch: $this->watch,
 			);
@@ -65,7 +73,7 @@ class Reload
 				$options,
 				$io,
 				$admin === '' ? null : self::admin($admin),
-				Companion::validate($this->companions),
+				$config->commands(Companion::validate($this->companions)),
 			);
 			// Without a backend, only companions have output, which they show themselves.
 			$result = $runtime->run(static function (string $_): void {});

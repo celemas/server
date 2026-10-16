@@ -133,6 +133,38 @@ final class ReloadTest extends TestCase
 		$this->assertStringContainsString('choose another port with --port=<port>', $buffer->errorOutput());
 	}
 
+	public function testProjectCompanionsRunAlongside(): void
+	{
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "companion.marker = 'touch companion-ran'\n");
+		[$command, $pid] = $this->start(["--port={$port}"]);
+		$this->waitFor(fn(): bool => is_file("{$this->dir}/companion-ran"));
+
+		posix_kill(-$pid, SIGINT);
+		$this->wait($command);
+		$this->assertFileExists("{$this->dir}/companion-ran");
+	}
+
+	public function testInvalidProjectSettingsAreAnError(): void
+	{
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "companion.css = true\n");
+		$buffer = new Buffer();
+		$cwd = (string) getcwd();
+		chdir($this->dir);
+
+		try {
+			$exit = Cli::run(new Reload(), new Io($buffer), []);
+		} finally {
+			chdir($cwd);
+		}
+
+		$this->assertSame(1, $exit);
+		$this->assertStringContainsString('Invalid companion.css in .cserve/config.ini', $buffer->errorOutput());
+	}
+
 	#[DataProvider('invalidAdminAddresses')]
 	public function testInvalidAdminAddressIsRejected(string $address): void
 	{
