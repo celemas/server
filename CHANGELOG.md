@@ -5,6 +5,11 @@
 ### Changed
 
 - Requires `celema/console` 0.7.
+- The flags of the `server` command take a `--no-` form, like `--no-open` or `--no-debug`, which overrides a project setting that enables them, and `--watch` and `--companions` override settings that disable them. `--no-watch` and `--no-companions` work as before.
+
+### Added
+
+- `.cserve/config.ini` and `.cserve/config.local.ini` take every option of the `server` command, named without the leading dashes, like `port = 8080`, `worker = true`, or `watch-files[] = 'src/**/*.php'`. The command line overrides them, and they override a run script's arguments, like its `port` and `watch` patterns. `processes` and `worker` only apply when their server runs, so a project can set both. Values of the wrong type are errors that name the file.
 
 ## [0.4.0](https://codefloe.com/celema/server/src/tag/0.4.0) (2026-10-14)
 
@@ -35,7 +40,7 @@
 
 ### Changed
 
-- **Breaking:** One `server` command serves with the built-in server or FrankenPHP, chosen by its new argument, `builtin` or `frankenphp`, the [project's settings](README.md#default-server), or the new `server` constructor argument, which defaults to `'builtin'`. `Celema\Server\FrankenPhp` and the `frankenphp` command are removed: run `server frankenphp` instead of `frankenphp`, and register `new Server($docroot, server: 'frankenphp')` instead of `new FrankenPhp($docroot)`, or only `Server` to choose the server on the command line. The `executable` argument is replaced by `php` for the built-in server and `frankenphp` for FrankenPHP. Options of the other server, like `--worker` with the built-in server, are errors instead of being ignored.
+- **Breaking:** One `server` command serves with the built-in server or FrankenPHP, chosen by its new argument, `builtin` or `frankenphp`, the [project's settings](README.md#project-settings), or the new `server` constructor argument, which defaults to `'builtin'`. `Celema\Server\FrankenPhp` and the `frankenphp` command are removed: run `server frankenphp` instead of `frankenphp`, and register `new Server($docroot, server: 'frankenphp')` instead of `new FrankenPhp($docroot)`, or only `Server` to choose the server on the command line. The `executable` argument is replaced by `php` for the built-in server and `frankenphp` for FrankenPHP. Options of the other server, like `--worker` with the built-in server, are errors instead of being ignored.
 - **Breaking:** The default application port of both servers is now `2130` instead of `1983`. The derived live reload port and the standalone `reload` command's default are now `21300` instead of `19830`. Explicitly configured ports are unchanged; update fixed URLs that relied on the old defaults, or set `--port` to retain them.
 - **Breaking:** Both servers now watch files and serve live reload by default, including in worker mode. Use `--no-watch` to disable file watching, live reload, and automatic worker restarts. Workers can run without watching; in that case the FrankenPHP admin API stays disabled.
 - **Breaking:** Removed `--watch` and `-w`. Remove bare occurrences from command invocations, and replace `--watch=<glob>` or `-w=<glob>` with `--watch-files=<glob>`. Pattern overrides still support repeated options and comma-separated patterns, but do not re-enable watching with `--no-watch`.

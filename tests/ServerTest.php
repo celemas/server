@@ -622,10 +622,10 @@ final class ServerTest extends TestCase
 			new Runner([new Server('/tmp/public')], new Io($buffer))->run(['cserve', 'help', 'server']),
 		);
 		$help = $buffer->output();
-		$this->assertStringContainsString('-o, --open', $help);
+		$this->assertStringContainsString('-o, --[no-]open', $help);
 		$this->assertStringContainsString('--worker[=<count>]', $help);
 		$this->assertStringContainsString('-p=<port>, --port=<port>', $help);
-		$this->assertStringContainsString('--no-watch', $help);
+		$this->assertStringContainsString('--[no-]watch', $help);
 		$this->assertStringContainsString('--watch-files=<glob>', $help);
 	}
 

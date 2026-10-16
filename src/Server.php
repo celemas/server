@@ -15,8 +15,10 @@ use InvalidArgumentException;
 class Server
 {
 	/**
-	 * The `server` is the one to run without a `server` argument, unless
-	 * the project's `.cserve/config.ini` sets another.
+	 * The `server` is the one to run without a `server` argument. The
+	 * project's settings in `.cserve/config.ini` override it, the `port`,
+	 * and the `watch` patterns, and set the other options of the command
+	 * line, which overrides them in turn.
 	 *
 	 * The built-in server runs with the `php` executable. FrankenPHP runs
 	 * with the `frankenphp` executable, or without one, the pinned
@@ -51,18 +53,18 @@ class Server
 		Io $io,
 		#[Arg("builtin or frankenphp. Defaults to the project's configured server.")]
 		?string $server = null,
-		#[Opt('Host to bind the server to.', short: '-h')]
-		string $host = 'localhost',
+		#[Opt('Host to bind the server to. Defaults to localhost.', short: '-h')]
+		?string $host = null,
 		#[Opt('Port to listen on.', short: '-p')]
 		?int $port = null,
 		#[Opt('Hide matching request log lines.', short: '-f', value: 'regex')]
-		string $filter = '',
+		?string $filter = null,
 		#[Opt('builtin: enable an Xdebug session. frankenphp: enable verbose Caddy logs.', short: '-d')]
-		bool $debug = false,
+		?bool $debug = null,
 		#[Opt('Reduce verbose output where supported.', short: '-q')]
-		bool $quiet = false,
+		?bool $quiet = null,
 		#[Opt('Open the application in the default browser once it responds.', short: '-o')]
-		bool $open = false,
+		?bool $open = null,
 		#[Opt('Port for live reload. Defaults to ten times the port, or the next free port above.', value: 'port')]
 		?int $reloadPort = null,
 		#[Opt(
@@ -76,10 +78,10 @@ class Server
 			bare: '1',
 		)]
 		?int $worker = null,
-		#[Opt('Disable file watching, live reload, and automatic worker restarts.')]
-		bool $noWatch = false,
-		#[Opt('Do not start the configured companion processes.')]
-		bool $noCompanions = false,
+		#[Opt('Watch files for live reload and automatic worker restarts. On by default.')]
+		?bool $watch = null,
+		#[Opt('Start the configured companion processes. On by default.')]
+		?bool $companions = null,
 		#[Opt(
 			'Override the configured watch patterns. Repeat the option or separate patterns with commas. Ignored with --no-watch.',
 			value: 'glob',
@@ -87,26 +89,33 @@ class Server
 		array $watchFiles = [],
 	): int {
 		try {
-			$server = $this->server($server, $processes, $worker);
+			$config = ProjectConfig::load((string) getcwd());
+
+			if (is_string($config)) {
+				throw new InvalidArgumentException($config);
+			}
+
+			$server = $this->server($server ?? $config->server, $processes, $worker);
+			// The project's settings for the other server only apply to that one.
 			$options = new Options(
-				host: $host,
-				port: $port ?? $this->port,
-				filter: $filter,
-				debug: $debug,
-				quiet: $quiet,
-				watch: !$noWatch,
-				workers: $worker,
-				processes: $processes,
-				open: $open,
-				reloadPort: $reloadPort,
-				companions: !$noCompanions,
-				watchFiles: $watchFiles,
+				host: $host ?? $config->host ?? 'localhost',
+				port: $port ?? $config->port ?? $this->port,
+				filter: $filter ?? $config->filter ?? '',
+				debug: $debug ?? $config->debug ?? false,
+				quiet: $quiet ?? $config->quiet ?? false,
+				watch: $watch ?? $config->watch ?? true,
+				workers: $server === 'frankenphp' ? $worker ?? $config->worker : null,
+				processes: $server === 'builtin' ? $processes ?? $config->processes : null,
+				open: $open ?? $config->open ?? false,
+				reloadPort: $reloadPort ?? $config->reloadPort,
+				companions: $companions ?? $config->companions ?? true,
+				watchFiles: $watchFiles === [] ? $config->watchFiles ?? [] : $watchFiles,
 				defaultWatch: $this->watch,
 			);
-			$companions = Companion::validate($this->companions);
+			$commands = Companion::validate($this->companions);
 			$result = $server === 'frankenphp'
-				? $this->frankenPhp($options, $companions, $io)
-				: $this->builtin($options, $companions, $io);
+				? $this->frankenPhp($options, $commands, $io)
+				: $this->builtin($options, $commands, $io);
 		} catch (InvalidArgumentException $e) {
 			$result = $e->getMessage();
 		}
@@ -122,19 +131,13 @@ class Server
 	}
 
 	/**
-	 * The server to run: the argument, the project's setting, or the
-	 * configured default. Options of the other server are rejected
-	 * rather than ignored.
+	 * The server to run: the argument or the project's setting, else the
+	 * configured default. Options of the other server on the command line
+	 * are rejected rather than ignored.
 	 */
 	private function server(?string $server, ?int $processes, ?int $worker): string
 	{
-		$config = ProjectConfig::load((string) getcwd());
-
-		if (is_string($config)) {
-			throw new InvalidArgumentException($config);
-		}
-
-		$server ??= $config->server ?? $this->server;
+		$server ??= $this->server;
 
 		if (!in_array($server, ProjectConfig::SERVERS, true)) {
 			throw new InvalidArgumentException(

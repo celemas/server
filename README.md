@@ -29,49 +29,59 @@ It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.p
 
 The commands:
 
-- `server [<server>]` serves the application, with the PHP CLI's built-in server (`builtin`) or with FrankenPHP (`frankenphp`), in classic mode or, with `--worker`, in [worker mode](#worker-mode). Without an argument, it runs the project's [default server](#default-server). `cserve` without a command, with only options, or with a server name runs it: `cserve frankenphp` is short for `cserve server frankenphp`.
+- `server [<server>]` serves the application, with the PHP CLI's built-in server (`builtin`) or with FrankenPHP (`frankenphp`), in classic mode or, with `--worker`, in [worker mode](#worker-mode). Without an argument, it runs the [project's server](#project-settings). `cserve` without a command, with only options, or with a server name runs it: `cserve frankenphp` is short for `cserve server frankenphp`.
 - `frankenphp:install` downloads FrankenPHP; see [Installing FrankenPHP](#installing-frankenphp).
 - `reload` serves live reload for an application that runs elsewhere, like in a container; see [Live reload for other servers](#live-reload-for-other-servers).
 
 `vendor/bin/cserve --help`, or `-h` before any command, lists the commands, and `vendor/bin/cserve help <command>` describes one. After a command, `-h` sets the host.
 
-### Default server
-
-The built-in server is the default. A project that serves with FrankenPHP sets it in `.cserve/config.ini`:
-
-```ini
-server = frankenphp
-```
-
-The setting takes `builtin` or `frankenphp`, and a server argument still runs as given, like `vendor/bin/cserve builtin` for step debugging with Xdebug. Unknown settings and invalid values are errors.
-
-A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
-
-```gitignore
-/.cserve/config.local.ini
-/.cserve/php/local.ini
-```
-
 ### Options
 
-The `server` command takes these options:
+The `server` command takes these options, which a project can also [configure](#project-settings):
 
 | Option | Description |
 | --- | --- |
 | `-h`, `--host=<host>` | Host to bind to. Defaults to `localhost`. |
 | `-p`, `--port=<port>` | Port to listen on. Defaults to `2130`. |
 | `-f`, `--filter=<regex>` | Hides request log lines whose URL matches the regex, for example `--filter='#^/assets/#'`. |
-| `-d`, `--debug` | `builtin`: sets `XDEBUG_SESSION`, so Xdebug debugs every request. `frankenphp`: enables verbose Caddy logs. |
-| `-q`, `--quiet` | Reduces output: runs the PHP server with `-q` and hides live reload lines while pages are connected. |
-| `-o`, `--open` | Opens the application in the default browser once it responds. |
-| `--no-watch` | Disables file watching, live reload, and automatic worker restarts. |
-| `--no-companions` | Does not start the configured [companion processes](#companion-processes). |
+| `-d`, `--[no-]debug` | `builtin`: sets `XDEBUG_SESSION`, so Xdebug debugs every request. `frankenphp`: enables verbose Caddy logs. |
+| `-q`, `--[no-]quiet` | Reduces output: runs the PHP server with `-q` and hides live reload lines while pages are connected. |
+| `-o`, `--[no-]open` | Opens the application in the default browser once it responds. |
+| `--[no-]watch` | Watches files for live reload and automatic worker restarts, by default. `--no-watch` disables file watching, live reload, and worker restarts. |
+| `--[no-]companions` | Starts the configured [companion processes](#companion-processes), by default. `--no-companions` does not start them. |
 | `--watch-files=<glob>` | Replaces the [watch patterns](#live-reload); repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
 | `--processes=<count>` | `builtin` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
 | `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
 
-The options of one server are errors with the other, like `--worker` with the built-in server, rather than being ignored.
+The `--no-` forms of the flags override a project setting that enables them. On the command line, the options of one server are errors with the other, like `--worker` with the built-in server, rather than being ignored.
+
+### Project settings
+
+A project configures the server to run and its options in `.cserve/config.ini`:
+
+```ini
+server = frankenphp
+worker = true
+port = 8080
+filter = '#^/assets/#'
+```
+
+`server` takes `builtin` or `frankenphp`, the server to run without a server argument. The built-in server is the default, and a server argument still runs as given, like `vendor/bin/cserve builtin` for step debugging with Xdebug. The other settings are the [options](#options), named without the leading dashes, like `reload-port`:
+
+- Flags take `true` or `false`: `debug`, `quiet`, `open`, `watch`, and `companions`. `watch = false` stands for `--no-watch`.
+- `worker` takes `true` for one worker, or a count.
+- `watch-files` takes one string of comma-separated patterns, or one `watch-files[] = '...'` line per pattern.
+- Strings with special characters belong in single quotes, like the regex of `filter`: outside quotes, INI reads characters like `|`, `!`, and parentheses as operators, and in double quotes, it replaces `${...}` with an environment variable.
+
+The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command only.
+
+A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings and overrides them one by one. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
+
+```gitignore
+/.cserve/config.local.ini
+/.cserve/php/local.ini
+```
 
 The command checks whether the application port is available before starting. A busy port is an error that suggests stopping another running server or choosing a different `--port`; it does not switch to another application port. The automatically selected live reload port tries its initial candidate and up to 100 higher ports, stopping at 65535. An explicit `--reload-port` must be available too, which is checked before the server starts.
 
@@ -104,9 +114,7 @@ By default, the command polls the watched files and tells open pages to update w
 Pages that a morph would break, like pages whose scripts render markup or keep state in the DOM, opt out with a meta tag; they reload for every change other than stylesheets:
 
 ```html
-<meta
-	name="celema-live-reload"
-	content="reload" />
+<meta name="celema-live-reload" content="reload" />
 ```
 
 After a morph, the script dispatches a `celema:morphed` event on the document, so pages can set up behaviors for new markup.
@@ -139,7 +147,7 @@ It prints the `CELEMA_LIVE_RELOAD` value the application needs to include the sc
 
 ```yaml
 environment:
-    CELEMA_LIVE_RELOAD: http://localhost:21300/celema-live-reload.js
+  CELEMA_LIVE_RELOAD: http://localhost:21300/celema-live-reload.js
 ```
 
 The endpoint listens on a fixed port, by default 21300, the `server` command's default live reload port. A busy port is an error rather than a reason to pick another one, which the application would not know about. Pages connect from the browser, so the address must be reachable from there, not from the container.
@@ -205,7 +213,7 @@ $runner = new Runner([
 exit($runner->run());
 ```
 
-Then start the server with `php run server`, or name the server, like `php run server builtin` or `php run server frankenphp --worker`. The commands take the same arguments and options as with `cserve`, and the [project's settings](#default-server) override the run script's. They are:
+Then start the server with `php run server`, or name the server, like `php run server builtin` or `php run server frankenphp --worker`. The commands take the same arguments and options as with `cserve`, and the [project's settings](#project-settings) override the run script's. They are:
 
 - `Celema\Server\Server` (`server`)
 - `Celema\Server\FrankenInstall` (`frankenphp:install`)
@@ -220,7 +228,7 @@ Then start the server with `php run server`, or name the server, like `php run s
 | `routePrefix` | `''` | A path prefix stripped from request paths, for applications mounted below a path. |
 | `watch` | `'**/*.{php,js,css,sql,tpql}'` | Watch patterns for live reload, as a list or a comma-separated string. See [Live reload](#live-reload). |
 | `companions` | `[]` | Processes to run alongside the server, like asset watchers. See [Companion processes](#companion-processes). |
-| `server` | `'builtin'` | The server to run without a server argument, `'builtin'` or `'frankenphp'`. The [project's settings](#default-server) override it. |
+| `server` | `'builtin'` | The server to run without a server argument, `'builtin'` or `'frankenphp'`. The [project's settings](#project-settings) override it. |
 | `php` | `'php'` | The PHP executable for the built-in server. |
 | `frankenphp` | none | The FrankenPHP executable. It replaces the [lookup](#installing-frankenphp). |
 | `version` | none | The FrankenPHP version to run from the shared cache, like `'1.12.7'`. Pin a version for every developer of a project to run the same FrankenPHP. See [Installing FrankenPHP](#installing-frankenphp). |
