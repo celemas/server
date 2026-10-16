@@ -9,11 +9,11 @@ use Celema\Console\Io;
 /**
  * The FrankenPHP executable to run. It is, in this order:
  *
- * 1. The configured executable.
- * 2. The pinned version from the cache. Another FrankenPHP never stands
- *    in for it, which would quietly ignore the pin.
- * 3. `frankenphp` on PATH.
- * 4. The newest version in the cache.
+ * 1. The configured one: an executable, or a version that pins the one
+ *    from the cache. Another FrankenPHP never stands in for a pinned
+ *    version, which would quietly ignore the pin.
+ * 2. `frankenphp` on PATH.
+ * 3. The newest version in the cache.
  *
  * When the pinned version, or any FrankenPHP, is missing, it is
  * downloaded once the user agrees in a terminal; never otherwise.
@@ -26,21 +26,29 @@ final readonly class FrankenBinary
 		public string $path,
 	) {}
 
+	/**
+	 * Whether a configured FrankenPHP names a version rather than an
+	 * executable: it starts with a digit, or with `v` and a digit.
+	 */
+	public static function pins(string $frankenphp): bool
+	{
+		return preg_match('/^v?\d/', $frankenphp) === 1;
+	}
+
 	public static function resolve(
-		?string $executable,
-		?string $version,
+		?string $frankenphp,
 		Io $io,
 		bool $interactive,
 		?Interrupt $interrupt = null,
 	): self|string {
-		if ($executable !== null) {
-			$path = Executable::find($executable);
-
-			return $path === null ? "The FrankenPHP executable '{$executable}' was not found." : new self($path);
+		if ($frankenphp !== null && self::pins($frankenphp)) {
+			return self::pinned($frankenphp, $io, $interactive, $interrupt);
 		}
 
-		if ($version !== null) {
-			return self::pinned($version, $io, $interactive, $interrupt);
+		if ($frankenphp !== null) {
+			$path = Executable::find($frankenphp);
+
+			return $path === null ? "The FrankenPHP executable '{$frankenphp}' was not found." : new self($path);
 		}
 
 		$path = Executable::find('frankenphp');

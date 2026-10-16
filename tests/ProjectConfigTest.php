@@ -120,14 +120,14 @@ final class ProjectConfigTest extends TestCase
 	{
 		file_put_contents(
 			"{$this->dir}/.cserve/config.ini",
-			"route-prefix = /site\nphp = /opt/php/bin/php\nversion = v1.12.7\n",
+			"route-prefix = /site\nphp = /opt/php/bin/php\nfrankenphp = v1.12.7\n",
 		);
 		$config = ProjectConfig::load($this->dir);
 
 		$this->assertInstanceOf(ProjectConfig::class, $config);
 		$this->assertSame('/site', $config->routePrefix);
 		$this->assertSame('/opt/php/bin/php', $config->php);
-		$this->assertSame('1.12.7', $config->version);
+		$this->assertSame('1.12.7', $config->frankenphp);
 	}
 
 	public function testDocrootIsRelativeToTheWorkingDirectory(): void
@@ -144,15 +144,14 @@ final class ProjectConfigTest extends TestCase
 		$this->assertSame("{$this->dir}/app", $absolute->docroot);
 	}
 
-	public function testLocalExecutableReplacesTheProjectVersion(): void
+	public function testLocalExecutableReplacesThePinnedVersion(): void
 	{
-		file_put_contents("{$this->dir}/.cserve/config.ini", "version = 1.12.7\n");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "frankenphp = 1.12.7\n");
 		file_put_contents("{$this->dir}/.cserve/config.local.ini", "frankenphp = /opt/frankenphp\n");
 		$config = ProjectConfig::load($this->dir);
 
 		$this->assertInstanceOf(ProjectConfig::class, $config);
 		$this->assertSame('/opt/frankenphp', $config->frankenphp);
-		$this->assertNull($config->version);
 	}
 
 	public function testCompanionsAreAddedReplacedAndRemovedByName(): void
@@ -220,12 +219,12 @@ final class ProjectConfigTest extends TestCase
 			'docroot' => ["docroot = www\n", "Invalid docroot 'www' in .cserve/config.ini: use an existing directory."],
 			'executable' => ["php = ''\n", "Invalid php '' in .cserve/config.ini: use an executable."],
 			'version' => [
-				"version = latest\n",
-				"Invalid version 'latest' in .cserve/config.ini: use a version like 1.12.7.",
+				"frankenphp = 1.12.x\n",
+				"Invalid frankenphp '1.12.x' in .cserve/config.ini: use a version like 1.12.7 or an executable.",
 			],
-			'executable and version' => [
-				"frankenphp = /opt/frankenphp\nversion = 1.12.7\n",
-				'Set either frankenphp or version in .cserve/config.ini, not both.',
+			'number' => [
+				"frankenphp = 1.12\n",
+				"Invalid frankenphp '1.12' in .cserve/config.ini: use a version like 1.12.7 or an executable.",
 			],
 			'companion' => [
 				"companion.css = true\n",

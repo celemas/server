@@ -21,10 +21,10 @@ class Server
 	 * options of the command line, which overrides them in turn.
 	 *
 	 * The built-in server runs with the `php` executable. FrankenPHP runs
-	 * with the `frankenphp` executable, or without one, the pinned
-	 * `version` from the shared cache, or else `frankenphp` on PATH or the
-	 * newest cached version. A missing FrankenPHP is downloaded once the
-	 * user agrees.
+	 * with `frankenphp`: an executable, or a version like '1.12.7' that
+	 * pins the one from the shared cache. Without it, FrankenPHP runs from
+	 * PATH, or else the newest cached version. A missing FrankenPHP is
+	 * downloaded once the user agrees.
 	 *
 	 * The `companions` run alongside the server, like asset watchers: each
 	 * name with a command line or a list of arguments.
@@ -43,7 +43,6 @@ class Server
 		protected readonly string $server = 'builtin',
 		protected readonly string $php = 'php',
 		protected readonly ?string $frankenphp = null,
-		protected readonly ?string $version = null,
 	) {}
 
 	/** @param list<string> $watchFiles */
@@ -198,21 +197,16 @@ class Server
 
 	private function binary(ProjectConfig $config, Io $io): FrankenBinary|string
 	{
-		// The project's executable or version replaces both of the run script's.
-		[$executable, $version] =
-			$config->frankenphp !== null || $config->version !== null
-				? [$config->frankenphp, $config->version]
-				: [$this->frankenphp, $this->version];
-
-		if ($executable !== null && $version !== null) {
-			return 'Configure either a FrankenPHP executable or a version, not both.';
-		}
-
 		// A download canceled with Ctrl+C leaves no partial file.
 		$interrupt = Interrupt::catch();
 
 		try {
-			return FrankenBinary::resolve($executable, $version, $io, $io->interactive(), $interrupt);
+			return FrankenBinary::resolve(
+				$config->frankenphp ?? $this->frankenphp,
+				$io,
+				$io->interactive(),
+				$interrupt,
+			);
 		} finally {
 			$interrupt->release();
 		}

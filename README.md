@@ -78,13 +78,13 @@ The settings also take the [run script's arguments](#run-scripts-with-celemacons
 
 - `docroot`, the public directory of `cserve`, relative to the working directory, like `docroot = app/public`. A run script names its own.
 - `route-prefix`, like `route-prefix = /site`.
-- `php` and `frankenphp`, the executables, which a developer usually sets in `.cserve/config.local.ini`.
-- `version`, the [pinned FrankenPHP version](#installing-frankenphp), like `version = 1.12.7`, which `frankenphp:install` installs without an argument.
+- `php`, the PHP executable for the built-in server.
+- `frankenphp`, a version that [pins FrankenPHP](#installing-frankenphp), like `frankenphp = 1.12.7`, or an executable, like `frankenphp = /opt/frankenphp/bin/frankenphp`. A value that starts with a digit, or with `v` and a digit, is a version, which `frankenphp:install` installs without an argument.
 - `companion.<name>`, a [companion process](#companion-processes).
 
-A file sets either `frankenphp` or `version`. Either one replaces both of an earlier file or the run script, so a developer's own executable wins over the project's pinned version.
+Executables usually belong in a developer's `.cserve/config.local.ini`, where a `frankenphp` executable replaces the project's pinned version.
 
-The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command. The `reload` command reads the companion settings, `companion.<name>` and `companions`, and `frankenphp:install` reads `version`.
+The command line overrides the settings: with `open = true`, `vendor/bin/cserve --no-open` does not open the browser. `processes` and `worker` only apply when their server runs, so a project can set both. Unknown settings, values of the wrong type, and invalid values are errors. The settings apply to the `server` command. The `reload` command reads the companion settings, `companion.<name>` and `companions`, and `frankenphp:install` reads `frankenphp`.
 
 A developer overrides the project's settings in `.cserve/config.local.ini`, which takes the same settings and overrides them one by one. Exclude it in the project's `.gitignore`, together with personal [PHP settings](#php-settings):
 
@@ -170,9 +170,9 @@ The command takes `--host`, `--port`, `--admin`, `--quiet`, `--watch-files`, and
 
 ## Installing FrankenPHP
 
-FrankenPHP runs, in this order, unless the [project settings](#project-settings) or a [run script](#run-scripts-with-celemaconsole) configure a `frankenphp` executable:
+FrankenPHP runs, in this order:
 
-1. The pinned version from the shared cache, given a `version` in the project settings or a run script.
+1. The `frankenphp` of the [project settings](#project-settings) or a [run script](#run-scripts-with-celemaconsole): an executable, or a version like `1.12.7` that pins FrankenPHP to that version from the shared cache.
 2. `frankenphp` on `PATH`.
 3. The newest FrankenPHP version in the shared cache.
 
@@ -216,7 +216,7 @@ require __DIR__ . '/vendor/autoload.php';
 $docroot = __DIR__ . '/public';
 $watch = ['src/**/*.{php,css,js}', 'views/**/*.php'];
 $runner = new Runner([
-	new Server($docroot, port: 1973, watch: $watch, server: 'frankenphp', version: '1.12.7'),
+	new Server($docroot, port: 1973, watch: $watch, server: 'frankenphp', frankenphp: '1.12.7'),
 	new FrankenInstall(),
 ]);
 
@@ -240,8 +240,7 @@ Then start the server with `php run server`, or name the server, like `php run s
 | `companions` | `[]` | Processes to run alongside the server, like asset watchers. See [Companion processes](#companion-processes). |
 | `server` | `'builtin'` | The server to run without a server argument, `'builtin'` or `'frankenphp'`. |
 | `php` | `'php'` | The PHP executable for the built-in server. |
-| `frankenphp` | none | The FrankenPHP executable. It replaces the [lookup](#installing-frankenphp). |
-| `version` | none | The FrankenPHP version to run from the shared cache, like `'1.12.7'`. Pin a version for every developer of a project to run the same FrankenPHP. See [Installing FrankenPHP](#installing-frankenphp). |
+| `frankenphp` | none | The FrankenPHP version to run from the shared cache, like `'1.12.7'`, or an executable. Pin a version for every developer of a project to run the same FrankenPHP. See [Installing FrankenPHP](#installing-frankenphp). |
 
 The [project settings](#project-settings) override these arguments, except `docroot`, and add their companions to `companions`.
 

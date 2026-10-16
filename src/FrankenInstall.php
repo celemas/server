@@ -32,7 +32,8 @@ final class FrankenInstall
 			return self::fail($io, $config);
 		}
 
-		$pinned = $config?->version;
+		$frankenphp = $config?->frankenphp;
+		$pinned = $frankenphp !== null && FrankenBinary::pins($frankenphp) ? $frankenphp : null;
 		$version ??= $pinned;
 		$cache = FrankenCache::locate();
 
@@ -101,7 +102,7 @@ final class FrankenInstall
 		// Without a pinned version, a FrankenPHP on PATH takes precedence.
 		if ($path !== null) {
 			$io->line(
-				'FrankenPHP runs %s from PATH, unless the project pins this version, like version = %s in %s',
+				'FrankenPHP runs %s from PATH, unless the project pins this version, like frankenphp = %s in %s',
 				$path,
 				$release->version,
 				ProjectConfig::FILE,

@@ -137,14 +137,14 @@ final class ProjectSettingsTest extends TestCase
 		$this->assertStringContainsString('prefix=/site', $buffer->output());
 	}
 
-	public function testExecutableSettingReplacesTheRunScriptVersion(): void
+	public function testExecutableSettingReplacesThePinnedVersion(): void
 	{
 		$this->configure(
 			"server = frankenphp\nhost = 127.0.0.1\nport = {$this->port()}\nwatch = false\n"
 				. "frankenphp = '{$this->dir}/other-frankenphp'\n",
 		);
 
-		[$exit, $buffer] = $this->serve([], new Server($this->dir, version: '9.9.9'));
+		[$exit, $buffer] = $this->serve([], new Server($this->dir, frankenphp: '9.9.9'));
 
 		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString('other-frankenphp run', $buffer->output());

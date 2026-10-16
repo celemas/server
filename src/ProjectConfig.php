@@ -34,7 +34,6 @@ namespace Celema\Server;
  *     routePrefix?: string,
  *     php?: string,
  *     frankenphp?: string,
- *     version?: string,
  *     commands?: array<string, Command|false>,
  * }
  *
@@ -67,8 +66,7 @@ final readonly class ProjectConfig
 		'docroot' => ['docroot', 'an existing directory'],
 		'route-prefix' => ['routePrefix', 'a path like /site'],
 		'php' => ['php', 'an executable'],
-		'frankenphp' => ['frankenphp', 'an executable'],
-		'version' => ['version', 'a version like 1.12.7'],
+		'frankenphp' => ['frankenphp', 'a version like 1.12.7 or an executable'],
 	];
 
 	/**
@@ -96,9 +94,8 @@ final readonly class ProjectConfig
 		public ?string $docroot = null,
 		public ?string $routePrefix = null,
 		public ?string $php = null,
+		/** A FrankenPHP executable, or a pinned version, normalized. */
 		public ?string $frankenphp = null,
-		/** The pinned FrankenPHP version, normalized. */
-		public ?string $version = null,
 		/** The companion commands by name; false removes one. */
 		private array $commands = [],
 	) {}
@@ -113,11 +110,6 @@ final readonly class ProjectConfig
 
 			if (is_string($values)) {
 				return $values;
-			}
-
-			// One file's executable or version replaces both of an earlier one's.
-			if (isset($values['frankenphp']) || isset($values['version'])) {
-				unset($settings['frankenphp'], $settings['version']);
 			}
 
 			/** @var Settings $settings */
@@ -206,10 +198,6 @@ final readonly class ProjectConfig
 			} else {
 				$settings['commands'][$companion] = $converted;
 			}
-		}
-
-		if (isset($settings['frankenphp'], $settings['version'])) {
-			return "Set either frankenphp or version in {$name}, not both.";
 		}
 
 		/** @var Settings $settings Converted to the properties' types */

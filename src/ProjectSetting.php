@@ -25,8 +25,8 @@ final class ProjectSetting
 			'docroot' => self::directory($value, $cwd),
 			'server' => is_string($value) && in_array($value, ProjectConfig::SERVERS, true) ? $value : null,
 			'host', 'filter', 'routePrefix' => is_string($value) ? $value : null,
-			'php', 'frankenphp' => is_string($value) && trim($value) !== '' ? $value : null,
-			'version' => is_string($value) ? FrankenCache::version($value) : null,
+			'php' => is_string($value) && trim($value) !== '' ? $value : null,
+			'frankenphp' => self::frankenphp($value),
 			'port', 'reloadPort', 'processes' => self::integer($value),
 			// Like a bare `--worker` and `--worker=0`.
 			'worker' => is_bool($value) ? (int) $value : self::integer($value),
@@ -36,6 +36,16 @@ final class ProjectSetting
 				: self::arguments($value),
 			default => is_bool($value) ? $value : null,
 		};
+	}
+
+	/** A version, normalized, or an executable. */
+	private static function frankenphp(mixed $value): ?string
+	{
+		if (!is_string($value) || trim($value) === '') {
+			return null;
+		}
+
+		return FrankenBinary::pins($value) ? FrankenCache::version($value) : $value;
 	}
 
 	/** Integers, also quoted ones. */

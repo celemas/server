@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://codefloe.com/celema/server/compare/0.4.0...HEAD)
 
+### Breaking Changes
+
+- `Server` takes a pinned FrankenPHP version as its `frankenphp` argument, like `new Server($docroot, frankenphp: '1.12.7')`, instead of a `version` argument. A value that starts with a digit, or with `v` and a digit, is a version; any other is an executable, as before.
+
 ### Changed
 
 - Requires `celema/console` 0.7.
@@ -11,10 +15,10 @@
 
 - `.cserve/config.ini` and `.cserve/config.local.ini` take every option of the `server` command, named without the leading dashes, like `port = 8080`, `worker = true`, or `watch-files[] = 'src/**/*.php'`. The command line overrides them, and they override a run script's arguments, like its `port` and `watch` patterns. `processes` and `worker` only apply when their server runs, so a project can set both. Values of the wrong type are errors that name the file.
 - `--worker=0` serves FrankenPHP in classic mode, and so does `worker = false` or `worker = 0` in the project settings. A developer can so switch off the workers that a project's `worker` setting enables, for one run or in `.cserve/config.local.ini`. Negative counts remain errors.
-- The project settings also take the run script's arguments that have no option: `route-prefix`, `php`, `frankenphp`, and `version`, so projects without a run script can pin a FrankenPHP version. A file's `frankenphp` or `version` replaces both of an earlier file or the run script.
+- The project settings also take the run script's arguments that have no option: `route-prefix`, `php`, and `frankenphp`, so projects without a run script can pin a FrankenPHP version, like `frankenphp = 1.12.7`.
 - Companion processes in the project settings: `companion.css = 'npx @tailwindcss/cli --watch'`, or one `companion.<name>[]` line per argument. They add to a run script's companions or replace those of the same name, and `companion.<name> = false` removes one.
 - `docroot` in the project settings names the public directory that `cserve` serves, for projects whose public directory is not `public/`, `web/`, or `htdocs/`.
-- `frankenphp:install` without an argument installs the `version` the project settings pin, instead of the latest release.
+- `frankenphp:install` without an argument installs the version that the project's `frankenphp` setting pins, instead of the latest release.
 - The `reload` command runs the companions of the project settings and follows `companions = false`, which `--companions` overrides. `--no-companions` works as before.
 
 ## [0.4.0](https://codefloe.com/celema/server/src/tag/0.4.0) (2026-10-14)

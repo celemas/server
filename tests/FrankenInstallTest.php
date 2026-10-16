@@ -166,13 +166,13 @@ final class FrankenInstallTest extends TestCase
 
 		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString("runs {$this->dir}/bin/frankenphp from PATH", $buffer->output());
-		$this->assertStringContainsString('version = 9.9.9 in .cserve/config.ini', $buffer->output());
+		$this->assertStringContainsString('frankenphp = 9.9.9 in .cserve/config.ini', $buffer->output());
 	}
 
 	public function testInstallsThePinnedVersionWithoutArgument(): void
 	{
 		$this->fake("{$this->dir}/bin/frankenphp");
-		[$exit, $buffer] = $this->install(settings: "version = 9.9.7\n");
+		[$exit, $buffer] = $this->install(settings: "frankenphp = 9.9.7\n");
 
 		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString(
@@ -185,7 +185,7 @@ final class FrankenInstallTest extends TestCase
 
 	public function testArgumentComesBeforeThePinnedVersion(): void
 	{
-		[$exit, $buffer] = $this->install('9.9.9', "version = 9.9.7\n");
+		[$exit, $buffer] = $this->install('9.9.9', "frankenphp = 9.9.7\n");
 
 		$this->assertSame(0, $exit, $buffer->errorOutput());
 		$this->assertStringContainsString('Installed FrankenPHP 9.9.9', $buffer->output());
@@ -193,10 +193,10 @@ final class FrankenInstallTest extends TestCase
 
 	public function testInvalidProjectSettingsAreAnError(): void
 	{
-		[$exit, $buffer] = $this->install(settings: "version = latest\n");
+		[$exit, $buffer] = $this->install(settings: "frankenphp = 9.9\n");
 
 		$this->assertSame(1, $exit);
-		$this->assertStringContainsString("Invalid version 'latest' in .cserve/config.ini", $buffer->errorOutput());
+		$this->assertStringContainsString("Invalid frankenphp '9.9' in .cserve/config.ini", $buffer->errorOutput());
 		$this->assertSame([], $this->requests());
 	}
 
@@ -205,7 +205,7 @@ final class FrankenInstallTest extends TestCase
 		$this->fake("{$this->dir}/bin/frankenphp");
 		$this->fake("{$this->dir}/custom");
 
-		$this->assertSame("{$this->dir}/custom", $this->resolve("{$this->dir}/custom", null));
+		$this->assertSame("{$this->dir}/custom", $this->resolve("{$this->dir}/custom"));
 	}
 
 	public function testPinnedVersionComesBeforePath(): void
@@ -213,7 +213,7 @@ final class FrankenInstallTest extends TestCase
 		$this->fake("{$this->dir}/bin/frankenphp");
 		$this->fake("{$this->cache}/9.9.9/frankenphp");
 
-		$this->assertSame("{$this->cache}/9.9.9/frankenphp", $this->resolve(null, 'v9.9.9'));
+		$this->assertSame("{$this->cache}/9.9.9/frankenphp", $this->resolve('v9.9.9'));
 	}
 
 	public function testPathComesBeforeTheCache(): void
@@ -221,7 +221,7 @@ final class FrankenInstallTest extends TestCase
 		$this->fake("{$this->dir}/bin/frankenphp");
 		$this->fake("{$this->cache}/9.9.9/frankenphp");
 
-		$this->assertSame("{$this->dir}/bin/frankenphp", $this->resolve(null, null));
+		$this->assertSame("{$this->dir}/bin/frankenphp", $this->resolve(null));
 	}
 
 	public function testNewestCachedVersionComesLast(): void
@@ -231,14 +231,14 @@ final class FrankenInstallTest extends TestCase
 		$this->fake("{$this->cache}/latest/frankenphp");
 		mkdir("{$this->cache}/2.0.0");
 
-		$this->assertSame("{$this->cache}/1.10.0/frankenphp", $this->resolve(null, null));
+		$this->assertSame("{$this->cache}/1.10.0/frankenphp", $this->resolve(null));
 	}
 
 	/** @param ?string $version A pinned version, or none */
 	#[DataProvider('missingVersions')]
 	public function testMissingFrankenPhpIsOnlyDownloadedInATerminal(?string $version, string $message): void
 	{
-		$binary = FrankenBinary::resolve(null, $version, new Io(new Buffer()), interactive: false);
+		$binary = FrankenBinary::resolve($version, new Io(new Buffer()), interactive: false);
 
 		$this->assertSame($message, $binary);
 		$this->assertSame([], $this->requests());
@@ -261,7 +261,7 @@ final class FrankenInstallTest extends TestCase
 	{
 		$buffer = new Buffer("y\n");
 		$io = new Io($buffer);
-		$binary = FrankenBinary::resolve(null, $version, $io, interactive: true);
+		$binary = FrankenBinary::resolve($version, $io, interactive: true);
 
 		$this->assertInstanceOf(FrankenBinary::class, $binary, $buffer->errorOutput());
 		$this->assertSame("{$this->cache}/{$installed}/frankenphp", $binary->path);
@@ -282,21 +282,21 @@ final class FrankenInstallTest extends TestCase
 
 	public function testDeclinedDownloadPointsToTheInstallCommand(): void
 	{
-		$binary = FrankenBinary::resolve(null, null, new Io(new Buffer("n\n")), interactive: true);
+		$binary = FrankenBinary::resolve(null, new Io(new Buffer("n\n")), interactive: true);
 
 		$this->assertIsString($binary);
 		$this->assertStringContainsString('frankenphp:install', $binary);
 		$this->assertSame([], $this->requests());
 	}
 
-	public function testCommandRejectsAnExecutableWithAVersion(): void
+	public function testCommandRejectsAnIncompleteVersion(): void
 	{
 		$buffer = new Buffer();
 		$io = new Io($buffer);
-		$command = new Server('/tmp/public', server: 'frankenphp', frankenphp: 'frankenphp', version: '9.9.9');
+		$command = new Server('/tmp/public', server: 'frankenphp', frankenphp: '9.9');
 
 		$this->assertSame(1, Cli::run($command, $io));
-		$this->assertStringContainsString('either a FrankenPHP executable or a version', $buffer->errorOutput());
+		$this->assertStringContainsString("Invalid FrankenPHP version '9.9'", $buffer->errorOutput());
 	}
 
 	public function testStartupNamesFrankenPhpAndWarnsAboutMissingExtensions(): void
@@ -420,9 +420,9 @@ final class FrankenInstallTest extends TestCase
 		return [$exit, $buffer];
 	}
 
-	private function resolve(?string $executable, ?string $version): string
+	private function resolve(?string $frankenphp): string
 	{
-		$binary = FrankenBinary::resolve($executable, $version, new Io(new Buffer()), interactive: false);
+		$binary = FrankenBinary::resolve($frankenphp, new Io(new Buffer()), interactive: false);
 		$this->assertInstanceOf(FrankenBinary::class, $binary, is_string($binary) ? $binary : '');
 
 		return $binary->path;
