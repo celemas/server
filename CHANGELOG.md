@@ -2,7 +2,9 @@
 
 ## [Unreleased](https://codefloe.com/celema/server/compare/0.4.0...HEAD)
 
-No notable changes since the last release.
+### Changed
+
+- Requires `celema/console` 0.7.
 
 ## [0.4.0](https://codefloe.com/celema/server/src/tag/0.4.0) (2026-10-14)
 

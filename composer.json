@@ -17,7 +17,7 @@
 	],
 	"require": {
 		"php": "^8.5",
-		"celema/console": "^0.6"
+		"celema/console": "^0.7"
 	},
 	"require-dev": {
 		"carthage-software/mago": "1.50.0",
