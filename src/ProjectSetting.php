@@ -16,11 +16,13 @@ final class ProjectSetting
 	 * The value converted to the property's type, or null if it does not
 	 * fit. A companion's value is false to remove it.
 	 *
+	 * @param string $cwd The directory relative paths start from
 	 * @return string|int|bool|list<string>|null
 	 */
-	public static function convert(string $property, mixed $value): string|int|bool|array|null
+	public static function convert(string $property, mixed $value, string $cwd): string|int|bool|array|null
 	{
 		return match ($property) {
+			'docroot' => self::directory($value, $cwd),
 			'server' => is_string($value) && in_array($value, ProjectConfig::SERVERS, true) ? $value : null,
 			'host', 'filter', 'routePrefix' => is_string($value) ? $value : null,
 			'php', 'frankenphp' => is_string($value) && trim($value) !== '' ? $value : null,
@@ -64,5 +66,18 @@ final class ProjectSetting
 
 		/** @var non-empty-list<string> $value Checked by array_all() */
 		return $value;
+	}
+
+	/** An existing directory, relative to the working directory unless absolute. */
+	private static function directory(mixed $value, string $cwd): ?string
+	{
+		if (!is_string($value) || trim($value) === '') {
+			return null;
+		}
+
+		$absolute = preg_match('#^([A-Za-z]:)?[/\\\\]#', $value) === 1;
+		$path = rtrim($absolute ? $value : $cwd . DIRECTORY_SEPARATOR . $value, '/\\');
+
+		return is_dir($path) ? $path : null;
 	}
 }

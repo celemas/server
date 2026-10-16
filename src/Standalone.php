@@ -12,6 +12,7 @@ use Celema\Console\Runner;
  * a run script of one's own, for any PHP application with a public
  * directory. Without a command, it runs the `server` command, and a
  * server name as the command, like `cserve frankenphp`, runs that one.
+ * It serves the project's `docroot` setting, or else a detected one.
  *
  * @internal
  */
@@ -24,7 +25,9 @@ final class Standalone
 	{
 		$io ??= new Io();
 		$argv = self::argv($argv);
-		$docroot = self::docroot($cwd);
+		$config = ProjectConfig::load($cwd);
+		// The server command reports invalid settings.
+		$docroot = (is_string($config) ? null : $config->docroot) ?? self::docroot($cwd);
 
 		if (array_slice($argv, offset: 1, length: 1) === ['server']) {
 			self::announce($docroot, $cwd, $io);
@@ -77,7 +80,9 @@ final class Standalone
 	private static function announce(string $docroot, string $cwd, Io $io): void
 	{
 		if ($docroot !== $cwd) {
-			$io->line('<dim>Public directory: ' . $io->escape(basename($docroot)) . '</dim>');
+			$inside = str_starts_with($docroot, $cwd . DIRECTORY_SEPARATOR);
+			$name = $inside ? substr($docroot, strlen($cwd) + 1) : $docroot;
+			$io->line('<dim>Public directory: ' . $io->escape($name) . '</dim>');
 
 			return;
 		}

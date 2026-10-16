@@ -130,6 +130,20 @@ final class ProjectConfigTest extends TestCase
 		$this->assertSame('1.12.7', $config->version);
 	}
 
+	public function testDocrootIsRelativeToTheWorkingDirectory(): void
+	{
+		mkdir("{$this->dir}/app/www", recursive: true);
+		file_put_contents("{$this->dir}/.cserve/config.ini", "docroot = app/www/\n");
+		$relative = ProjectConfig::load($this->dir);
+		file_put_contents("{$this->dir}/.cserve/config.ini", "docroot = '{$this->dir}/app'\n");
+		$absolute = ProjectConfig::load($this->dir);
+
+		$this->assertInstanceOf(ProjectConfig::class, $relative);
+		$this->assertInstanceOf(ProjectConfig::class, $absolute);
+		$this->assertSame("{$this->dir}/app/www", $relative->docroot);
+		$this->assertSame("{$this->dir}/app", $absolute->docroot);
+	}
+
 	public function testLocalExecutableReplacesTheProjectVersion(): void
 	{
 		file_put_contents("{$this->dir}/.cserve/config.ini", "version = 1.12.7\n");
@@ -203,6 +217,7 @@ final class ProjectConfigTest extends TestCase
 				"watch-files[src] = 'src/**'\n",
 				'Invalid watch-files in .cserve/config.ini: use a string of glob patterns or a list of them.',
 			],
+			'docroot' => ["docroot = www\n", "Invalid docroot 'www' in .cserve/config.ini: use an existing directory."],
 			'executable' => ["php = ''\n", "Invalid php '' in .cserve/config.ini: use an executable."],
 			'version' => [
 				"version = latest\n",

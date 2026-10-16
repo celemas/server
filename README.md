@@ -25,7 +25,7 @@ vendor/bin/cserve frankenphp --worker
 vendor/bin/cserve --port=8080 --open
 ```
 
-It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.php`, or else, with a warning, the whole working directory. The server watches files and serves live reload by default. Pass `--no-watch` to disable both.
+It serves the first of `public/`, `web/`, or `htdocs/` that contains an `index.php`, or else, with a warning, the whole working directory, unless the [project settings](#project-settings) name the public directory. The server watches files and serves live reload by default. Pass `--no-watch` to disable both.
 
 The commands:
 
@@ -76,6 +76,7 @@ filter = '#^/assets/#'
 
 The settings also take the [run script's arguments](#run-scripts-with-celemaconsole) that have no option, in kebab-case:
 
+- `docroot`, the public directory of `cserve`, relative to the working directory, like `docroot = app/public`. A run script names its own.
 - `route-prefix`, like `route-prefix = /site`.
 - `php` and `frankenphp`, the executables, which a developer usually sets in `.cserve/config.local.ini`.
 - `version`, the [pinned FrankenPHP version](#installing-frankenphp), like `version = 1.12.7`, which `frankenphp:install` installs without an argument.

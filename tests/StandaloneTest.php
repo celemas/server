@@ -109,6 +109,27 @@ final class StandaloneTest extends TestCase
 		$this->assertStringContainsString("php -S 127.0.0.1:{$port} -t {$this->dir}/public ", $output);
 	}
 
+	public function testServesTheConfiguredPublicDirectory(): void
+	{
+		// The setting comes before a detected directory.
+		mkdir("{$this->dir}/public");
+		file_put_contents("{$this->dir}/public/index.php", '<?php');
+		mkdir("{$this->dir}/app/www", recursive: true);
+		mkdir("{$this->dir}/.cserve");
+		file_put_contents("{$this->dir}/.cserve/config.ini", "docroot = app/www\n");
+		mkdir("{$this->dir}/bin");
+		file_put_contents("{$this->dir}/bin/php", "#!/bin/sh\n[ \"\$1\" = -S ] && echo \"php \$*\" >&2\nexit 0\n");
+		chmod("{$this->dir}/bin/php", 0o755);
+		$port = Ports::ephemeral();
+		$this->assertIsInt($port);
+
+		[$exit, $output] = $this->runBinary(['--host=127.0.0.1', "--port={$port}", '--no-watch'], "{$this->dir}/bin");
+
+		$this->assertSame(0, $exit, $output);
+		$this->assertStringContainsString("Public directory: app/www\n", $output);
+		$this->assertStringContainsString("php -S 127.0.0.1:{$port} -t {$this->dir}/app/www ", $output);
+	}
+
 	public function testServesWithTheConfiguredServer(): void
 	{
 		mkdir("{$this->dir}/.cserve");

@@ -30,6 +30,7 @@ namespace Celema\Server;
  *     watch?: bool,
  *     companions?: bool,
  *     watchFiles?: list<string>,
+ *     docroot?: string,
  *     routePrefix?: string,
  *     php?: string,
  *     frankenphp?: string,
@@ -63,6 +64,7 @@ final readonly class ProjectConfig
 		'watch' => ['watch', 'true or false'],
 		'companions' => ['companions', 'true or false'],
 		'watch-files' => ['watchFiles', 'a string of glob patterns or a list of them'],
+		'docroot' => ['docroot', 'an existing directory'],
 		'route-prefix' => ['routePrefix', 'a path like /site'],
 		'php' => ['php', 'an executable'],
 		'frankenphp' => ['frankenphp', 'an executable'],
@@ -90,6 +92,8 @@ final readonly class ProjectConfig
 		public ?bool $watch = null,
 		public ?bool $companions = null,
 		public ?array $watchFiles = null,
+		/** The public directory of `cserve`, absolute. */
+		public ?string $docroot = null,
 		public ?string $routePrefix = null,
 		public ?string $php = null,
 		public ?string $frankenphp = null,
@@ -189,7 +193,7 @@ final readonly class ProjectConfig
 			[$property, $expected] = $companion === null
 				? self::SETTINGS[$setting]
 				: ['companion', 'a command line, a list of arguments, or false'];
-			$converted = ProjectSetting::convert($property, $value);
+			$converted = ProjectSetting::convert($property, $value, $cwd);
 
 			if ($converted === null) {
 				$shown = is_string($value) || is_int($value) || is_float($value) ? " '{$value}'" : '';
