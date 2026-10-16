@@ -10,6 +10,7 @@
 ### Added
 
 - `.cserve/config.ini` and `.cserve/config.local.ini` take every option of the `server` command, named without the leading dashes, like `port = 8080`, `worker = true`, or `watch-files[] = 'src/**/*.php'`. The command line overrides them, and they override a run script's arguments, like its `port` and `watch` patterns. `processes` and `worker` only apply when their server runs, so a project can set both. Values of the wrong type are errors that name the file.
+- `--worker=0` serves FrankenPHP in classic mode, and so does `worker = false` or `worker = 0` in the project settings. A developer can so switch off the workers that a project's `worker` setting enables, for one run or in `.cserve/config.local.ini`. Negative counts remain errors.
 
 ## [0.4.0](https://codefloe.com/celema/server/src/tag/0.4.0) (2026-10-14)
 

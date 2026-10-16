@@ -73,7 +73,7 @@ class Server
 		)]
 		?int $processes = null,
 		#[Opt(
-			'frankenphp only: keep the application in memory with FrankenPHP workers (default: 1). Watched changes to files other than CSS or JS restart the workers.',
+			'frankenphp only: keep the application in memory with FrankenPHP workers (default: 1, 0 for none). Watched changes to files other than CSS or JS restart the workers.',
 			value: 'count',
 			bare: '1',
 		)]

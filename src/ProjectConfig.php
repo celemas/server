@@ -50,7 +50,7 @@ final readonly class ProjectConfig
 		'open' => ['open', 'true or false'],
 		'reload-port' => ['reloadPort', 'a port number'],
 		'processes' => ['processes', 'a positive integer'],
-		'worker' => ['worker', 'true or a positive integer'],
+		'worker' => ['worker', 'true, false, or a count'],
 		'watch' => ['watch', 'true or false'],
 		'companions' => ['companions', 'true or false'],
 		'watch-files' => ['watchFiles', 'a string of glob patterns or a list of them'],
@@ -154,8 +154,8 @@ final readonly class ProjectConfig
 			'server' => is_string($value) && in_array($value, self::SERVERS, true) ? $value : null,
 			'host', 'filter' => is_string($value) ? $value : null,
 			'port', 'reloadPort', 'processes' => self::integer($value),
-			// A bare `--worker` stands for one worker.
-			'worker' => $value === true ? 1 : self::integer($value),
+			// Like a bare `--worker` and `--worker=0`.
+			'worker' => is_bool($value) ? (int) $value : self::integer($value),
 			'watchFiles' => self::patterns($value),
 			default => is_bool($value) ? $value : null,
 		};

@@ -22,11 +22,13 @@ final class ProjectSettingsTest extends TestCase
 		mkdir("{$dir}/.cserve", recursive: true);
 		$this->dir = (string) realpath($dir);
 
-		// Both backends answer the version queries and report how they would serve.
+		// Both backends answer the version queries and report how they would
+		// serve; FrankenPHP keeps its configuration, which is removed after.
 		foreach (['php', 'frankenphp'] as $name) {
 			file_put_contents(
 				"{$this->dir}/{$name}",
 				"#!/bin/sh\ncase \"\$1\" in -n|version|php-cli) exit 0;; esac\n"
+					. "[ \"\$1\" = run ] && cp \"\$3\" {$this->dir}/Caddyfile\n"
 					. "echo \"{$name} \$* debug=\${XDEBUG_SESSION-unset} workers=\${PHP_CLI_SERVER_WORKERS-unset}"
 					. " script=\${CELEMA_LIVE_RELOAD-unset}\" >&2\n",
 			);
@@ -96,6 +98,29 @@ final class ProjectSettingsTest extends TestCase
 		return [
 			'worker with builtin' => ["worker = 4\n", ['builtin'], 'php -S'],
 			'processes with frankenphp' => ["processes = 4\n", ['frankenphp'], 'frankenphp run'],
+		];
+	}
+
+	/** @param list<string> $args */
+	#[DataProvider('workerSettings')]
+	public function testWorkerSettingIsOverriddenByZero(string $local, array $args, string $expected): void
+	{
+		$this->configure("server = frankenphp\nhost = 127.0.0.1\nport = {$this->port()}\nworker = 4\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", $local);
+
+		[$exit, $buffer] = $this->serve($args);
+
+		$this->assertSame(0, $exit, $buffer->errorOutput());
+		$this->assertStringContainsString($expected, (string) file_get_contents("{$this->dir}/Caddyfile"));
+	}
+
+	public static function workerSettings(): array
+	{
+		return [
+			'project setting' => ['', [], "\t\t\tnum 4\n"],
+			'local setting' => ["worker = false\n", [], "\tphp_server\n"],
+			'local count' => ["worker = 0\n", [], "\tphp_server\n"],
+			'command line' => ['', ['--worker=0'], "\tphp_server\n"],
 		];
 	}
 

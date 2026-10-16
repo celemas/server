@@ -13,12 +13,16 @@ use InvalidArgumentException;
  */
 final readonly class Options
 {
+	/** The number of FrankenPHP workers; null for classic mode. */
+	public ?int $workers;
+
 	/** @var list<string> */
 	public array $watchFiles;
 
 	/**
 	 * Throws an InvalidArgumentException for an invalid port, filter, or
-	 * count. Without explicit patterns, `$watchFiles` takes the defaults.
+	 * count. Zero workers stand for classic mode. Without explicit
+	 * patterns, `$watchFiles` takes the defaults.
 	 *
 	 * @param list<string> $watchFiles
 	 * @param array|string $defaultWatch
@@ -32,7 +36,7 @@ final readonly class Options
 		public bool $debug = false,
 		public bool $quiet = false,
 		public bool $watch = true,
-		public ?int $workers = null,
+		?int $workers = null,
 		public ?int $processes = null,
 		public bool $open = false,
 		public ?int $reloadPort = null,
@@ -47,8 +51,12 @@ final readonly class Options
 			self::port($reloadPort);
 		}
 
-		self::count($workers, 'Worker');
+		if ($workers !== null && $workers < 0) {
+			throw new InvalidArgumentException("Worker count '{$workers}' must be 0 or a positive integer.");
+		}
+
 		self::count($processes, 'Process');
+		$this->workers = $workers === 0 ? null : $workers;
 		$this->watchFiles = WatchPattern::list($watchFiles === [] ? $defaultWatch : $watchFiles);
 	}
 

@@ -65,8 +65,8 @@ final class WorkerModeTest extends TestCase
 	}
 
 	/**
-	 * Non-integers are usage errors of the command line; integers below
-	 * one fail the server's own check.
+	 * Non-integers are usage errors of the command line; negative integers
+	 * fail the server's own check.
 	 *
 	 * @return array<string, array{string, int, string}>
 	 */
@@ -74,8 +74,7 @@ final class WorkerModeTest extends TestCase
 	{
 		return [
 			'empty' => ['', 2, 'expects an integer'],
-			'zero' => ['0', 1, 'must be a positive integer'],
-			'negative' => ['-1', 1, 'must be a positive integer'],
+			'negative' => ['-1', 1, "Worker count '-1' must be 0 or a positive integer."],
 			'fraction' => ['1.5', 2, 'expects an integer'],
 			'text' => ['eight', 2, 'expects an integer'],
 			'exponent' => ['1e2', 2, 'expects an integer'],

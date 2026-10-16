@@ -10,7 +10,6 @@ use Celema\Console\Runner;
 use Celema\Server\Ports;
 use Celema\Server\Server;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\DataProviderExternal;
 use PHPUnit\Framework\TestCase;
 
 final class ProcessesTest extends TestCase
@@ -44,7 +43,17 @@ final class ProcessesTest extends TestCase
 		];
 	}
 
-	#[DataProviderExternal(WorkerModeTest::class, 'invalidWorkerCounts')]
+	/** @return array<string, array{string, int, string}> */
+	public static function invalidProcessCounts(): array
+	{
+		return [
+			'zero' => ['0', 1, "Process count '0' must be a positive integer."],
+			'negative' => ['-1', 1, "Process count '-1' must be a positive integer."],
+			'text' => ['two', 2, "Option '--processes' expects an integer, got 'two'"],
+		];
+	}
+
+	#[DataProvider('invalidProcessCounts')]
 	public function testInvalidProcessCountFailsBeforeStartup(string $count, int $code, string $message): void
 	{
 		[$exit, $buffer] = $this->command('builtin', ["--processes={$count}"]);

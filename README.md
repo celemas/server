@@ -52,7 +52,7 @@ The `server` command takes these options, which a project can also [configure](#
 | `--watch-files=<glob>` | Replaces the [watch patterns](#live-reload); repeat the option or separate patterns with commas. Does not enable watching when `--no-watch` is set. |
 | `--reload-port=<port>` | Port for the live reload endpoint. Defaults to ten times the port, or the next free port above. |
 | `--processes=<count>` | `builtin` only: serves requests concurrently with the given number of PHP server processes, for pages that load many PHP-generated resources at once. Defaults to one process. Not available on Windows. |
-| `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker; an explicit count must be a positive integer. See [Worker mode](#worker-mode). |
+| `--worker[=<count>]` | `frankenphp` only: keeps the application in memory with FrankenPHP workers. Defaults to one worker. `--worker=0` serves in classic mode, which overrides a project's `worker` setting. See [Worker mode](#worker-mode). |
 
 The `--no-` forms of the flags override a project setting that enables them. On the command line, the options of one server are errors with the other, like `--worker` with the built-in server, rather than being ignored.
 
@@ -70,7 +70,7 @@ filter = '#^/assets/#'
 `server` takes `builtin` or `frankenphp`, the server to run without a server argument. The built-in server is the default, and a server argument still runs as given, like `vendor/bin/cserve builtin` for step debugging with Xdebug. The other settings are the [options](#options), named without the leading dashes, like `reload-port`:
 
 - Flags take `true` or `false`: `debug`, `quiet`, `open`, `watch`, and `companions`. `watch = false` stands for `--no-watch`.
-- `worker` takes `true` for one worker, or a count.
+- `worker` takes `true` for one worker, a count, or `false` for classic mode, like `--worker=0`.
 - `watch-files` takes one string of comma-separated patterns, or one `watch-files[] = '...'` line per pattern.
 - Strings with special characters belong in single quotes, like the regex of `filter`: outside quotes, INI reads characters like `|`, `!`, and parentheses as operators, and in double quotes, it replaces `${...}` with an environment variable.
 

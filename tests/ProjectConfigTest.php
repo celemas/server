@@ -107,13 +107,13 @@ final class ProjectConfigTest extends TestCase
 	public function testLocalConfigOverridesOnlyItsOwnSettings(): void
 	{
 		file_put_contents("{$this->dir}/.cserve/config.ini", "port = 8080\nopen = true\nworker = 4\n");
-		file_put_contents("{$this->dir}/.cserve/config.local.ini", "open = false\nworker = 2\n");
+		file_put_contents("{$this->dir}/.cserve/config.local.ini", "open = false\nworker = false\n");
 		$config = ProjectConfig::load($this->dir);
 
 		$this->assertInstanceOf(ProjectConfig::class, $config);
 		$this->assertSame(8080, $config->port);
 		$this->assertFalse($config->open);
-		$this->assertSame(2, $config->worker);
+		$this->assertSame(0, $config->worker);
 	}
 
 	public function testInvalidLocalConfigIsAnError(): void
@@ -150,7 +150,10 @@ final class ProjectConfigTest extends TestCase
 			],
 			'flag' => ["open = 1\n", "Invalid open '1' in .cserve/config.ini: use true or false."],
 			'host' => ["host[] = localhost\n", 'Invalid host in .cserve/config.ini: use a host name or address.'],
-			'worker' => ["worker = off\n", 'Invalid worker in .cserve/config.ini: use true or a positive integer.'],
+			'worker' => [
+				"worker = many\n",
+				"Invalid worker 'many' in .cserve/config.ini: use true, false, or a count.",
+			],
 			'processes' => [
 				"processes = all\n",
 				"Invalid processes 'all' in .cserve/config.ini: use a positive integer.",
