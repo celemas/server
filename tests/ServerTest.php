@@ -728,6 +728,24 @@ final class ServerTest extends TestCase
 		);
 	}
 
+	public function testWatchPatternExpandsEveryBraceGroup(): void
+	{
+		$options = new Options(watchFiles: ['{src,views}/**/*.{php,css}', 'lib/{a,{b,c}}.js']);
+
+		$this->assertSame(
+			[
+				'src/**/*.php',
+				'src/**/*.css',
+				'views/**/*.php',
+				'views/**/*.css',
+				'lib/a.js',
+				'lib/b.js',
+				'lib/c.js',
+			],
+			$options->watchFiles,
+		);
+	}
+
 	public function testWatchPatternParsesBraceCommasCorrectly(): void
 	{
 		$options = new Options(

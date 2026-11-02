@@ -2,7 +2,9 @@
 
 ## [Unreleased](https://codefloe.com/celema/server/compare/0.5.0...HEAD)
 
-No notable changes since the last release.
+### Fixed
+
+- Watch patterns expand every brace group, like `{src,views}/**/*.{php,css}`, and nested ones. Only the first group was expanded before, so such a pattern silently matched no files.
 
 ## [0.5.0](https://codefloe.com/celema/server/src/tag/0.5.0) (2026-10-16)
 

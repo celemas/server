@@ -27,10 +27,10 @@ final class WatchBrace
 	/** @return list<string> */
 	private static function expand(string $pattern): array
 	{
-		$open = strpos($pattern, '{');
 		$close = strpos($pattern, '}');
+		$open = $close === false ? false : strrpos(substr($pattern, 0, $close), '{');
 
-		if ($open === false || $close === false || $close <= $open) {
+		if ($close === false || $open === false) {
 			return [$pattern];
 		}
 
@@ -45,7 +45,9 @@ final class WatchBrace
 				continue;
 			}
 
-			$expanded[] = $prefix . $value . $suffix;
+			foreach (self::expand($prefix . $value . $suffix) as $alternative) {
+				$expanded[] = $alternative;
+			}
 		}
 
 		if ($expanded === []) {
